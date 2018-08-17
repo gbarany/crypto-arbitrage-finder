@@ -5,7 +5,7 @@ import bellmanford as bf
 import networkx as nx
 import matplotlib.pyplot as plt
 from ArbitrageGraph import ArbitrageGraph
-
+import time
 
 async def poll(exchange,symbols):
     i = 0    
@@ -25,7 +25,8 @@ async def main(exchange,symbols,arbitrageGraph):
             exchange.name,
             exchange.fees['trading']['taker'],
             order_book['asks'][0][0],
-            order_book['bids'][0][0])
+            order_book['bids'][0][0],
+            time.time())
         if negative_cycle == True:
             edges=arbitrageGraph.nodeslist_to_edges(nodes)
             print("length:",length,"ratio",np.exp(-length),'nodes',nodes,'edges',edges)
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     symbols["coinfloor"] = ['BTC/USD']
     exchanges["coinfloor"].fees['trading']['taker']=0.003
 
-    arbitrageGraph = ArbitrageGraph()
+    arbitrageGraph = ArbitrageGraph(edgeTTL=5)
     #arbitrageGraph.addInterExchangeLines(symbols)
 
     for exchange in exchanges.keys():
