@@ -36,7 +36,6 @@ class ArbitrageGraph:
         self.gdict[key2] = (timestamp,float(-1.0 * np.log((1-fee_rate)*h_bid)))
         return self.update_graph(timestamp=timestamp)
 
-
     def update_graph(self,timestamp):
         self.glist = []
         now = timestamp
@@ -58,15 +57,29 @@ class ArbitrageGraph:
         #print("length:",length, ", nodes:",nodes,", negative_cycle:",negative_cycle)
         return length, nodes, negative_cycle
 
-    def nodeslist_to_edges(self,nodes):
-        edges = []
+    def nodeslist_to_edges(self,nodes,timestamp_now):
+        edges_weight = []
+        edges_age_s = []
+        hops = len(nodes)-1
+        exchanges_involved = []
+
         for i, node in enumerate(nodes[:-1]):
             source = node.split('-')
             target = nodes[(i+1)%len(nodes)].split('-')
+            
+            exchanges_involved.append(source[0])
+            exchanges_involved.append(target[0])
+
             v=self.gdict[((source[0],source[1]),(target[0],target[1]))]
-            edge = v[1]
-            edges.append(edge)
-        return edges
+            if v[0] is not None:
+                edges_age_s.append(timestamp_now-v[0])
+            else:
+                edges_age_s.append(0)
+            edges_weight.append(v[1])
+
+        exchanges_involved = sorted(set(exchanges_involved),key=str.lower)
+        nof_exchanges_involved = len(exchanges_involved)
+        return edges_weight, edges_age_s, hops, exchanges_involved, nof_exchanges_involved
 
     def plot_graph(self):
         plt.clf()

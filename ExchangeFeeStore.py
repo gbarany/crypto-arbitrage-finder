@@ -20,13 +20,15 @@ class ExchangeFeeStore:
             return 0
 
     def getTakerFee(self,exchangename,symbols):
-        return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['taker'])
+        #return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['taker'])
+        return 0.003 # TODO: add fee calculation lookup table
 
     def getMakerFee(self,exchangename,symbols):
-        return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['maker'])
-
+        #return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['maker'])
+        return 0.0026 # TODO: add fee calculation lookup table
     def getFundingFee(self,exchangename,symbol):
-        return self.numberOrZero(self.getExchange(exchangename).currencies[symbol]['fee'])
+        #return self.numberOrZero(self.getExchange(exchangename).currencies[symbol]['fee'])
+        return 0 # TODO: add fee calculation lookup table
 
 if __name__ == "__main__":
     exchangeFeeStore = ExchangeFeeStore()

@@ -5,13 +5,14 @@ import bellmanford as bf
 import networkx as nx
 import matplotlib.pyplot as plt
 from ArbitrageGraph import ArbitrageGraph
+from OrderBook import OrderBook
 import time
 
 async def poll(exchange,symbols):
     i = 0    
     while True:
         symbol = symbols[i % len(symbols)]
-        yield (symbol, await exchange.fetch_order_book(symbol, limit=2))
+        yield (symbol, await exchange.fetch_order_book(symbol, limit=20))
         i += 1
         await asyncio.sleep(exchange.rateLimit / 1000)
 
@@ -19,7 +20,6 @@ async def poll(exchange,symbols):
 async def main(exchange,symbols,arbitrageGraph):
     async for (symbol, order_book) in poll(exchange,symbols):
         print("Received",symbol, "from",exchange.name)
-        #print(symbol, order_book)
         length, nodes, negative_cycle = arbitrageGraph.update_point(
             symbol,
             exchange.name,
@@ -30,6 +30,14 @@ async def main(exchange,symbols,arbitrageGraph):
         if negative_cycle == True:
             edges=arbitrageGraph.nodeslist_to_edges(nodes)
             print("length:",length,"ratio",np.exp(-length),'nodes',nodes,'edges',edges)
+
+        vol_BTC = 1
+        orderBook = OrderBook(symbol=symbol,asks=order_book['asks'],bids=order_book['bids'])
+        vol_BASE = vol_BTC*arbitrageGraph.getMeanPrice(symbol_base_ref='BTC',symbol_quote_ref=symbol.split('/')[0])        
+        print("vol_BASE:",vol_BASE)
+        print("Ask price",orderBook.getAskPrice(vol=vol_BASE))
+        print("Bid price",orderBook.getBidPrice(vol=vol_BASE))
+        
         arbitrageGraph.plot_graph()
 
 if __name__ == "__main__":
