@@ -31,9 +31,10 @@ class ArbitrageGraph:
         connectSameCurrenciesOnDifferentExchanges(symbol_base,uniqueNodes)
         connectSameCurrenciesOnDifferentExchanges(symbol_quote,uniqueNodes)
 
-
-        self.gdict[key1] = (timestamp,float(-1.0 * np.log((1-fee_rate)*1/l_ask)))
-        self.gdict[key2] = (timestamp,float(-1.0 * np.log((1-fee_rate)*h_bid)))
+        if l_ask != None:
+            self.gdict[key1] = (timestamp,float(-1.0 * np.log((1-fee_rate)*1/l_ask)))
+        if h_bid != None:
+            self.gdict[key2] = (timestamp,float(-1.0 * np.log((1-fee_rate)*h_bid)))
         return self.update_graph(timestamp=timestamp)
 
     def update_graph(self,timestamp):

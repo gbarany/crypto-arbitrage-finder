@@ -57,17 +57,21 @@ class OrderbookAnalyser:
 
             try:
                 orderBook = OrderBook(symbol=symbol,asks=asks_str,bids=bids_str)
-                rate_BTC_to_BASE = self.priceStore.getMeanPrice(symbol_base_ref='BTC',symbol_quote_ref=symbol.split('/')[0],timestamp=timestamp)
+                rate_BTC_to_BASE = self.priceStore.getMeanPrice(symbol_base_ref='BTC',symbol_quote_ref=symbol.split('/')[0],timestamp=timestamp)                
+
                 if rate_BTC_to_BASE == None:
                     continue
                 vol_BASE = vol_BTC*rate_BTC_to_BASE
 
+                askPrice=orderBook.getAskPrice(vol=vol_BASE)
+                bidPrice=orderBook.getBidPrice(vol=vol_BASE)
+                
                 length, nodes, negative_cycle = self.arbitrageGraph.update_point(
                     symbol,
                     exchangename,
                     self.exchangeFeeStore.getTakerFee(exchangename,symbol),
-                    orderBook.getAskPrice(vol=vol_BASE),
-                    orderBook.getBidPrice(vol=vol_BASE),
+                    askPrice,
+                    bidPrice,
                     timestamp)
                 
                 if negative_cycle == True:
