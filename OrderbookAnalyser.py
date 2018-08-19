@@ -22,16 +22,18 @@ class OrderbookAnalyser:
     def getSQLQuery(self,exchangeList,limit):
         sql="""
         SELECT exchange, pair, bids, asks, id, orderbook_time 
-        FROM orderbook WHERE exchange 
-        IN %s
-        ORDER BY ID""" % ("('"+"','".join(exchangeList)+"')")
+        FROM orderbook"""
+        if exchangeList:
+            sql += " WHERE exchange IN %s" % ("('"+"','".join(exchangeList)+"')")
+        
+        sql += " ORDER BY ID"
         if limit:
             sql += " LIMIT %d"%limit
         
         sql += ";"
         return sql
 
-    def runSim(self,exchangeList,limit=None,vol_BTC=[1]):
+    def runSim(self,exchangeList=None,limit=None,vol_BTC=[1]):
         sql = self.getSQLQuery(exchangeList=exchangeList,limit=limit)
         db = MySQLdb.connect(
             host=self.host,
@@ -122,5 +124,5 @@ if __name__ == "__main__":
     orderbookAnalyser = OrderbookAnalyser(host,user,passwd,db,port)
 
     exchangeList = ['coinfloor','kraken','bitfinex','bittrex','gdax','bitstamp','coinbase','poloniex']
-    df=orderbookAnalyser.runSim(exchangeList=exchangeList,limit=1000,vol_BTC=[0.15,0.015])
+    df=orderbookAnalyser.runSim(exchangeList=exchangeList,limit=10,vol_BTC=[0.15,0.015])
     df.to_csv("arbitrage.csv",index=False)
