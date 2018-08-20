@@ -1,13 +1,10 @@
 import asyncio
 import ccxt.async as ccxt
 import numpy as np
-import bellmanford as bf
-import networkx as nx
 import matplotlib.pyplot as plt
-from ArbitrageGraph import ArbitrageGraph
-from OrderBook import OrderBook
 import time
-
+from OrderbookAnalyser import OrderbookAnalyser
+import threading
 async def poll(exchange,symbols):
     i = 0    
     while True:
@@ -17,28 +14,20 @@ async def poll(exchange,symbols):
         await asyncio.sleep(exchange.rateLimit / 1000)
 
 
-async def main(exchange,symbols,arbitrageGraph):
+async def main(exchange,symbols,orderbookAnalyser):
+    id = 0
     async for (symbol, order_book) in poll(exchange,symbols):
         print("Received",symbol, "from",exchange.name)
-        length, nodes, negative_cycle = arbitrageGraph.update_point(
-            symbol,
-            exchange.name,
-            exchange.fees['trading']['taker'],
-            order_book['asks'][0][0],
-            order_book['bids'][0][0],
-            time.time())
-        if negative_cycle == True:
-            edges=arbitrageGraph.nodeslist_to_edges(nodes)
-            print("length:",length,"ratio",np.exp(-length),'nodes',nodes,'edges',edges)
-
-        vol_BTC = 1
-        orderBook = OrderBook(symbol=symbol,asks=order_book['asks'],bids=order_book['bids'])
-        vol_BASE = vol_BTC*arbitrageGraph.getMeanPrice(symbol_base_ref='BTC',symbol_quote_ref=symbol.split('/')[0])        
-        print("vol_BASE:",vol_BASE)
-        print("Ask price",orderBook.getAskPrice(vol=vol_BASE))
-        print("Bid price",orderBook.getBidPrice(vol=vol_BASE))
-        
-        arbitrageGraph.plot_graph()
+        orderbookAnalyser.update(
+                exchangename=exchange.name,
+                symbol = symbol,
+                bids = order_book['bids'],
+                asks = order_book['asks'],
+                id = id,
+                timestamp = time.time()
+                )
+        id += 1
+        #arbitrageGraph.plot_graph()
 
 if __name__ == "__main__":
     
@@ -64,11 +53,18 @@ if __name__ == "__main__":
     symbols["coinfloor"] = ['BTC/USD']
     exchanges["coinfloor"].fees['trading']['taker']=0.003
 
-    arbitrageGraph = ArbitrageGraph(edgeTTL=5)
-    #arbitrageGraph.addInterExchangeLines(symbols)
+    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01])
 
     for exchange in exchanges.keys():
-        asyncio.ensure_future(main(exchanges[exchange],symbols[exchange],arbitrageGraph))
+        asyncio.ensure_future(main(exchanges[exchange],symbols[exchange],orderbookAnalyser))
+
+    def stop_loop():
+        input('Press <enter> to stop')
+        loop.call_soon_threadsafe(loop.stop)
 
     loop = asyncio.get_event_loop()
+    threading.Thread(target=stop_loop).start()
     loop.run_forever()
+    
+    orderbookAnalyser.generateExportFilename(list(exchanges.keys()))
+    orderbookAnalyser.saveResultsCSV()

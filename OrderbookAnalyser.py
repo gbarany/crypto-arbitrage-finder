@@ -16,6 +16,7 @@ class OrderbookAnalyser:
         self.vol_BTC = vol_BTC
         self.df_results = pd.DataFrame(
             columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
+        self.generateExportFilename()
 
     def getSQLQuery(self,exchangeList,limit):
         sql="""
@@ -77,8 +78,14 @@ class OrderbookAnalyser:
         except TypeError:
             print("*** TypeError error ***")
 
+    def generateExportFilename(self,exchangeList=None):
+        if exchangeList == None:
+            self.exportFilename = "arbitrage_Vol=%s"%("-".join([str(i)+"BTC" for i in self.vol_BTC]))
+        else:
+            self.exportFilename = "arbitrage_Vol=%s_XC=%s"%("-".join([str(i)+"BTC" for i in self.vol_BTC]),'-'.join(exchangeList))
 
     def runSimFromDB(self,dbconfig,exchangeList=None,limit=None):
+        self.generateExportFilename(exchangeList)
         sql = self.getSQLQuery(exchangeList=exchangeList,limit=limit)
         db = MySQLdb.connect(
             host=dbconfig["host"],
@@ -104,6 +111,9 @@ class OrderbookAnalyser:
         db.close()
         return self.df_results
 
+    def saveResultsCSV(self):
+        self.df_results.to_csv("./results/"+self.exportFilename+".csv",index=False)
+
 def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100):
     
     dbconfig = {}
@@ -122,10 +132,7 @@ def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100):
 
     orderbookAnalyser = OrderbookAnalyser(vol_BTC=vol_BTC)
     df_results=orderbookAnalyser.runSimFromDB(dbconfig=dbconfig,exchangeList=exchangeList,limit=limit)
-    
-    if exchangeList==None:
-        exchangeList=['all']
-    df_results.to_csv("./results/arbitrage_Vol=%s_XC=%s.csv"%("-".join([str(i)+"BTC" for i in vol_BTC]),'-'.join(exchangeList)),index=False)
+    orderbookAnalyser.saveResultsCSV()
     return df_results
 
 if __name__ == "__main__":
