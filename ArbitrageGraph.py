@@ -82,8 +82,11 @@ class ArbitrageGraph:
         nof_exchanges_involved = len(exchanges_involved)
         return edges_weight, edges_age_s, hops, exchanges_involved, nof_exchanges_involved
 
-    def plot_graph(self):
+    def plot_graph(self,figid=1,vol_BTC=None):
+        plt.figure(figid)
         plt.clf()
+        plt.title("Throughput Volume %2.3fBTC"%vol_BTC)
+
         pos=nx.circular_layout(self.G)
         edges = self.G.edges()
         colors = []

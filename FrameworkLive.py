@@ -27,7 +27,7 @@ async def main(exchange,symbols,orderbookAnalyser):
                 timestamp = time.time()
                 )
         id += 1
-        #arbitrageGraph.plot_graph()
+        orderbookAnalyser.plot_graphs()
 
 if __name__ == "__main__":
     

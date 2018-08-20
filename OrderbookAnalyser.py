@@ -114,6 +114,10 @@ class OrderbookAnalyser:
     def saveResultsCSV(self):
         self.df_results.to_csv("./results/"+self.exportFilename+".csv",index=False)
 
+    def plot_graphs(self):
+        for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
+            arbitrageGraph.plot_graph(figid=(idx+1),vol_BTC=self.vol_BTC[idx])
+
 def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100):
     
     dbconfig = {}
