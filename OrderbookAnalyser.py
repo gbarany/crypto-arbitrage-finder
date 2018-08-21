@@ -77,6 +77,8 @@ class OrderbookAnalyser:
             print("*** NoneType error ***")
         except TypeError:
             print("*** TypeError error ***")
+        except Exception as e:
+            print("*** General error within the update loop error ***")
 
     def generateExportFilename(self,exchangeList=None):
         if exchangeList == None:
@@ -149,5 +151,5 @@ if __name__ == "__main__":
     vol_BTC=[1,0.1,0.01]
     exchangeList = ['coinfloor','kraken','bitfinex','bittrex','gdax','bitstamp','coinbase','poloniex']
     limit = 10
-    #simFromDB(vol_BTC=vol_BTC,exchangeList=exchangeList,limit=limit)
-    simLive()
+    simFromDB(vol_BTC=vol_BTC,exchangeList=exchangeList,limit=limit)
+    #simLive()
