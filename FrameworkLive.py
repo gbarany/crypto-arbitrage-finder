@@ -51,9 +51,14 @@ if __name__ == "__main__":
     
     exchanges["coinfloor"]=ccxt.coinfloor({'enableRateLimit': True})
     symbols["coinfloor"] = ['BTC/USD']
-    exchanges["coinfloor"].fees['trading']['taker']=0.003
 
-    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01])
+    exchanges["Bitstamp"]=ccxt.bitstamp({'enableRateLimit': True})
+    symbols["Bitstamp"] = ['BTC/USD','BCH/BTC', 'ETH/BTC']
+
+    exchanges["Gdax"]=ccxt.gdax({'enableRateLimit': True})
+    symbols["Gdax"] = ['BTC/USD','BCH/BTC', 'ETC/BTC','ETH/BTC']
+
+    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01],edgeTTL=7,priceTTL=60)
 
     for exchange in exchanges.keys():
         asyncio.ensure_future(main(exchanges[exchange],symbols[exchange],orderbookAnalyser))

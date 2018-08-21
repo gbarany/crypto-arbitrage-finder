@@ -5,6 +5,16 @@ class PriceStore:
         self.price = {}
         self.priceTTL = 60
     
+    def isOrderbookEmpty(self,ob):
+        if len(ob)==0:
+            return True
+        else:
+            if len(ob[0])==0:
+                return True
+
+        return False
+
+
     def updatePriceFromOrderBook(self,symbol,exchangename,asks,bids,timestamp):
         self.symbol = symbol
         
@@ -17,6 +27,10 @@ class PriceStore:
             bids = list(ast.literal_eval(bids))
         else:
             bids = bids
+        
+        if self.isOrderbookEmpty(asks) or self.isOrderbookEmpty(bids):
+            return
+        
         price = (asks[0][0]+bids[0][0])/2
         symbol_base  = (exchangename,symbol.split('/')[0])
         symbol_quote  = (exchangename,symbol.split('/')[1])

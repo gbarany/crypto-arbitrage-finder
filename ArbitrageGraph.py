@@ -51,6 +51,9 @@ class ArbitrageGraph:
             else:
                 self.glist.extend([[symbol_base, symbol_quote,edge]])
 
+        if len(self.glist)==0:
+            return 0,[],None
+
         self.G = nx.DiGraph()
         self.G.add_weighted_edges_from(self.glist)
         length, nodes, negative_cycle = bf.negative_edge_cycle(self.G)

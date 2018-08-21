@@ -9,10 +9,10 @@ import pandas as pd
 
 
 class OrderbookAnalyser:
-    def __init__(self,vol_BTC=[1]):        
-        self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=5) for count in range(len(vol_BTC))] # create Arbitrage Graph objects
+    def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60):
+        self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))] # create Arbitrage Graph objects
         self.exchangeFeeStore = ExchangeFeeStore()
-        self.priceStore = PriceStore(priceTTL=60)
+        self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
         self.df_results = pd.DataFrame(
             columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
@@ -139,8 +139,15 @@ def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100):
     orderbookAnalyser.saveResultsCSV()
     return df_results
 
+def simLive():
+    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1])
+    orderbookAnalyser.update("poloniex","BTC/USD",[],[],1,0)
+    #orderbookAnalyser.update("poloniex","BTC/USD",[[1,2],[3,4]],[[2,3]],1,0)
+    pass
+
 if __name__ == "__main__":
     vol_BTC=[1,0.1,0.01]
     exchangeList = ['coinfloor','kraken','bitfinex','bittrex','gdax','bitstamp','coinbase','poloniex']
     limit = 10
-    simFromDB(vol_BTC=vol_BTC,exchangeList=exchangeList,limit=limit)
+    #simFromDB(vol_BTC=vol_BTC,exchangeList=exchangeList,limit=limit)
+    simLive()
