@@ -32,8 +32,14 @@ class PriceStore:
             return
         
         price = (asks[0][0]+bids[0][0])/2
-        symbol_base  = (exchangename,symbol.split('/')[0])
-        symbol_quote  = (exchangename,symbol.split('/')[1])
+
+        symbolsplit = symbol.split('/')
+        
+        if len(symbolsplit)!=2:
+            return
+
+        symbol_base  = (exchangename,symbolsplit[0])
+        symbol_quote  = (exchangename,symbolsplit[1])
 
         key1 = (symbol_quote,symbol_base)
         key2 = (symbol_base,symbol_quote)

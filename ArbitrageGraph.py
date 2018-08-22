@@ -14,9 +14,14 @@ class ArbitrageGraph:
         self.edgeTTL = edgeTTL
         
     def update_point(self,symbol,exchangename,fee_rate,l_ask,h_bid,timestamp):
-        symbol_base  = (exchangename,symbol.split('/')[0])
-        symbol_quote  = (exchangename,symbol.split('/')[1])
+        symbolsplit = symbol.split('/')
+        if len(symbolsplit)!=2:
+            return 0,[],None
 
+        symbol_base  = (exchangename,symbolsplit[0])
+        symbol_quote  = (exchangename,symbolsplit[1])
+
+        
         key1 = (symbol_quote,symbol_base)
         key2 = (symbol_base,symbol_quote)
 
