@@ -1,0 +1,9 @@
+ccxt
+asyncio
+mysqlclient
+matplotlib
+bellmanford
+numpy
+networkx
+pandas
+tqdm
