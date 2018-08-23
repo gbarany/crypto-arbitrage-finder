@@ -114,7 +114,7 @@ class OrderbookAnalyser:
         return self.df_results
 
     def saveResultsCSV(self):
-        self.df_results.to_csv("../results/"+self.exportFilename+".csv",index=False)
+        self.df_results.to_csv("./results/"+self.exportFilename+".csv",index=False)
 
     def plot_graphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):

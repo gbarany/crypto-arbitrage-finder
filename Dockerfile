@@ -10,3 +10,6 @@ COPY src/ ./src
 
 RUN mkdir -p ~/.config/matplotlib
 RUN echo 'backend : Agg' > ~/.config/matplotlib/matplotlibrc
+
+COPY ./docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]
