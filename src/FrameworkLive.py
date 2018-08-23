@@ -1,3 +1,6 @@
+#!/usr/bin/python
+
+import sys, getopt
 import asyncio
 import ccxt.async_support as ccxt
 import numpy as np
@@ -14,7 +17,7 @@ async def poll(exchange,symbols):
         await asyncio.sleep(exchange.rateLimit / 1000)
 
 
-async def main(exchange,symbols,orderbookAnalyser):
+async def mainfunc(exchange,symbols,orderbookAnalyser,enablePlotting):
     id = 0
     async for (symbol, order_book) in poll(exchange,symbols):
         print("Received",symbol, "from",exchange.name)
@@ -27,15 +30,30 @@ async def main(exchange,symbols,orderbookAnalyser):
                 timestamp = time.time()
                 )
         id += 1
-        orderbookAnalyser.plot_graphs()
+        if enablePlotting:
+            orderbookAnalyser.plot_graphs()
 
-if __name__ == "__main__":
-    
-    fig1 = plt.figure(1)
-    plt.plot(1,2)
-    plt.ion()
-    plt.show()
-    plt.pause(0.001)
+
+def main(argv):
+    enablePlotting = True
+    resultsdir = './'
+    try:
+        opts, args = getopt.getopt(argv,"nr",["noplot","resultsdir="])
+    except getopt.GetoptError:
+        print('Invalid parameter. Use --noplot to suppress plots')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-n", "--noplot"):
+            enablePlotting = False
+        if opt in ("-r", "--resultsdir"):
+            resultsdir = arg
+
+    if enablePlotting:
+        plt.figure(1)
+        plt.plot(1,2)
+        plt.ion()
+        plt.show()
+        plt.pause(0.001)
 
     exchanges = {}
     symbols = {}
@@ -61,7 +79,7 @@ if __name__ == "__main__":
     orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01],edgeTTL=7,priceTTL=60)
 
     for exchange in exchanges.keys():
-        asyncio.ensure_future(main(exchanges[exchange],symbols[exchange],orderbookAnalyser))
+        asyncio.ensure_future(mainfunc(exchanges[exchange],symbols[exchange],orderbookAnalyser,enablePlotting))
 
     def stop_loop():
         input('Press <enter> to stop')
@@ -72,4 +90,7 @@ if __name__ == "__main__":
     loop.run_forever()
     
     orderbookAnalyser.generateExportFilename(list(exchanges.keys()))
-    orderbookAnalyser.saveResultsCSV()
+    orderbookAnalyser.saveResultsCSV(resultsdir)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
