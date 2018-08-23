@@ -1,8 +1,20 @@
 #!/usr/bin/python
 
 import sys, getopt
-
+import signal
 from OrderbookAnalyser import OrderbookAnalyser
+
+vol_BTC=[1,0.1,0.01]
+orderbookAnalyser = OrderbookAnalyser(vol_BTC=vol_BTC)
+    
+def sigterm(x, y):
+    print('\n[FrameworkSimDB] SIGTERM received, time to leave.\n')
+    orderbookAnalyser.terminate()
+    # exit()
+
+# Register the signal to the handler
+signal.signal(signal.SIGTERM, sigterm)  # Used by this script
+
 
 def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100,resultsdir="./"):
     
@@ -20,7 +32,6 @@ def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100,resultsdir
         dbconfig["db"]="orderbook"
         dbconfig["port"]=33306
 
-    orderbookAnalyser = OrderbookAnalyser(vol_BTC=vol_BTC)
     df_results=orderbookAnalyser.runSimFromDB(dbconfig=dbconfig,exchangeList=exchangeList,limit=limit)
     orderbookAnalyser.saveResultsCSV(resultsdir)
     return df_results
@@ -43,7 +54,6 @@ def main(argv):
         if opt in ("-i", "--limit"):
             limit = int(arg)
 
-    vol_BTC=[1,0.1,0.01]
     exchangeList = ['coinfloor','kraken','bitfinex','bittrex','gdax','bitstamp','coinbase','poloniex']
     simFromDB(vol_BTC=vol_BTC,exchangeList=exchangeList,limit=limit,resultsdir=resultsdir,runLocalDB=runLocalDB)
     

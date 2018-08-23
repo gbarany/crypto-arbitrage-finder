@@ -17,7 +17,7 @@ class OrderbookAnalyser:
         self.df_results = pd.DataFrame(
             columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
         self.generateExportFilename()
-
+        self.isRunning = True
     def getSQLQuery(self,exchangeList,limit):
         sql="""
         SELECT exchange, pair, bids, asks, id, orderbook_time 
@@ -86,6 +86,9 @@ class OrderbookAnalyser:
         else:
             self.exportFilename = "arbitrage_Vol=%s_XC=%s"%("-".join([str(i)+"BTC" for i in self.vol_BTC]),'-'.join(exchangeList))
 
+    def terminate(self):
+        self.isRunning = False
+
     def runSimFromDB(self,dbconfig,exchangeList=None,limit=None):
         self.generateExportFilename(exchangeList)
         sql = self.getSQLQuery(exchangeList=exchangeList,limit=limit)
@@ -101,15 +104,18 @@ class OrderbookAnalyser:
         
 
         for row in tqdm(cursor):
-            self.update(
-                exchangename=row[0],
-                symbol = row[1],
-                bids = row[2],
-                asks = row[3],
-                id = int(row[4]),
-                timestamp = float(row[5])
-                )
-            #arbitrageGraph.plot_graph()
+            if self.isRunning:
+                self.update(
+                    exchangename=row[0],
+                    symbol = row[1],
+                    bids = row[2],
+                    asks = row[3],
+                    id = int(row[4]),
+                    timestamp = float(row[5])
+                    )
+                #arbitrageGraph.plot_graph()
+            else:
+                break
         db.close()
         return self.df_results
 
