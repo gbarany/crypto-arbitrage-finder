@@ -119,37 +119,3 @@ class OrderbookAnalyser:
     def plot_graphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
             arbitrageGraph.plot_graph(figid=(idx+1),vol_BTC=self.vol_BTC[idx])
-
-def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100):
-    
-    dbconfig = {}
-    if runLocalDB == False:
-        dbconfig["host"]="orderbook-2.cyifbgm0zwt0.eu-west-2.rds.amazonaws.com"
-        dbconfig["user"]="admin"
-        dbconfig["passwd"]="123Qwe123Qwe"
-        dbconfig["db"]="orderbook"
-        dbconfig["port"]=3306
-    else:
-        dbconfig["host"]="127.0.0.1"
-        dbconfig["user"]="admin"
-        dbconfig["passwd"]="admin"
-        dbconfig["db"]="orderbook"
-        dbconfig["port"]=33306
-
-    orderbookAnalyser = OrderbookAnalyser(vol_BTC=vol_BTC)
-    df_results=orderbookAnalyser.runSimFromDB(dbconfig=dbconfig,exchangeList=exchangeList,limit=limit)
-    orderbookAnalyser.saveResultsCSV()
-    return df_results
-
-def simLive():
-    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1])
-    orderbookAnalyser.update("poloniex","BTC/USD",[],[],1,0)
-    #orderbookAnalyser.update("poloniex","BTC/USD",[[1,2],[3,4]],[[2,3]],1,0)
-    pass
-
-if __name__ == "__main__":
-    vol_BTC=[1,0.1,0.01]
-    exchangeList = ['coinfloor','kraken','bitfinex','bittrex','gdax','bitstamp','coinbase','poloniex']
-    limit = 10
-    simFromDB(vol_BTC=vol_BTC,exchangeList=exchangeList,limit=limit)
-    #simLive()
