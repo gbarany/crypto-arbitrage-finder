@@ -91,6 +91,8 @@ def main(argv):
     
     orderbookAnalyser.generateExportFilename(list(exchanges.keys()))
     orderbookAnalyser.saveResultsCSV(resultsdir)
+    for _, exchange in exchanges.items():
+        exchange.close()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
