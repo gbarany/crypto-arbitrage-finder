@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 
+# test
+
 class ArbitrageGraph:
     def __init__(self,edgeTTL):
         self.gdict = {}
