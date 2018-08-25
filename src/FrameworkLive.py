@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 import time
 from OrderbookAnalyser import OrderbookAnalyser
 import threading
-async def poll(exchange,symbols):
+import datetime
+
+async def pollOrderbook(exchange,symbols):
     i = 0    
     while True:
         symbol = symbols[i % len(symbols)]
@@ -16,11 +18,20 @@ async def poll(exchange,symbols):
         i += 1
         await asyncio.sleep(exchange.rateLimit / 1000)
 
+async def pollCoinmarketcap(cmc):
+    while True:
+        yield (await cmc.fetch_tickers())
+        await asyncio.sleep(cmc.rateLimit / 1000)
 
-async def mainfunc(exchange,symbols,orderbookAnalyser,enablePlotting):
+async def coinmarketcapPoller(cmc):
+    #await cmc.load_markets()
+    async for ticker in pollCoinmarketcap(cmc):
+        print(datetime.datetime.now(), "Received prices from coinmarketcap (BTC/USD",ticker['BTC/USD']['last'],')')
+
+async def exchangePoller(exchange,symbols,orderbookAnalyser,enablePlotting):
     id = 0
-    async for (symbol, order_book) in poll(exchange,symbols):
-        print("Received",symbol, "from",exchange.name)
+    async for (symbol, order_book) in pollOrderbook(exchange,symbols):
+        print(datetime.datetime.now(), "Received",symbol, "from",exchange.name)
         orderbookAnalyser.update(
                 exchangename=exchange.name,
                 symbol = symbol,
@@ -75,13 +86,16 @@ def main(argv):
 
     exchanges["Gdax"]=ccxt.gdax({'enableRateLimit': True})
     symbols["Gdax"] = ['BTC/USD','BCH/BTC', 'ETC/BTC','ETH/BTC']
-
+    
+    cmc = ccxt.coinmarketcap({'enableRateLimit': True})
     orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01],edgeTTL=7,priceTTL=60,resultsdir=resultsdir)
     
 
     for exchange in exchanges.keys():
-        asyncio.ensure_future(mainfunc(exchanges[exchange],symbols[exchange],orderbookAnalyser,enablePlotting))
-
+        asyncio.ensure_future(exchangePoller(exchanges[exchange],symbols[exchange],orderbookAnalyser,enablePlotting))
+    
+    asyncio.ensure_future(coinmarketcapPoller(cmc))
+    
     def stop_loop():
         input('Press <enter> to stop')
         loop.call_soon_threadsafe(loop.stop)
@@ -91,7 +105,7 @@ def main(argv):
     loop.run_forever()
     
     orderbookAnalyser.generateExportFilename(list(exchanges.keys()))
-    orderbookAnalyser.saveResultsCSV()
+    orderbookAnalyser.save()
     for _, exchange in exchanges.items():
         exchange.close()
 

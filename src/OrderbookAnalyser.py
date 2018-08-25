@@ -7,7 +7,7 @@ from OrderBook import OrderBook
 from PriceStore import PriceStore
 import pandas as pd
 import os
-
+import dill
 
 class OrderbookAnalyser:
     def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,resultsdir='./',tradeLogFilename="tradelog.csv"):
@@ -20,7 +20,7 @@ class OrderbookAnalyser:
             columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
         self.tradeLogFilename = tradeLogFilename        
         try:
-            os.remove(self.tradeLogFilename)
+            os.remove(self.resultsdir+self.tradeLogFilename)
         except OSError:
             pass
         with open(self.resultsdir+self.tradeLogFilename, 'a') as f:
@@ -132,8 +132,11 @@ class OrderbookAnalyser:
         db.close()
         return self.df_results
 
-    def saveResultsCSV(self):
+    def save(self):
         self.df_results.to_csv(self.resultsdir+self.exportFilename+".csv",index=False)
+        with open(self.resultsdir+self.exportFilename+".pkl", 'wb') as f:
+            dill.dump(self, f)
+    
 
     def plot_graphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):

@@ -30,7 +30,7 @@ def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100,resultsdir
     signal.signal(signal.SIGTERM, sigterm)  # Used by this script
 
     df_results=orderbookAnalyser.runSimFromDB(dbconfig=dbconfig,exchangeList=exchangeList,limit=limit)
-    orderbookAnalyser.saveResultsCSV()
+    orderbookAnalyser.save()
     return df_results
 
 def main(argv):
