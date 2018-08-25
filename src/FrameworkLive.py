@@ -49,7 +49,7 @@ def main(argv):
     enablePlotting = True
     resultsdir = './'
     try:
-        opts, args = getopt.getopt(argv,"nr",["noplot","resultsdir="])
+        opts, _ = getopt.getopt(argv,"nr",["noplot","resultsdir="])
     except getopt.GetoptError:
         print('Invalid parameter. Use --noplot to suppress plots')
         sys.exit(2)
