@@ -6,18 +6,28 @@ from ExchangeFeeStore import ExchangeFeeStore
 from OrderBook import OrderBook
 from PriceStore import PriceStore
 import pandas as pd
+import os
 
 
 class OrderbookAnalyser:
-    def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60):
+    def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,tradeLogFilename="./tradelog.csv"):
         self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))] # create Arbitrage Graph objects
         self.exchangeFeeStore = ExchangeFeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
         self.df_results = pd.DataFrame(
             columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
+        self.tradeLogFilename = tradeLogFilename        
+        try:
+            os.remove(self.tradeLogFilename)
+        except OSError:
+            pass
+        with open(self.tradeLogFilename, 'a') as f:
+            self.df_results.to_csv(f, header=True, index=False)
+
         self.generateExportFilename()
         self.isRunning = True
+
     def getSQLQuery(self,exchangeList,limit):
         sql="""
         SELECT exchange, pair, bids, asks, id, orderbook_time 
@@ -58,7 +68,7 @@ class OrderbookAnalyser:
                 
                 if negative_cycle == True:
                     edges_weight, edges_age_s, hops, exchanges_involved, nof_exchanges_involved=arbitrageGraph.nodeslist_to_edges(nodes,timestamp)
-                    self.df_results=self.df_results.append(pd.DataFrame([[
+                    df_new = pd.DataFrame([[
                         int(id),
                         float(self.vol_BTC[idx]),
                         length,np.exp(-1.0*length)*100-100,
@@ -68,8 +78,10 @@ class OrderbookAnalyser:
                         hops,
                         ",".join(str(x) for x in exchanges_involved),
                         nof_exchanges_involved]],
-                        columns=self.df_results.columns),
-                        ignore_index=True)
+                        columns=self.df_results.columns)
+                    self.df_results=self.df_results.append(df_new,ignore_index=True)
+                    with open(self.tradeLogFilename, 'a') as f:
+                        df_new.to_csv(f, header=False, index=False)
                     
         except IndexError:
             print("*** Invalid orderbook ***")
@@ -78,7 +90,7 @@ class OrderbookAnalyser:
         except TypeError:
             print("*** TypeError error ***")
         except Exception as e:
-            print("*** General error within the update loop error ***")
+            print("*** General error within the update loop error:", e)
 
     def generateExportFilename(self,exchangeList=None):
         if exchangeList == None:
