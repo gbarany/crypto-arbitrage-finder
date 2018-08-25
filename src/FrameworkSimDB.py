@@ -4,18 +4,6 @@ import sys, getopt
 import signal
 from OrderbookAnalyser import OrderbookAnalyser
 
-vol_BTC=[1,0.1,0.01]
-orderbookAnalyser = OrderbookAnalyser(vol_BTC=vol_BTC)
-    
-def sigterm(x, y):
-    print('\n[FrameworkSimDB] SIGTERM received, time to leave.\n')
-    orderbookAnalyser.terminate()
-    # exit()
-
-# Register the signal to the handler
-signal.signal(signal.SIGTERM, sigterm)  # Used by this script
-
-
 def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100,resultsdir="./"):
     
     dbconfig = {}
@@ -32,15 +20,25 @@ def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100,resultsdir
         dbconfig["db"]="orderbook"
         dbconfig["port"]=33306
 
+    orderbookAnalyser = OrderbookAnalyser(vol_BTC=vol_BTC,resultsdir=resultsdir)
+        
+    def sigterm(x, y):
+        print('\n[FrameworkSimDB] SIGTERM received, time to leave.\n')
+        orderbookAnalyser.terminate()
+
+    # Register the signal to the handler
+    signal.signal(signal.SIGTERM, sigterm)  # Used by this script
+
     df_results=orderbookAnalyser.runSimFromDB(dbconfig=dbconfig,exchangeList=exchangeList,limit=limit)
-    orderbookAnalyser.saveResultsCSV(resultsdir)
+    orderbookAnalyser.saveResultsCSV()
     return df_results
 
 def main(argv):
     resultsdir = './'
     runLocalDB = False
     limit = None
-    
+    vol_BTC=[1,0.1,0.01]
+
     try:
         opts, _ = getopt.getopt(argv,"lri",["localdb","resultsdir=","limit="])
     except getopt.GetoptError:
@@ -53,7 +51,6 @@ def main(argv):
             resultsdir = arg
         if opt in ("-i", "--limit"):
             limit = int(arg)
-
     exchangeList = ['coinfloor','kraken','bitfinex','bittrex','gdax','bitstamp','coinbase','poloniex']
     simFromDB(vol_BTC=vol_BTC,exchangeList=exchangeList,limit=limit,resultsdir=resultsdir,runLocalDB=runLocalDB)
     

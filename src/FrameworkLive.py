@@ -77,7 +77,8 @@ def main(argv):
     symbols["Gdax"] = ['BTC/USD','BCH/BTC', 'ETC/BTC','ETH/BTC']
 
     orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01],edgeTTL=7,priceTTL=60)
-
+    orderbookAnalyser.resultsdir = resultsdir
+    
     for exchange in exchanges.keys():
         asyncio.ensure_future(mainfunc(exchanges[exchange],symbols[exchange],orderbookAnalyser,enablePlotting))
 
@@ -90,7 +91,7 @@ def main(argv):
     loop.run_forever()
     
     orderbookAnalyser.generateExportFilename(list(exchanges.keys()))
-    orderbookAnalyser.saveResultsCSV(resultsdir)
+    orderbookAnalyser.saveResultsCSV()
     for _, exchange in exchanges.items():
         exchange.close()
 

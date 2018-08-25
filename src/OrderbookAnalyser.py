@@ -10,11 +10,12 @@ import os
 
 
 class OrderbookAnalyser:
-    def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,tradeLogFilename="./tradelog.csv"):
+    def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,resultsdir='./',tradeLogFilename="tradelog.csv"):
         self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))] # create Arbitrage Graph objects
         self.exchangeFeeStore = ExchangeFeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
+        self.resultsdir = resultsdir
         self.df_results = pd.DataFrame(
             columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
         self.tradeLogFilename = tradeLogFilename        
@@ -22,7 +23,7 @@ class OrderbookAnalyser:
             os.remove(self.tradeLogFilename)
         except OSError:
             pass
-        with open(self.tradeLogFilename, 'a') as f:
+        with open(self.resultsdir+self.tradeLogFilename, 'a') as f:
             self.df_results.to_csv(f, header=True, index=False)
 
         self.generateExportFilename()
@@ -80,7 +81,7 @@ class OrderbookAnalyser:
                         nof_exchanges_involved]],
                         columns=self.df_results.columns)
                     self.df_results=self.df_results.append(df_new,ignore_index=True)
-                    with open(self.tradeLogFilename, 'a') as f:
+                    with open(self.resultsdir+self.tradeLogFilename, 'a') as f:
                         df_new.to_csv(f, header=False, index=False)
                     
         except IndexError:
@@ -131,8 +132,8 @@ class OrderbookAnalyser:
         db.close()
         return self.df_results
 
-    def saveResultsCSV(self,resultsdir="./"):
-        self.df_results.to_csv(resultsdir+self.exportFilename+".csv",index=False)
+    def saveResultsCSV(self):
+        self.df_results.to_csv(self.resultsdir+self.exportFilename+".csv",index=False)
 
     def plot_graphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
