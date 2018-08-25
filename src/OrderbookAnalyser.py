@@ -8,6 +8,7 @@ from PriceStore import PriceStore
 import pandas as pd
 import os
 import dill
+import datetime
 
 class OrderbookAnalyser:
     def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,resultsdir='./',tradeLogFilename="tradelog.csv"):
@@ -16,9 +17,10 @@ class OrderbookAnalyser:
         self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
         self.resultsdir = resultsdir
+        self.timestamp_start = datetime.datetime.now()
         self.df_results = pd.DataFrame(
             columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
-        self.tradeLogFilename = tradeLogFilename        
+        self.tradeLogFilename = self.timestamp_start.strftime('%Y%m%d-%H%M%S')+"_"+tradeLogFilename
         try:
             os.remove(self.resultsdir+self.tradeLogFilename)
         except OSError:
@@ -133,8 +135,9 @@ class OrderbookAnalyser:
         return self.df_results
 
     def save(self):
-        self.df_results.to_csv(self.resultsdir+self.exportFilename+".csv",index=False)
-        with open(self.resultsdir+self.exportFilename+".pkl", 'wb') as f:
+        fname = self.resultsdir+self.timestamp_start.strftime('%Y%m%d-%H%M%S')+"_"+self.exportFilename
+        self.df_results.to_csv(fname+".csv",index=False)
+        with open(fname+".pkl", 'wb') as f:
             dill.dump(self, f)
     
 

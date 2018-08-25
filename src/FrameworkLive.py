@@ -10,6 +10,7 @@ from OrderbookAnalyser import OrderbookAnalyser
 import threading
 import datetime
 
+
 async def pollOrderbook(exchange,symbols):
     i = 0    
     while True:
@@ -88,7 +89,12 @@ def main(argv):
     symbols["Gdax"] = ['BTC/USD','BCH/BTC', 'ETC/BTC','ETH/BTC']
     
     cmc = ccxt.coinmarketcap({'enableRateLimit': True})
-    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01],edgeTTL=7,priceTTL=60,resultsdir=resultsdir)
+    orderbookAnalyser = OrderbookAnalyser(
+        vol_BTC=[1,0.1,0.01],
+        edgeTTL=7,
+        priceTTL=60,
+        resultsdir=resultsdir,
+        tradeLogFilename='tradelog_live.csv')
     
 
     for exchange in exchanges.keys():

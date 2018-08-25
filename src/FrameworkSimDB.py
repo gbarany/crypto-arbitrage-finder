@@ -20,7 +20,10 @@ def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100,resultsdir
         dbconfig["db"]="orderbook"
         dbconfig["port"]=33306
 
-    orderbookAnalyser = OrderbookAnalyser(vol_BTC=vol_BTC,resultsdir=resultsdir)
+    orderbookAnalyser = OrderbookAnalyser(
+        vol_BTC=vol_BTC,
+        resultsdir=resultsdir,
+        tradeLogFilename='tradelog_simdb.csv')
         
     def sigterm(x, y):
         print('\n[FrameworkSimDB] SIGTERM received, time to leave.\n')
