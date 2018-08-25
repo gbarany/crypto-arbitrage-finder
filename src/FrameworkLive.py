@@ -76,9 +76,9 @@ def main(argv):
     exchanges["Gdax"]=ccxt.gdax({'enableRateLimit': True})
     symbols["Gdax"] = ['BTC/USD','BCH/BTC', 'ETC/BTC','ETH/BTC']
 
-    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01],edgeTTL=7,priceTTL=60)
-    orderbookAnalyser.resultsdir = resultsdir
+    orderbookAnalyser = OrderbookAnalyser(vol_BTC=[1,0.1,0.01],edgeTTL=7,priceTTL=60,resultsdir=resultsdir)
     
+
     for exchange in exchanges.keys():
         asyncio.ensure_future(mainfunc(exchanges[exchange],symbols[exchange],orderbookAnalyser,enablePlotting))
 
