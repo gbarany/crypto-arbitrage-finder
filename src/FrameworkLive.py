@@ -71,27 +71,23 @@ def main(argv):
     symbols = {}
     
     exchanges["Poloniex"]=ccxt.poloniex({'enableRateLimit': True})
-    symbols["Poloniex"] = ['BTC/USDT','BCH/BTC', 'DASH/BTC','ETC/BTC','ETH/BTC']
-
-    exchanges["Bitfinex"]=ccxt.bitfinex({'enableRateLimit': True})
-    symbols["Bitfinex"] = ['BTC/USDT','BCH/BTC', 'DASH/BTC', 'ETC/BTC','ETH/BTC']
-
     exchanges["Kraken"]=ccxt.kraken({'enableRateLimit': True})
-    symbols["Kraken"] = ['BTC/USD','BCH/BTC', 'DASH/BTC', 'ETC/BTC','ETH/BTC']
-    
     exchanges["coinfloor"]=ccxt.coinfloor({'enableRateLimit': True})
-    symbols["coinfloor"] = ['BTC/USD']
-
     exchanges["Bitstamp"]=ccxt.bitstamp({'enableRateLimit': True})
-    symbols["Bitstamp"] = ['BTC/USD','BCH/BTC', 'ETH/BTC']
-
     exchanges["Gdax"]=ccxt.gdax({'enableRateLimit': True})
-    symbols["Gdax"] = ['BTC/USD','BCH/BTC', 'ETC/BTC','ETH/BTC']
-    
+    exchanges["Bittrex"]=ccxt.bittrex({'enableRateLimit': True})
+
+    symbols['coinfloor'] =['BTC/EUR','BTC/EUR','BCH/GBP','BTC/GBP','BTC/USD']
+    symbols['Kraken'] =['BTC/USD','BTC/EUR','BTC/USD','BCH/USD','XRP/USD','LTC/EUR','LTC/USD','ETH/BTC','BCH/BTC','XRP/BTC']
+    symbols['Bittrex'] =['XRP/BTC','BTC/USD','BCH/BTC','BTC/USD','LTC/BTC','XRP/ETH','BCH/ETH','ETH/BTC','LTC/ETH','BCH/USDT']
+    symbols['Gdax'] =['BCH/BTC','BTC/EUR','LTC/EUR','BTC/USD','BTC/EUR','ETH/USD','ETH/EUR','BCH/EUR','ETH/BTC','BCH/USD']
+    symbols['Bitstamp'] =['BTC/EUR','ETH/BTC','BTC/USD','ETH/USD','BCH/EUR','BCH/BTC','LTC/EUR','ETH/EUR','XRP/BTC','LTC/BTC']
+    symbols['Poloniex'] =['BCH/BTC','XRP/BTC','LTC/BTC','ETH/BTC','BCH/ETH','ETC/BTC','ETC/ETH','LSK/ETH','LSK/BTC','LTC/USDT']
+
     cmc = ccxt.coinmarketcap({'enableRateLimit': True})
     orderbookAnalyser = OrderbookAnalyser(
         vol_BTC=[1,0.1,0.01],
-        edgeTTL=7,
+        edgeTTL=30,
         priceTTL=60,
         resultsdir=resultsdir,
         tradeLogFilename='tradelog_live.csv')
