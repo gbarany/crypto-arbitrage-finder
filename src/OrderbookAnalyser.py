@@ -2,7 +2,7 @@ from tqdm import tqdm
 import MySQLdb as MySQLdb
 import numpy as np
 from ArbitrageGraph import ArbitrageGraph
-from ExchangeFeeStore import ExchangeFeeStore
+from FeeStore import FeeStore
 from OrderBook import OrderBook
 from PriceStore import PriceStore
 import pandas as pd
@@ -13,7 +13,7 @@ import datetime
 class OrderbookAnalyser:
     def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,resultsdir='./',tradeLogFilename="tradelog.csv"):
         self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))] # create Arbitrage Graph objects
-        self.exchangeFeeStore = ExchangeFeeStore()
+        self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
         self.resultsdir = resultsdir
@@ -64,7 +64,7 @@ class OrderbookAnalyser:
                 length, nodes, negative_cycle = arbitrageGraph.update_point(
                     symbol,
                     exchangename,
-                    self.exchangeFeeStore.getTakerFee(exchangename,symbol),
+                    self.feeStore.getTakerFee(exchangename,symbol),
                     askPrice,
                     bidPrice,
                     timestamp)
