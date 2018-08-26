@@ -1,7 +1,7 @@
 import ccxt
 import numbers
 
-class ExchangeFeeStore:
+class FeeStore:
     def __init__(self):
         self.exchanges = {}
 
