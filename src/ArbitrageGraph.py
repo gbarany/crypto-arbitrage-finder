@@ -63,7 +63,6 @@ class ArbitrageGraph:
         self.G.add_weighted_edges_from(self.glist)
         length, nodes, negative_cycle = bf.negative_edge_cycle(self.G)
         self.negativepath = nodes
-        #print("length:",length, ", nodes:",nodes,", negative_cycle:",negative_cycle)
         return length, nodes, negative_cycle
 
     def nodeslist_to_edges(self,nodes,timestamp_now):

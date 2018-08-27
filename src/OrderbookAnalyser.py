@@ -9,6 +9,9 @@ import pandas as pd
 import os
 import dill
 import datetime
+import logging
+
+logger = logging.getLogger('CryptoArbitrageApp')
 
 class OrderbookAnalyser:
     def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,resultsdir='./',tradeLogFilename="tradelog.csv"):
@@ -19,7 +22,7 @@ class OrderbookAnalyser:
         self.resultsdir = resultsdir
         self.timestamp_start = datetime.datetime.now()
         self.df_results = pd.DataFrame(
-            columns=['id','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
+            columns=['id','timestamp','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
         self.tradeLogFilename = self.timestamp_start.strftime('%Y%m%d-%H%M%S')+"_"+tradeLogFilename
         try:
             os.remove(self.resultsdir+self.tradeLogFilename)
@@ -70,9 +73,11 @@ class OrderbookAnalyser:
                     timestamp)
                 
                 if negative_cycle == True:
+                    logger.info("Found arbitrage deal")
                     edges_weight, edges_age_s, hops, exchanges_involved, nof_exchanges_involved=arbitrageGraph.nodeslist_to_edges(nodes,timestamp)
                     df_new = pd.DataFrame([[
                         int(id),
+                        timestamp,
                         float(self.vol_BTC[idx]),
                         length,np.exp(-1.0*length)*100-100,
                         ",".join(str(x) for x in nodes),
@@ -87,13 +92,13 @@ class OrderbookAnalyser:
                         df_new.to_csv(f, header=False, index=False)
                     
         except IndexError:
-            print("*** Invalid orderbook ***")
+            logger.error("IndexError on exchangename:"+exchangename+" symbol:"+symbol)
         except NameError:
-            print("*** NoneType error ***")
+            logger.error("NameError on exchangename:"+exchangename+" symbol:"+symbol)
         except TypeError:
-            print("*** TypeError error ***")
+            logger.error("TypeError on exchangename:"+exchangename+" symbol:"+symbol)
         except Exception as e:
-            print("*** General error within the update loop error:", e)
+            logger.error("Exception on exchangename:"+exchangename+" symbol:"+symbol+":"+e)
 
     def generateExportFilename(self,exchangeList=None):
         if exchangeList == None:
@@ -115,8 +120,7 @@ class OrderbookAnalyser:
             port=dbconfig["port"])
         cursor = db.cursor()
         nof_rows=cursor.execute(sql)
-        print("Rows fetched:",nof_rows)
-        
+        logger.info("Rows fetched:"+str(nof_rows))
 
         for row in tqdm(cursor):
             if self.isRunning:

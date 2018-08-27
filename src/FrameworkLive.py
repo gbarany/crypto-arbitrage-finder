@@ -9,30 +9,55 @@ import time
 from OrderbookAnalyser import OrderbookAnalyser
 import threading
 import datetime
+import logging
+
+logger = logging.getLogger('CryptoArbitrageApp')
+logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+fh = logging.FileHandler('CryptoArbitrageApp.log')
+fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 
 async def pollOrderbook(exchange,symbols):
     i = 0    
-    while True:
+    while True:    
         symbol = symbols[i % len(symbols)]
-        yield (symbol, await exchange.fetch_order_book(symbol, limit=20))
+        try:
+            yield (symbol, await exchange.fetch_order_book(symbol, limit=20))
+        except (ccxt.ExchangeError, ccxt.NetworkError) as error:
+            logger.error('Fetch orderbook from '+exchange.name+" "+symbol+": "+ type(error).__name__+" "+ str(error.args))
+
         i += 1
         await asyncio.sleep(exchange.rateLimit / 1000)
 
 async def pollCoinmarketcap(cmc):
     while True:
-        yield (await cmc.fetch_tickers())
+        try:
+            yield (await cmc.fetch_tickers())
+        except (ccxt.ExchangeError, ccxt.NetworkError) as error:
+            logger.error("Fetch tickers from coinmarketcap: "+ type(error).__name__+" "+ str(error.args))
+
         await asyncio.sleep(cmc.rateLimit / 1000)
 
 async def coinmarketcapPoller(cmc):
     #await cmc.load_markets()
     async for ticker in pollCoinmarketcap(cmc):
-        print(datetime.datetime.now(), "Received prices from coinmarketcap (BTC/USD",ticker['BTC/USD']['last'],')')
+        logger.info("Received prices from coinmarketcap")
 
 async def exchangePoller(exchange,symbols,orderbookAnalyser,enablePlotting):
     id = 0
     async for (symbol, order_book) in pollOrderbook(exchange,symbols):
-        print(datetime.datetime.now(), "Received",symbol, "from",exchange.name)
+        logger.info("Received "+symbol+" from "+exchange.name)
         orderbookAnalyser.update(
                 exchangename=exchange.name,
                 symbol = symbol,
@@ -52,13 +77,14 @@ def main(argv):
     try:
         opts, _ = getopt.getopt(argv,"nr",["noplot","resultsdir="])
     except getopt.GetoptError:
-        print('Invalid parameter. Use --noplot to suppress plots')
+        logger.error('Invalid parameter. Use --noplot to suppress plots')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-n", "--noplot"):
             enablePlotting = False
         if opt in ("-r", "--resultsdir"):
             resultsdir = arg
+
 
     if enablePlotting:
         plt.figure(1)
@@ -108,8 +134,8 @@ def main(argv):
     
     orderbookAnalyser.generateExportFilename(list(exchanges.keys()))
     orderbookAnalyser.save()
-    for _, exchange in exchanges.items():
-        exchange.close()
+    #for _, exchange in exchanges.items():
+    #    exchange.close()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
