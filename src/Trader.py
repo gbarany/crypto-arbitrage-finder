@@ -36,7 +36,7 @@ class Trader:
         exchange = getattr(ccxt, exchangeName)(self.keys[exchangeName])
         if exchange.has['createMarketOrder']:
             try:
-                response=exchange.createLimitBuyOrder(symbol, amount)
+                response= await exchange.createLimitBuyOrder(symbol, amount)
             except Exception as e:
                 print('Failed to create order with', exchange.id, type(e).__name__, str(e))
         else:
@@ -44,10 +44,25 @@ class Trader:
         await exchange.close()
         return response
 
+    def marketBuyOrders(self,tradelist):
+        for trade in tradelist:
+            exchangeName = trade[0]
+            symbol = trade[1]
+            amount = trade[2]
+            asyncio.ensure_future(self.marketBuyOrder(exchangeName,symbol,amount))
+
+        pending = asyncio.Task.all_tasks()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(asyncio.gather(*pending))
+
 if __name__ == "__main__":
     trader = Trader(exchangeNames=["kraken","gdax","bitstamp"],credfile='./cred/api.json')
-    trader.fetchBalances()
-    print(trader.getFreeBalance("kraken","BTC"))
+    #trader.fetchBalances()
+    #print(trader.getFreeBalance("kraken","BTC"))
+    tradelist = [
+        ("kraken","BTC",0.0001)
+    ]
 
+    trader.marketBuyOrders(tradelist)
 
     #print(stock.isSufficientStock("kraken","BTC",2))
