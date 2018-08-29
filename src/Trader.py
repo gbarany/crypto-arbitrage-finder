@@ -26,19 +26,19 @@ class Trader:
             if 'test' in exchange.urls:
                 exchange.urls['api'] = exchange.urls['test']
                 await exchange.load_markets()
-                self.exchanges[exchangeName.lower()] = exchange
+                self.exchanges[exchangeName.lower().replace(" ","")] = exchange
         else:
             exchange.load_markets()
-            self.exchanges[exchangeName.lower()] = exchange
+            self.exchanges[exchangeName.lower().replace(" ","")] = exchange
 
 
     async def fetchBalance(self,exchange):
         try:
-            self.balance[exchange.name.lower()] = await exchange.fetch_balance()
+            self.balance[exchange.name.lower().replace(" ","")] = await exchange.fetch_balance()
         except (ccxt.ExchangeError, ccxt.NetworkError) as error:
             logger.error('Fetch balance from '+exchange.name+" "+type(error).__name__+" "+ str(error.args))
 
-        await exchange.close()
+        #await exchange.close()
     
     def fetchBalances(self):
         self.balance = {}
@@ -80,11 +80,11 @@ class Trader:
                 response= await exchange.createMarketBuyOrder(symbol, amount)
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
                 logger.error('createMarketBuyOrder failed from '+exchange.name+" "+symbol+": "+ type(error).__name__+" "+ str(error.args))
-            #except Exception as error:
-            #    logger.error('createMarketBuyOrder failed from '+exchange.name+" "+symbol+": "+ type(error).__name__+" "+ str(error.args))
+            except Exception as error:
+                logger.error('createMarketBuyOrder failed from '+exchange.name+" "+symbol+": "+ type(error).__name__+" "+ str(error.args))
         else:
             logger.error("No market oder possible on "+exchange.name)
-        await exchange.close()
+        #await exchange.close()
         return response
 
     def marketBuyOrders(self,tradelist):
@@ -102,7 +102,7 @@ class Trader:
             return
         
         for trade in tradelist:
-            exchange = self.exchanges[trade[0].lower()]
+            exchange = self.exchanges[trade[0].lower().replace(" ","")]
             symbol = trade[1]
             amount = trade[2]
             orders.append(asyncio.ensure_future(self.marketBuyOrder(exchange,symbol,amount)))
@@ -112,12 +112,12 @@ class Trader:
 
 if __name__ == "__main__":
     logger.info("Trader start")
-    trader = Trader(exchangeNames=["gdax"],credfile='./cred/api_sandbox.json',enableSandbox=True)
-    #trader = Trader(exchangeNames=["kraken","gdax","bitstamp"],credfile='./cred/api_sandbox.json',enableSandbox=True)
+    trader = Trader(exchangeNames=["coinbasepro"],credfile='./cred/api_sandbox.json',enableSandbox=True)
+    #trader = Trader(exchangeNames=["kraken","coinbasepro","bitstamp"],credfile='./cred/api_sandbox.json',enableSandbox=True)
     trader.fetchBalances()
-    logger.info("Free balance on GDAX:"+str(trader.getFreeBalance("gdax","BTC")))
+    logger.info("Free balance on coinbasepro:"+str(trader.getFreeBalance("coinbasepro","BTC")))
     tradelist = [
-        ("gdax","BTC/USD",0.01),
+        ("coinbasepro","BTC/USD",0.01),
         #("bitstamp","BTC/USD",0.0001)
         #("bitstamp","BTC/USD",0.0001)
     ]
