@@ -2,14 +2,20 @@ import asyncio
 import json
 import ccxt.async_support as ccxt
 from InitLogger import *
+from Trade import Trade
+from TraderExceptions import OrderCreationError
 
+ 
 class Trader:
+    BUY_ORDER = "BUY_ORDER"
+    SELL_ORDER = "SELL_ORDER"
+
     def __init__(self, exchangeNames=[],credfile='./cred/api.json',enableSandbox=True):
         self.keys = {}
         self.balance = {}
         self.credfile =  credfile
         self.enableSandbox = enableSandbox
-
+        self.trades = {}
         with open(self.credfile) as file:
             self.keys = json.load(file)
 
@@ -17,9 +23,9 @@ class Trader:
         tasks=[]
         for exchangeName in exchangeNames:
             tasks.append(asyncio.ensure_future(self.initExchange(exchangeName)))
-        
+        logger.info("Exchanges init started")
         asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
-
+        logger.info("Exchanges init completed")
     async def initExchange(self,exchangeName):
         exchange = getattr(ccxt, exchangeName)(self.keys[exchangeName])
         if self.enableSandbox == True:
@@ -28,8 +34,36 @@ class Trader:
                 await exchange.load_markets()
                 self.exchanges[exchangeName.lower().replace(" ","")] = exchange
         else:
-            exchange.load_markets()
+            await exchange.load_markets()
             self.exchanges[exchangeName.lower().replace(" ","")] = exchange
+
+    async def closeExchange(self,exchange):
+        await exchange.close()
+
+    def closeExchanges(self):
+        tasks=[]
+        for _,exchange in self.exchanges.items():
+            tasks.append(asyncio.ensure_future(self.closeExchange(exchange)))        
+        asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
+        logger.info("Exchanges closed")
+
+    async def fetchOrderStatus(self,trade):
+        response=await trader.exchanges[trade.exchangeNameStd].fetchOrder(trade.id)
+        trade.timestamp = response["timestamp"]
+        trade.datetime = response["datetime"]
+        trade.status = response["status"]
+        trade.cost = response["cost"]
+        trade.amount = response["amount"]
+        trade.filled = response["filled"]
+        trade.remaining = response["remaining"]
+        self.trades[trade.id]=trade
+
+    def fetchOrderStatuses(self):
+        tasks=[]
+        for _,trade in self.trades.items():
+            tasks.append(asyncio.ensure_future(self.fetchOrderStatus(trade)))        
+        asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
+        logger.info("Order statuses fetched")
 
 
     async def fetchBalance(self,exchange):
@@ -59,69 +93,77 @@ class Trader:
     def isSufficientStock(self,exchange,symbol,requiredStock):
         return self.getFreeBalance(exchange,symbol)>=requiredStock
 
-    def isTransactionValid(self,exchange,symbol,amount):        
+    def isTransactionValid(self,exchangeNameStd,symbol,amount):        
+        exchange = self.exchanges[exchangeNameStd]
         if exchange.markets[symbol]['limits']['price']['min']:
             if amount<exchange.markets[symbol]['limits']['price']['min']:
-                logger.warning('Amount too small, won''t execute on '+exchange.name+" "+symbol+" Amount: "+str(amount))
-                return False
+                raise ValueError('Amount too small, won''t execute on '+exchange.name+" "+symbol+" Amount: "+str(amount)+
+                " Min.amount:"+str(exchange.markets[symbol]['limits']['price']['min']))
+
 
         if exchange.markets[symbol]['limits']['price']['max']:
             if amount>exchange.markets[symbol]['limits']['price']['max']:
-                logger.warning('Amount too big, won''t execute on '+exchange.name+" "+symbol+" Amount: "+str(amount))
-                return False
-        
-        return True
+                raise ValueError('Amount too big, won''t execute on '+exchange.name+" "+symbol+" Amount: "+str(amount)+
+                " Max.amount:"+str(exchange.markets[symbol]['limits']['price']['max']))
 
-    async def marketBuyOrder(self,exchange,symbol,amount):
+    async def createLimitOrder(self,trade):
         response={}
+        exchange=self.exchanges[trade.exchangeNameStd]
+        symbol=trade.symbol
+        amount=trade.amount
+        price=trade.price
+        tradetype=trade.tradetype
+        try:
+            if tradetype==Trader.BUY_ORDER:
+                response= await exchange.createLimitBuyOrder(symbol, amount,price)
+                logger.info("createLimitBuyOrder "+symbol+" Amount:"+str(amount)+" Price:"+str(price)+" created successfully. "+str(response))
+            elif tradetype==Trader.SELL_ORDER:
+                response= await exchange.createLimitSellOrder(symbol, amount,price)
+                logger.info("createLimitSellOrder "+symbol+" Amount:"+str(amount)+" Price:"+str(price)+" created successfully. "+str(response))
+            else:
+                raise ValueError('tradetype has an invalid value')
+            trade.status = trade.STATUS_CREATED
+            trade.id = response['id']
+            trade.errorlog = response['info']['error']
+            self.trades[trade.id] = trade
+        except Exception as error:
+            logger.error('createLimitBuyOrder failed from '+exchange.name+" "+symbol+": "+ type(error).__name__+" "+ str(error.args))
+            raise OrderCreationError("Order creation failed"+exchange.name+" "+symbol)
 
-        if exchange.has['createMarketOrder']:
-            try:
-                response= await exchange.createMarketBuyOrder(symbol, amount)
-            except (ccxt.ExchangeError, ccxt.NetworkError) as error:
-                logger.error('createMarketBuyOrder failed from '+exchange.name+" "+symbol+": "+ type(error).__name__+" "+ str(error.args))
-            except Exception as error:
-                logger.error('createMarketBuyOrder failed from '+exchange.name+" "+symbol+": "+ type(error).__name__+" "+ str(error.args))
-        else:
-            logger.error("No market oder possible on "+exchange.name)
-        #await exchange.close()
-        return response
-
-    def marketBuyOrders(self,tradelist):
+    def createLimitOrders(self,tradelist):
         orders = []
-        
-        allTransactionsValid = True
-        for trade in tradelist:
-            exchange = self.exchanges[trade[0]]
-            symbol = trade[1]
-            amount = trade[2]
-            allTransactionsValid = (allTransactionsValid and self.isTransactionValid(exchange,symbol,amount))
+        try:
+            # Pre-check transactions
+            for trade in tradelist:
+                if trade.exchangeNameStd in self.exchanges.keys():
+                    self.isTransactionValid(trade.exchangeNameStd,trade.symbol,trade.amount)
+                else:
+                    raise ValueError('exchange '+ trade[0] +' is not intialized')
+            
+            # Fire real transactions
+            for trade in tradelist:
+                orders.append(asyncio.ensure_future(self.createLimitOrder(trade)))
 
-        if not allTransactionsValid:
-            logger.warn("Arbitrage deal cannot be executed as at least one transaction is invalid")
-            return
-        
-        for trade in tradelist:
-            exchange = self.exchanges[trade[0].lower().replace(" ","")]
-            symbol = trade[1]
-            amount = trade[2]
-            orders.append(asyncio.ensure_future(self.marketBuyOrder(exchange,symbol,amount)))
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(asyncio.gather(*orders))
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(asyncio.gather(*orders))
+        except OrderCreationError as e:
+            # TODO: cancel all orders in the deal
+            pass
+        except Exception as e:
+            logger.error("Arbitrage deal cannot be executed, "+str(e.args))
 
 if __name__ == "__main__":
-    logger.info("Trader start")
-    trader = Trader(exchangeNames=["coinbasepro"],credfile='./cred/api_sandbox.json',enableSandbox=True)
-    #trader = Trader(exchangeNames=["kraken","coinbasepro","bitstamp"],credfile='./cred/api_sandbox.json',enableSandbox=True)
+    trader = Trader(exchangeNames=["kraken"],credfile='./cred/api_trading.json',enableSandbox=False)
     trader.fetchBalances()
-    logger.info("Free balance on coinbasepro:"+str(trader.getFreeBalance("coinbasepro","BTC")))
+    logger.info("Free balance:"+str(trader.getFreeBalance("kraken","BTC")))
     tradelist = [
-        ("coinbasepro","BTC/USD",0.01),
+        Trade("kraken","BTC/USD",0.1,20000,Trader.SELL_ORDER),
         #("bitstamp","BTC/USD",0.0001)
         #("bitstamp","BTC/USD",0.0001)
     ]
 
-    trader.marketBuyOrders(tradelist)
-
+    trader.createLimitOrders(tradelist)
+    trader.fetchOrderStatuses()
+    trader.closeExchanges()
     #print(stock.isSufficientStock("kraken","BTC",2))
