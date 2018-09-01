@@ -1,7 +1,11 @@
 import ccxt
 import numbers
+from InitLogger import logger
 
 class FeeStore:
+
+    DEFAULT_TAKER_FEE = 0.003
+    DEFAULT_MAKER_FEE = 0.0026
     def __init__(self):
         self.exchanges = {}
 
@@ -20,18 +24,22 @@ class FeeStore:
             return 0
 
     def getTakerFee(self,exchangename,symbols):
-        #return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['taker'])
-        return 0.003 # TODO: add fee calculation lookup table
+        try:
+            return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['taker'])
+        except Exception as e:
+            logger.warn("Couldn't fetch taker fee from exchange, defaulting to "+str(FeeStore.DEFAULT_TAKER_FEE)+" "+str(e.args))
+            return FeeStore.DEFAULT_TAKER_FEE
+        
 
     def getMakerFee(self,exchangename,symbols):
-        #return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['maker'])
-        return 0.0026 # TODO: add fee calculation lookup table
-    def getFundingFee(self,exchangename,symbol):
-        #return self.numberOrZero(self.getExchange(exchangename).currencies[symbol]['fee'])
-        return 0 # TODO: add fee calculation lookup table
+        try:
+            return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['maker'])
+        except Exception as e:
+            logger.warn("Couldn't fetch maker fee from exchange, defaulting to "+str(FeeStore.DEFAULT_MAKER_FEE)+" "+str(e.args))
+            return FeeStore.DEFAULT_MAKER_FEE
+
 
 if __name__ == "__main__":
-    exchangeFeeStore = FeeStore()
-    print("Taker",exchangeFeeStore.getTakerFee('poloniex','BTC/USDT'))
-    print("Maker",exchangeFeeStore.getMakerFee('kraken','BTC/USD'))
-    print("Funding",exchangeFeeStore.getFundingFee('kraken','BTC'))
+    feeStore = FeeStore()
+    print("Taker",feeStore.getTakerFee('poloniex','BTC/USDT'))
+    print("Maker",feeStore.getMakerFee('kraken','BTC/USD'))
