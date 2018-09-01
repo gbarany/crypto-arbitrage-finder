@@ -7,9 +7,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from OrderbookAnalyser import OrderbookAnalyser
-import threading
+from Trader import Trader
+from threading import Condition, Thread
 import datetime
-from InitLogger import *
+from InitLogger import logger
 
 async def pollOrderbook(exchange,symbols):
     i = 0    
@@ -53,28 +54,39 @@ async def exchangePoller(exchange,symbols,orderbookAnalyser,enablePlotting):
         if enablePlotting:
             orderbookAnalyser.plot_graphs()
 
+def consumeArbTradeTriggerEvent(arbTradeTriggerEvent,arbTradeQueue,isSandboxMode):
+    while True:
+        arbTradeTriggerEvent.acquire()
+        arbTradeTriggerEvent.wait()  # Blocks until an item is available for consumption.
+        # do stuff with the trading queue
+        with Trader(exchangeNames=["kraken"],credfile='./cred/api_trading.json',isSandboxMode=isSandboxMode) as trader:
+            trader.executeTrades(arbTradeQueue.pop())
+
+        arbTradeTriggerEvent.release()
+        logger.info("Arbitrage trade trigger event consumed")
 
 def main(argv):
     enablePlotting = True
+    isSandboxMode = True
+
     resultsdir = './'
     try:
-        opts, _ = getopt.getopt(argv,"nr",["noplot","resultsdir="])
+        opts, _ = getopt.getopt(argv,"nrl",["noplot","resultsdir=","live"])
     except getopt.GetoptError:
-        logger.error('Invalid parameter. Use --noplot to suppress plots')
+        logger.error('Invalid parameter. --noplot: suppress plots, --resultsdir=: output directory, --live:execute trades')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-n", "--noplot"):
             enablePlotting = False
         if opt in ("-r", "--resultsdir"):
             resultsdir = arg
+        if opt in ("-l", "--live"):
+            isSandboxMode = False
 
-
-    if enablePlotting:
-        plt.figure(1)
-        plt.plot(1,2)
-        plt.ion()
-        plt.show()
-        plt.pause(0.001)
+    if isSandboxMode:
+        logger.info("Running in sandbox mode, TRADES WILL NOT BE EXECUTED")
+    else:
+        logger.info("Running in live mode, TRADES WILL BE EXECUTED")
 
     exchanges = {}
     symbols = {}
@@ -92,6 +104,18 @@ def main(argv):
     symbols['Gdax'] =['BCH/BTC','BTC/EUR','LTC/EUR','BTC/USD','BTC/EUR','ETH/USD','ETH/EUR','BCH/EUR','ETH/BTC','BCH/USD']
     symbols['Bitstamp'] =['BTC/EUR','ETH/BTC','BTC/USD','ETH/USD','BCH/EUR','BCH/BTC','LTC/EUR','ETH/EUR','XRP/BTC','LTC/BTC']
     symbols['Poloniex'] =['BCH/BTC','XRP/BTC','LTC/BTC','ETH/BTC','BCH/ETH','ETC/BTC','ETC/ETH','LSK/ETH','LSK/BTC','LTC/USDT']
+    
+
+    if enablePlotting:
+        plt.figure(1)
+        plt.plot(1,2)
+        plt.ion()
+        plt.show()
+        plt.pause(0.001)
+
+
+    arbTradeTriggerEvent = Condition()
+    arbTradeQueue = []
 
     cmc = ccxt.coinmarketcap({'enableRateLimit': True})
     orderbookAnalyser = OrderbookAnalyser(
@@ -100,7 +124,9 @@ def main(argv):
         priceTTL=60,
         resultsdir=resultsdir,
         tradeLogFilename='tradelog_live.csv',
-        priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC)
+        priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
+        arbTradeTriggerEvent=arbTradeTriggerEvent,
+        arbTradeQueue=arbTradeQueue)
     
 
     for exchange in exchanges.keys():
@@ -113,13 +139,12 @@ def main(argv):
         loop.call_soon_threadsafe(loop.stop)
 
     loop = asyncio.get_event_loop()
-    threading.Thread(target=stop_loop).start()
+    Thread(target=stop_loop).start()
+    Thread(target=consumeArbTradeTriggerEvent, args=(arbTradeTriggerEvent,arbTradeQueue,isSandboxMode)).start()
     loop.run_forever()
     
     orderbookAnalyser.generateExportFilename(list(exchanges.keys()))
     orderbookAnalyser.save()
-    #for _, exchange in exchanges.items():
-    #    exchange.close()
-
+    logger.info("FrameworkLive exited normally. Bye.")
 if __name__ == "__main__":
     main(sys.argv[1:])

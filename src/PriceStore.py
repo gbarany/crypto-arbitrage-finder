@@ -1,5 +1,5 @@
 import ast
-from InitLogger import *
+from InitLogger import logger
 
 class PriceStore:
     def __init__(self,priceTTL=5):

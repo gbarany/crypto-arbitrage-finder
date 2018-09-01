@@ -31,7 +31,7 @@ class FeeStore:
         return 0 # TODO: add fee calculation lookup table
 
 if __name__ == "__main__":
-    exchangeFeeStore = ExchangeFeeStore()
+    exchangeFeeStore = FeeStore()
     print("Taker",exchangeFeeStore.getTakerFee('poloniex','BTC/USDT'))
     print("Maker",exchangeFeeStore.getMakerFee('kraken','BTC/USD'))
     print("Funding",exchangeFeeStore.getFundingFee('kraken','BTC'))

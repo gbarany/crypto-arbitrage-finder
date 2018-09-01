@@ -31,9 +31,9 @@ class OrderBook:
                 vol = 0
                 break
         if vol==0:
-            return vol_price/vol_total
+            return vol_price/vol_total, entry_price
         else:
-            return None
+            return None, None
 
     def getAskPrice(self,vol):
         return self.getPrice(self.asks,vol)
@@ -48,5 +48,5 @@ if __name__ == "__main__":
         asks="[[7500, 1],[8000, 1]]",
         bids="[[7000, 1],[6500, 1]]")
 
-    print("Ask price",orderBook.getAskPrice(0.5))
-    print("Bid price",orderBook.getBidPrice(0.5))
+    print("Ask price",orderBook.getAskPrice(1.5))
+    print("Bid price",orderBook.getBidPrice(1.5))

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import ccxt.async_support as ccxt
-from InitLogger import *
+from InitLogger import logger
 from Trade import Trade
 from TraderExceptions import OrderCreationError, TradesShowstopper
 import time
@@ -12,11 +12,12 @@ class Trader:
     NOF_CCTX_RETRY = 4
     TTL_TRADEORDER_S = 10
 
-    def __init__(self, exchangeNames=[],credfile='./cred/api.json'):
+    def __init__(self, exchangeNames=[],credfile='./cred/api.json',isSandboxMode=True):
         self.keys = {}
         self.balance = {}
         self.credfile =  credfile
         self.trades = {}
+        self.isSandboxMode=isSandboxMode
         with open(self.credfile) as file:
             self.keys = json.load(file)
 
@@ -185,6 +186,9 @@ class Trader:
     def createLimitOrders(self,tradelist):
         orders = []
         try:
+            if self.isSandboxMode==True:
+                raise ValueError('trader sandbox mode ON')
+                
             # Pre-check transactions
             for trade in tradelist:
                 if trade.exchangeNameStd in self.exchanges.keys():
