@@ -77,15 +77,15 @@ class OrderbookAnalyser:
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
                 vol_BASE = self.vol_BTC[idx]*rate_BTC_to_BASE
 
-                askPrice,askLimitPrice=orderBook.getAskPrice(vol=vol_BASE)
-                bidPrice,bidLimitPrice=orderBook.getBidPrice(vol=vol_BASE)
+                askPrice=orderBook.getAskPrice(vol=vol_BASE)
+                bidPrice=orderBook.getBidPrice(vol=vol_BASE)
                 
                 length, nodes, negative_cycle = arbitrageGraph.update_point(
                     symbol,
                     exchangename,
                     self.feeStore.getTakerFee(exchangename,symbol),
-                    askPrice,
-                    bidPrice,
+                    askPrice.meanprice,
+                    bidPrice.meanprice,
                     timestamp)
                 
                 if negative_cycle == True:
@@ -122,22 +122,22 @@ class OrderbookAnalyser:
 
                                 if A == 'EUR' or A =='USD' or A =='GBP':
                                     tradesymbols = B+"/"+A
-                                    limitprice = bidLimitPrice
+                                    limitprice = bidPrice.limitprice
                                     tradetype = Trader.SELL_ORDER
                                     volume = 1/vol_BASE
                                 elif A == 'BTC' and B!='EUR' and B!='USD' and B!='GBP':
                                     tradesymbols = B+"/"+A
-                                    limitprice = bidLimitPrice
+                                    limitprice = bidPrice.limitprice
                                     tradetype = Trader.SELL_ORDER
                                     volume = 1/vol_BASE
                                 elif A == 'ETH' and B!='EUR' and B!='USD' and B!='GBP' and B!='BTC' :
                                     tradesymbols = B+"/"+A
-                                    limitprice = bidLimitPrice
+                                    limitprice = bidPrice.limitprice
                                     tradetype = Trader.SELL_ORDER
                                     volume = 1/vol_BASE
                                 else:
                                     tradesymbols = A+"/"+B
-                                    limitprice = askLimitPrice
+                                    limitprice = askPrice.limitprice
                                     tradetype = Trader.BUY_ORDER
                                     volume = vol_BASE
                                 
