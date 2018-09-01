@@ -1,4 +1,5 @@
 import ast
+from InitLogger import *
 
 class PriceStore:
     def __init__(self,priceTTL=5):
@@ -14,6 +15,23 @@ class PriceStore:
 
         return False
 
+    def updatePriceFromCoinmarketcap(self,ticker):
+        self.price.clear()
+        for symbol, tickeritem in ticker.items():
+            try:
+                symbolsplit = symbol.split('/')
+                symbol_base  = ('coinmarketcap',symbolsplit[0])
+                symbol_quote  = ('coinmarketcap',symbolsplit[1])
+                price = tickeritem['last']
+                timestamp = tickeritem['timestamp']
+                if price != None:
+                    if price>0:
+                        key1 = (symbol_quote,symbol_base)
+                        key2 = (symbol_base,symbol_quote)
+                        self.price[key1] = (timestamp,1/price)
+                        self.price[key2] = (timestamp,price)
+            except Exception as e:
+                logger.error("Error occured parsing CMC ticker "+symbol+" "+str(e.args))
 
     def updatePriceFromOrderBook(self,symbol,exchangename,asks,bids,timestamp):
         self.symbol = symbol

@@ -14,13 +14,18 @@ import logging
 logger = logging.getLogger('CryptoArbitrageApp')
 
 class OrderbookAnalyser:
-    def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,resultsdir='./',tradeLogFilename="tradelog.csv"):
+    PRICE_SOURCE_ORDERBOOK="PRICE_SOURCE_ORDERBOOK"
+    PRICE_SOURCE_CMC="PRICE_SOURCE_CMC"
+
+    def __init__(self,vol_BTC=[1],edgeTTL=5,priceTTL=60,resultsdir='./',tradeLogFilename="tradelog.csv",priceSource=PRICE_SOURCE_ORDERBOOK):
         self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))] # create Arbitrage Graph objects
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
         self.resultsdir = resultsdir
         self.timestamp_start = datetime.datetime.now()
+        self.cmcTicker = None
+        self.priceSource = priceSource
         self.df_results = pd.DataFrame(
             columns=['id','timestamp','vol_BTC','length','profit_perc','nodes','edges_weight','edges_age_s','hops','exchanges_involved','nof_exchanges_involved'])
         self.tradeLogFilename = self.timestamp_start.strftime('%Y%m%d-%H%M%S')+"_"+tradeLogFilename
@@ -48,10 +53,17 @@ class OrderbookAnalyser:
         sql += ";"
         return sql
 
+    def updateCmcPrice(self,cmcTicker):
+        self.cmcTicker = cmcTicker
+
     def update(self,exchangename,symbol,bids,asks,id,timestamp):
+        if self.priceSource == OrderbookAnalyser.PRICE_SOURCE_ORDERBOOK or self.cmcTicker==None:
+            self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
+            if self.cmcTicker==None:
+                logger.warn('No valid CMC ticker received yet, reverting back to orderbook pricing')
 
-        self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
-
+        elif self.priceSource == OrderbookAnalyser.PRICE_SOURCE_CMC:
+            self.priceStore.updatePriceFromCoinmarketcap(self.cmcTicker)
         try:
             orderBook = OrderBook(symbol=symbol,asks=asks,bids=bids)
             rate_BTC_to_BASE = self.priceStore.getMeanPrice(symbol_base_ref='BTC',symbol_quote_ref=symbol.split('/')[0],timestamp=timestamp)                

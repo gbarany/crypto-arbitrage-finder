@@ -32,10 +32,10 @@ async def pollCoinmarketcap(cmc):
 
         await asyncio.sleep(cmc.rateLimit / 1000)
 
-async def coinmarketcapPoller(cmc):
-    #await cmc.load_markets()
+async def coinmarketcapPoller(cmc,orderbookAnalyser):
     async for ticker in pollCoinmarketcap(cmc):
         logger.info("Received prices from coinmarketcap")
+        orderbookAnalyser.updateCmcPrice(ticker)
 
 async def exchangePoller(exchange,symbols,orderbookAnalyser,enablePlotting):
     id = 0
@@ -99,13 +99,14 @@ def main(argv):
         edgeTTL=30,
         priceTTL=60,
         resultsdir=resultsdir,
-        tradeLogFilename='tradelog_live.csv')
+        tradeLogFilename='tradelog_live.csv',
+        priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC)
     
 
     for exchange in exchanges.keys():
         asyncio.ensure_future(exchangePoller(exchanges[exchange],symbols[exchange],orderbookAnalyser,enablePlotting))
     
-    asyncio.ensure_future(coinmarketcapPoller(cmc))
+    asyncio.ensure_future(coinmarketcapPoller(cmc,orderbookAnalyser))
     
     def stop_loop():
         input('Press <enter> to stop')
