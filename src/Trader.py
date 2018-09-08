@@ -3,7 +3,7 @@ import json
 import ccxt.async_support as ccxt
 from InitLogger import logger
 from Trade import Trade
-from TraderExceptions import OrderCreationError, TradesShowstopper
+from Exceptions import OrderCreationError, TradesShowstopper
 import time
 
 class Trader:
