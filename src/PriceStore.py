@@ -2,9 +2,9 @@ import ast
 from InitLogger import logger
 
 class PriceStore:
-    def __init__(self,priceTTL=5):
+    def __init__(self,priceTTL=60):
         self.price = {}
-        self.priceTTL = 60
+        self.priceTTL = priceTTL
     
     def isOrderbookEmpty(self,ob):
         if len(ob)==0:
@@ -82,10 +82,11 @@ class PriceStore:
             if symbol_base_ref == symbol_base \
                 and symbol_quote_ref == symbol_quote \
                 and exchange_base == exchange_quote \
-                and (timestamp-ts)<=self.priceTTL:
+                and (timestamp-ts)<=self.priceTTL \
+                and timestamp>ts:
                 acc += rate
                 cntr += 1
         if cntr != 0:
             return acc/cntr
         else:
-            return None
+            raise ValueError('Price information not available %s/%s timestamp %f'% (symbol_base_ref,symbol_quote_ref,timestamp))

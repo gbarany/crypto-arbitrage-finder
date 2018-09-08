@@ -3,7 +3,8 @@
 import sys, getopt
 import signal
 from OrderbookAnalyser import OrderbookAnalyser
-from InitLogger import *
+from InitLogger import logger
+
 
 def simFromDB(runLocalDB=True,vol_BTC=[1],exchangeList=None,limit=100,resultsdir="./"):
     

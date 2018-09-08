@@ -4,6 +4,9 @@ class Trade:
     STATUS_EXECUTED = "STATUS_EXECUTED "
     STATUS_FAILED = "STATUS_FAILED"
 
+    BUY_ORDER = "BUY_ORDER"
+    SELL_ORDER = "SELL_ORDER"
+
     def __init__(self,exchangeName,symbol,amount,price,tradetype):
         self.exchangeName=exchangeName
         self.exchangeNameStd=exchangeName.lower().replace(" ","")        
@@ -16,7 +19,6 @@ class Trade:
 
         self.timestamp = None
         self.datetime = None
-        self.status = None
         self.cost = None
         self.filled = None
         self.remaining = None

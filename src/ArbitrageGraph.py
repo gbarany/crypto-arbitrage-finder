@@ -3,9 +3,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
-
+from ArbitrageGraphPath import ArbitrageGraphPath
 class ArbitrageGraph:
-    def __init__(self,edgeTTL):
+    def __init__(self,edgeTTL=5):
         self.gdict = {}
         self.glist = []
         self.G = nx.DiGraph()
@@ -13,7 +13,7 @@ class ArbitrageGraph:
         self.negativepath = []
         self.edgeTTL = edgeTTL
         
-    def update_point(self,symbol,exchangename,fee_rate,l_ask,h_bid,timestamp):
+    def updatePoint(self,symbol,exchangename,fee_rate,l_ask,h_bid,timestamp):
         symbolsplit = symbol.split('/')
         if len(symbolsplit)!=2:
             return 0,[],None
@@ -40,9 +40,9 @@ class ArbitrageGraph:
             self.gdict[key1] = (timestamp,float(-1.0 * np.log((1-fee_rate)*1/l_ask)))
         if h_bid != None:
             self.gdict[key2] = (timestamp,float(-1.0 * np.log((1-fee_rate)*h_bid)))
-        return self.update_graph(timestamp=timestamp)
+        return self.updateGraph(timestamp=timestamp)
 
-    def update_graph(self,timestamp):
+    def updateGraph(self,timestamp):
         self.glist = []
         now = timestamp
         for k, v in self.gdict.items():
@@ -65,31 +65,14 @@ class ArbitrageGraph:
         self.negativepath = nodes
         return length, nodes, negative_cycle
 
-    def nodeslist_to_edges(self,nodes,timestamp_now):
-        edges_weight = []
-        edges_age_s = []
-        hops = len(nodes)-1
-        exchanges_involved = []
+    def getPath(self,nodes,timestamp_now):
+        return ArbitrageGraphPath(
+            gdict=self.gdict,
+            nodes=nodes,
+            timestamp_now=timestamp_now,
+            edgeTTL_s=self.edgeTTL)
 
-        for i, node in enumerate(nodes[:-1]):
-            source = node.split('-')
-            target = nodes[(i+1)%len(nodes)].split('-')
-            
-            exchanges_involved.append(source[0])
-            exchanges_involved.append(target[0])
-
-            v=self.gdict[((source[0],source[1]),(target[0],target[1]))]
-            if v[0] is not None:
-                edges_age_s.append(timestamp_now-v[0])
-            else:
-                edges_age_s.append(0)
-            edges_weight.append(v[1])
-
-        exchanges_involved = sorted(set(exchanges_involved),key=str.lower)
-        nof_exchanges_involved = len(exchanges_involved)
-        return edges_weight, edges_age_s, hops, exchanges_involved, nof_exchanges_involved
-
-    def plot_graph(self,figid=1,vol_BTC=None):
+    def plotGraph(self,figid=1,vol_BTC=None):
         plt.figure(figid)
         plt.clf()
         plt.title("Throughput Volume %2.3fBTC"%vol_BTC)

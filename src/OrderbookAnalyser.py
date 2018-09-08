@@ -80,7 +80,7 @@ class OrderbookAnalyser:
                 askPrice=orderBook.getAskPrice(vol=vol_BASE)
                 bidPrice=orderBook.getBidPrice(vol=vol_BASE)
                 
-                length, nodes, negative_cycle = arbitrageGraph.update_point(
+                length, nodes, negative_cycle = arbitrageGraph.updatePoint(
                     symbol,
                     exchangename,
                     self.feeStore.getTakerFee(exchangename,symbol),
@@ -90,18 +90,18 @@ class OrderbookAnalyser:
                 
                 if negative_cycle == True:
                     logger.info("Found arbitrage deal")
-                    edges_weight, edges_age_s, hops, exchanges_involved, nof_exchanges_involved=arbitrageGraph.nodeslist_to_edges(nodes,timestamp)
+                    path=arbitrageGraph.getPath(nodes,timestamp)
                     df_new = pd.DataFrame([[
                         int(id),
                         timestamp,
                         float(self.vol_BTC[idx]),
                         length,np.exp(-1.0*length)*100-100,
                         ",".join(str(x) for x in nodes),
-                        ",".join(str(x) for x in edges_weight),
-                        ",".join(str(x) for x in edges_age_s),
-                        hops,
-                        ",".join(str(x) for x in exchanges_involved),
-                        nof_exchanges_involved]],
+                        ",".join(str(x) for x in path.edges_weight),
+                        ",".join(str(x) for x in path.edges_age_s),
+                        path.hops,
+                        ",".join(str(x) for x in path.exchanges_involved),
+                        path.nof_exchanges_involved]],
                         columns=self.df_results.columns)
                     self.df_results=self.df_results.append(df_new,ignore_index=True)
                     with open(self.resultsdir+self.tradeLogFilename, 'a') as f:
@@ -123,22 +123,22 @@ class OrderbookAnalyser:
                                 if A == 'EUR' or A =='USD' or A =='GBP':
                                     tradesymbols = B+"/"+A
                                     limitprice = bidPrice.limitprice
-                                    tradetype = Trader.SELL_ORDER
+                                    tradetype = Trade.SELL_ORDER
                                     volume = 1/vol_BASE
                                 elif A == 'BTC' and B!='EUR' and B!='USD' and B!='GBP':
                                     tradesymbols = B+"/"+A
                                     limitprice = bidPrice.limitprice
-                                    tradetype = Trader.SELL_ORDER
+                                    tradetype = Trade.SELL_ORDER
                                     volume = 1/vol_BASE
                                 elif A == 'ETH' and B!='EUR' and B!='USD' and B!='GBP' and B!='BTC' :
                                     tradesymbols = B+"/"+A
                                     limitprice = bidPrice.limitprice
-                                    tradetype = Trader.SELL_ORDER
+                                    tradetype = Trade.SELL_ORDER
                                     volume = 1/vol_BASE
                                 else:
                                     tradesymbols = A+"/"+B
                                     limitprice = askPrice.limitprice
-                                    tradetype = Trader.BUY_ORDER
+                                    tradetype = Trade.BUY_ORDER
                                     volume = vol_BASE
                                 
                                 #tradelist.append(Trade("kraken","BTC/USD",0.1,20000,Trader.SELL_ORDER))
@@ -193,7 +193,7 @@ class OrderbookAnalyser:
                     id = int(row[4]),
                     timestamp = float(row[5])
                     )
-                #arbitrageGraph.plot_graph()
+                #arbitrageGraph.plotGraph()
             else:
                 break
         db.close()
@@ -206,6 +206,6 @@ class OrderbookAnalyser:
             dill.dump(self, f)
         logger.info("Orderbook analyser results saved at " +fname)
 
-    def plot_graphs(self):
+    def plotGraphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-            arbitrageGraph.plot_graph(figid=(idx+1),vol_BTC=self.vol_BTC[idx])
+            arbitrageGraph.plotGraph(figid=(idx+1),vol_BTC=self.vol_BTC[idx])

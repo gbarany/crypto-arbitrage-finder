@@ -7,8 +7,6 @@ from TraderExceptions import OrderCreationError, TradesShowstopper
 import time
 
 class Trader:
-    BUY_ORDER = "BUY_ORDER"
-    SELL_ORDER = "SELL_ORDER"
     NOF_CCTX_RETRY = 4
     TTL_TRADEORDER_S = 10
 
@@ -160,10 +158,10 @@ class Trader:
         price=trade.price
         tradetype=trade.tradetype
         try:
-            if tradetype==Trader.BUY_ORDER:
+            if tradetype==Trade.BUY_ORDER:
                 response= await exchange.createLimitBuyOrder(symbol, amount,price)
                 logger.info("createLimitBuyOrder "+symbol+" Amount:"+str(amount)+" Price:"+str(price)+" ID: "+ response['id'] +" created successfully")
-            elif tradetype==Trader.SELL_ORDER:
+            elif tradetype==Trade.SELL_ORDER:
                 response= await exchange.createLimitSellOrder(symbol, amount,price)
                 logger.info("createLimitSellOrder "+symbol+" Amount:"+str(amount)+" Price:"+str(price)+" ID: "+response['id']+" created successfully")
             else:
@@ -225,6 +223,6 @@ if __name__ == "__main__":
 
     with Trader(exchangeNames=["kraken"],credfile='./cred/api_trading.json') as trader:
         tradelist = [
-            Trade("kraken","BTC/USD",0.1,20000,Trader.SELL_ORDER),
+            Trade("kraken","BTC/USD",0.1,20000,Trade.SELL_ORDER),
         ]
         trader.executeTrades(tradelist)
