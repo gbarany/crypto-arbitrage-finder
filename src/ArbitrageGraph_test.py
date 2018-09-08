@@ -12,12 +12,12 @@ class TestClass(object):
         arbitrageGraph.updatePoint(symbol="BTC/ETH",exchangename="kraken",fee_rate=0.0,l_ask=5,h_bid=4,timestamp=2)
 
         with pytest.raises(ValueError):
-            path=arbitrageGraph.getPath(nodes=["BTC","XRP","ETH"],timestamp_now=4)
+            path=arbitrageGraph.getPath(nodes=["BTC","XRP","ETH"],timestamp=4)
 
         with pytest.raises(ValueError):
-            path=arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-XRP","kraken-ETH"],timestamp_now=4)
+            path=arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-XRP","kraken-ETH"],timestamp=4)
 
-        path=arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp_now=4)
+        path=arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp=4)
         assert path.edges_age_s == [4,3,2]
         assert path.edges_weight==[-np.log(9000),-np.log(1/200),-np.log(1/5)]
         assert path.hops==3
@@ -31,7 +31,7 @@ class TestClass(object):
         arbitrageGraph.updatePoint(symbol="BTC/ETH",exchangename="kraken",fee_rate=0.0,l_ask=5,h_bid=4,timestamp=2)
 
         with pytest.raises(ValueError):
-            arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp_now=6)
+            arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp=6)
         
 
     def test_TTLTest_two(self):
@@ -41,11 +41,11 @@ class TestClass(object):
         arbitrageGraph.updatePoint(symbol="BTC/ETH",exchangename="kraken",fee_rate=0.0,l_ask=5,h_bid=4,timestamp=4)
         
         with pytest.raises(ValueError):
-            arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp_now=6)
+            arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp=6)
 
         arbitrageGraph.updatePoint(symbol="BTC/USD",exchangename="kraken",fee_rate=0.0,l_ask=12000,h_bid=5000,timestamp=5)
 
-        path=arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp_now=6)
+        path=arbitrageGraph.getPath(nodes=["kraken-BTC","kraken-USD","kraken-ETH","kraken-BTC"],timestamp=6)
         assert path.edges_age_s == [1,3,2]
         assert path.edges_weight==[-np.log(5000),-np.log(1/200),-np.log(1/5)]
         assert path.hops==3

@@ -61,15 +61,22 @@ class ArbitrageGraph:
 
         self.G = nx.DiGraph()
         self.G.add_weighted_edges_from(self.glist)
-        length, nodes, negative_cycle = bf.negative_edge_cycle(self.G)
+        length, nodes, isNegativeCycle = bf.negative_edge_cycle(self.G)
         self.negativepath = nodes
-        return length, nodes, negative_cycle
-
-    def getPath(self,nodes,timestamp_now):
+        
         return ArbitrageGraphPath(
             gdict=self.gdict,
             nodes=nodes,
-            timestamp_now=timestamp_now,
+            timestamp=timestamp,
+            edgeTTL_s=self.edgeTTL,
+            isNegativeCycle=isNegativeCycle,
+            length=length)
+
+    def getPath(self,nodes,timestamp):
+        return ArbitrageGraphPath(
+            gdict=self.gdict,
+            nodes=nodes,
+            timestamp=timestamp,
             edgeTTL_s=self.edgeTTL)
 
     def plotGraph(self,figid=1,vol_BTC=None):
