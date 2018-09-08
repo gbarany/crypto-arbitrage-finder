@@ -7,9 +7,14 @@ class TestClass(object):
 
     def test_one(self):
         arbitrageGraph = ArbitrageGraph()
-        arbitrageGraph.updatePoint(symbol="BTC/USD",exchangename="kraken",fee_rate=0.0,l_ask=10000,h_bid=9000,timestamp=0)
-        arbitrageGraph.updatePoint(symbol="ETH/USD",exchangename="kraken",fee_rate=0.0,l_ask=200,h_bid=100,timestamp=1)
-        arbitrageGraph.updatePoint(symbol="BTC/ETH",exchangename="kraken",fee_rate=0.0,l_ask=5,h_bid=4,timestamp=2)
+        p1=arbitrageGraph.updatePoint(symbol="BTC/USD",exchangename="kraken",fee_rate=0.0,l_ask=10000,h_bid=9000,timestamp=0)
+        assert p1.isNegativeCycle == False
+        
+        p2=arbitrageGraph.updatePoint(symbol="ETH/USD",exchangename="kraken",fee_rate=0.0,l_ask=200,h_bid=100,timestamp=1)
+        assert p2.isNegativeCycle == False
+        
+        p3=arbitrageGraph.updatePoint(symbol="BTC/ETH",exchangename="kraken",fee_rate=0.0,l_ask=5,h_bid=4,timestamp=2)
+        assert p3.isNegativeCycle == True
 
         with pytest.raises(ValueError):
             path=arbitrageGraph.getPath(nodes=["BTC","XRP","ETH"],timestamp=4)

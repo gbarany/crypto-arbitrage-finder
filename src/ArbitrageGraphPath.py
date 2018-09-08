@@ -1,4 +1,7 @@
 import pandas as pd
+import numpy as np
+
+from Trade import Trade
 
 class ArbitrageGraphPath:
     def __init__(self,gdict,nodes,timestamp,edgeTTL_s,isNegativeCycle=None,length=None):
@@ -44,7 +47,7 @@ class ArbitrageGraphPath:
         self.length = length
         self.nodes = nodes
     
-    def toDataFrameLog(self,id,timestamp,vol_BTC):
+    def toDataFrameLog(self,id,timestamp,vol_BTC,df_columns):
         df_new = pd.DataFrame([[
             int(id),
             timestamp,
@@ -57,15 +60,16 @@ class ArbitrageGraphPath:
             self.hops,
             ",".join(str(x) for x in self.exchanges_involved),
             self.nof_exchanges_involved]],
-            columns=self.df_results.columns)
-    
-    def toTradeList(self):
+            columns=df_columns)
+        return df_new
+        
+    def toTradeList(self,bidPrice,askPrice,vol_BASE):
         tradelist = []                        
         for idx_node,node in enumerate(self.nodes[:-1]):
-            base_exchange = node.split['-'][0]
-            base_symbol = node.split['-'][1]
-            quote_exchange = self.nodes[idx_node+1].split['-'][0]
-            quote_symbol = self.nodes[idx_node+1].split['-'][1]
+            base_exchange = node.split('-')[0]
+            base_symbol = node.split('-')[1]
+            quote_exchange = self.nodes[idx_node+1].split('-')[0]
+            quote_symbol = self.nodes[idx_node+1].split('-')[1]
             if base_exchange == quote_exchange:
                 A = base_symbol
                 B = quote_symbol

@@ -44,8 +44,8 @@ class OrderbookAnalyser:
     def updateCmcPrice(self,cmcTicker):
         self.cmcTicker = cmcTicker
 
-    def logArbitrageDeal(self,id,timestamp,path):
-        df_new = path.toDataFrame(id=id, timestamp=timestamp,vol_BTC=self.vol_BTC[idx])
+    def logArbitrageDeal(self,id,vol_BTC,timestamp,path):
+        df_new = path.toDataFrameLog(id=id, timestamp=timestamp,vol_BTC=vol_BTC,df_columns=self.df_results.columns)
         self.df_results=self.df_results.append(df_new,ignore_index=True)
 
         with open(self.resultsdir+self.tradeLogFilename, 'a') as f:
@@ -83,11 +83,12 @@ class OrderbookAnalyser:
                 
                 if path.isNegativeCycle == True:
                     logger.info("Found arbitrage deal")
-                    self.logArbitrageDeal(id=id,timestamp=timestamp,path=path)
+                    self.logArbitrageDeal(id=id,timestamp=timestamp,vol_BTC=self.vol_BTC[idx],path=path)
 
                     if self.arbTradeTriggerEvent!=None and self.arbTradeQueue!=None:
-                        self.arbTradeTriggerEvent.acquire()                        
-                        self.arbTradeQueue.append(path.toTradeList())
+                        self.arbTradeTriggerEvent.acquire()
+                        tradeList=path.toTradeList(bidPrice=bidPrice,askPrice=askPrice,vol_BASE=vol_BASE)
+                        self.arbTradeQueue.append(tradeList)
                         self.arbTradeTriggerEvent.notify()
                         self.arbTradeTriggerEvent.release()        
                         logger.info("Arbitrage trade event created succesfully")
@@ -96,7 +97,7 @@ class OrderbookAnalyser:
                         logger.info("Creating arbitrage trade event failed, invalid event or queue")
                     
         except Exception as e:
-            logger.error("Exception on exchangename:"+exchangename+" symbol:"+symbol+":"+e)
+            logger.error("Exception on exchangename:"+exchangename+" symbol:"+symbol+":"+str(e))
 
     def generateExportFilename(self,exchangeList=None):
         if exchangeList == None:
