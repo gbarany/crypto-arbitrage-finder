@@ -9,3 +9,4 @@ pandas
 tqdm
 dill
 pytest
+pytest-cov
