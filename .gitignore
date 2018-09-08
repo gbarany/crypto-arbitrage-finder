@@ -5,3 +5,4 @@ api_sandbox.json
 config.py
 .pytest_cache
 cred
+.coverage
