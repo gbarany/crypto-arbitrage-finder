@@ -2,10 +2,7 @@ import pytest
 import numpy as np
 from ArbitrageGraph import ArbitrageGraph
 
-""" @pytest.fixture(scope="class")
-def getFeeStore():
-    return FeeStore()
- """
+
 class TestClass(object):
 
     def test_one(self):
