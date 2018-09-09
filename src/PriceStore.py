@@ -49,8 +49,8 @@ class PriceStore:
                         # convert price to BTC (from USD price)
                         key3 = (symbol_base,('coinmarketcap','BTC'))
                         key4 = (('coinmarketcap','BTC'),symbol_base)
-                        self.price[key3] = price*1/ticker['BTC/'+symbol_quote[1]]['last']
-                        self.price[key4] = 1/self.price[key3]
+                        self.price[key3] = (timestamp,price*1/ticker['BTC/'+symbol_quote[1]]['last'])
+                        self.price[key4] = (timestamp,1/price*ticker['BTC/'+symbol_quote[1]]['last'])
             except Exception as e:
                 logger.error("Error occured parsing CMC ticker "+symbol+" "+str(e.args))
 
