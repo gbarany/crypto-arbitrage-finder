@@ -4,6 +4,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 from ArbitrageGraphPath import ArbitrageGraphPath
+
+class ArbitrageGraphEdge:
+    def __init__(self,timestamp=None,meanprice=0.0,limitprice=0.0,feeRate=0,vol_BASE=0):
+        self.timestamp = timestamp
+        self.meanprice = meanprice
+        self.limitprice = limitprice
+        self.feeRate = feeRate
+        self.vol_BASE = vol_BASE
+    def getLogWeight(self):
+        return -1.0 * np.log((1-self.feeRate)*self.meanprice)
+
 class ArbitrageGraph:
     def __init__(self,edgeTTL=5):
         self.gdict = {}
@@ -13,7 +24,7 @@ class ArbitrageGraph:
         self.negativepath = []
         self.edgeTTL = edgeTTL
         
-    def updatePoint(self,symbol,exchangename,fee_rate,l_ask,h_bid,timestamp):
+    def updatePoint(self,symbol,exchangename,feeRate,askPrice,bidPrice,timestamp):
         symbolsplit = symbol.split('/')
         if len(symbolsplit)!=2:
             return 0,[],None
@@ -29,17 +40,17 @@ class ArbitrageGraph:
             if not node in uniqueNodes:
                 for nodeIterator in uniqueNodes:
                     if nodeIterator[1]==node[1]:
-                        self.gdict[(node,nodeIterator)] = (None,float(0))
-                        self.gdict[(nodeIterator,node)] = (None,float(0))
+                        self.gdict[(node,nodeIterator)] = ArbitrageGraphEdge()
+                        self.gdict[(nodeIterator,node)] = ArbitrageGraphEdge()
         
         uniqueNodes = list(set(itertools.chain(*[[s[0],s[1]] for s in self.gdict.keys()])))
         connectSameCurrenciesOnDifferentExchanges(symbol_base,uniqueNodes)
         connectSameCurrenciesOnDifferentExchanges(symbol_quote,uniqueNodes)
 
-        if l_ask != None:
-            self.gdict[key1] = (timestamp,float(-1.0 * np.log((1-fee_rate)*1/l_ask)))
-        if h_bid != None:
-            self.gdict[key2] = (timestamp,float(-1.0 * np.log((1-fee_rate)*h_bid)))
+        if askPrice.meanprice != None:
+            self.gdict[key1] = ArbitrageGraphEdge(timestamp=timestamp,meanprice=1/askPrice.meanprice, limitprice=1/askPrice.limitprice,feeRate=feeRate,vol_BASE=askPrice.vol_BASE*askPrice.meanprice)
+        if bidPrice.meanprice != None:
+            self.gdict[key2] = ArbitrageGraphEdge(timestamp=timestamp,meanprice=bidPrice.meanprice, limitprice=bidPrice.limitprice,feeRate=feeRate,vol_BASE=bidPrice.vol_BASE)
         return self.updateGraph(timestamp=timestamp)
 
     def updateGraph(self,timestamp):
@@ -48,8 +59,8 @@ class ArbitrageGraph:
         for k, v in self.gdict.items():
             symbol_base = '-'.join(k[0])
             symbol_quote = '-'.join(k[1])
-            ts = v[0]
-            edge = v[1]
+            ts = v.timestamp
+            edge = v.getLogWeight()
             if  ts is not None:
                 if (now-ts) < self.edgeTTL:
                     self.glist.extend([[symbol_base, symbol_quote,edge]])

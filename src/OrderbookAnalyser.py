@@ -74,21 +74,20 @@ class OrderbookAnalyser:
                 bidPrice=orderBook.getBidPrice(vol=vol_BASE)
                 
                 path = arbitrageGraph.updatePoint(
-                    symbol,
-                    exchangename,
-                    self.feeStore.getTakerFee(exchangename,symbol),
-                    askPrice.meanprice,
-                    bidPrice.meanprice,
-                    timestamp)
+                    symbol=symbol,
+                    exchangename=exchangename,
+                    feeRate=self.feeStore.getTakerFee(exchangename,symbol),
+                    askPrice=askPrice,
+                    bidPrice=bidPrice,
+                    timestamp=timestamp)
                 
                 if path.isNegativeCycle == True:
                     logger.info("Found arbitrage deal")
                     self.logArbitrageDeal(id=id,timestamp=timestamp,vol_BTC=self.vol_BTC[idx],path=path)
 
                     if self.arbTradeTriggerEvent!=None and self.arbTradeQueue!=None:
-                        self.arbTradeTriggerEvent.acquire()
-                        tradeList=path.toTradeList(bidPrice=bidPrice,askPrice=askPrice,vol_BASE=vol_BASE)
-                        self.arbTradeQueue.append(tradeList)
+                        self.arbTradeTriggerEvent.acquire()                        
+                        self.arbTradeQueue.append(path)
                         self.arbTradeTriggerEvent.notify()
                         self.arbTradeTriggerEvent.release()        
                         logger.info("Arbitrage trade event created succesfully")

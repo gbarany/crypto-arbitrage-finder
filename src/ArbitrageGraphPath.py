@@ -6,6 +6,9 @@ from Trade import Trade
 class ArbitrageGraphPath:
     def __init__(self,gdict,nodes,timestamp,edgeTTL_s,isNegativeCycle=None,length=None):
         edges_weight = []
+        edges_vol_BASE = []
+        edges_weight_log = []
+        edges_weight_limit = []
         edges_age_s = []
         exchanges_involved = []
         hops = 0
@@ -26,20 +29,25 @@ class ArbitrageGraphPath:
                     raise ValueError("Path non-existent in graph")
 
                 v=gdict[((source[0],source[1]),(target[0],target[1]))]
-                if v[0] is not None:
-                    if timestamp-v[0]>edgeTTL_s:
+                if v.timestamp is not None:
+                    if timestamp-v.timestamp>edgeTTL_s:
                         raise ValueError("Path used to exist but TTL expired")
-                    edges_age_s.append(timestamp-v[0])
+                    edges_age_s.append(timestamp-v.timestamp)
                 else:
                     edges_age_s.append(0)
-                edges_weight.append(v[1])
-
+                edges_weight_log.append(v.getLogWeight())
+                edges_weight.append(v.meanprice)
+                edges_weight_limit.append(v.limitprice)
+                edges_vol_BASE.append(v.vol_BASE)
             exchanges_involved = sorted(set(exchanges_involved),key=str.lower)
             nof_exchanges_involved = len(exchanges_involved)
             hops = len(nodes)-1
 
+        self.edges_weight_log=edges_weight_log
         self.edges_weight=edges_weight
         self.edges_age_s=edges_age_s
+        self.edges_weight_limit=edges_weight_limit
+        self.edges_vol_BASE=edges_vol_BASE
         self.hops=hops
         self.exchanges_involved=exchanges_involved
         self.nof_exchanges_involved=nof_exchanges_involved
@@ -63,7 +71,7 @@ class ArbitrageGraphPath:
             columns=df_columns)
         return df_new
         
-    def toTradeList(self,bidPrice,askPrice,vol_BASE):
+    def toTradeList(self):
         tradelist = []                        
         for idx_node,node in enumerate(self.nodes[:-1]):
             base_exchange = node.split('-')[0]
@@ -76,24 +84,24 @@ class ArbitrageGraphPath:
                 
                 if A == 'EUR' or A =='USD' or A =='GBP':
                     tradesymbols = B+"/"+A
-                    limitprice = bidPrice.limitprice
-                    tradetype = Trade.SELL_ORDER
-                    volume = 1/vol_BASE
+                    limitprice = 1/self.edges_weight_limit[idx_node]
+                    tradetype = Trade.BUY_ORDER
+                    volume = self.edges_vol_BASE[idx_node]*self.edges_weight[idx_node]
                 elif A == 'BTC' and B!='EUR' and B!='USD' and B!='GBP':
                     tradesymbols = B+"/"+A
-                    limitprice = bidPrice.limitprice
-                    tradetype = Trade.SELL_ORDER
-                    volume = 1/vol_BASE
+                    limitprice = 1/self.edges_weight_limit[idx_node]
+                    tradetype = Trade.BUY_ORDER
+                    volume = self.edges_vol_BASE[idx_node]*self.edges_weight[idx_node]
                 elif A == 'ETH' and B!='EUR' and B!='USD' and B!='GBP' and B!='BTC' :
                     tradesymbols = B+"/"+A
-                    limitprice = bidPrice.limitprice
-                    tradetype = Trade.SELL_ORDER
-                    volume = 1/vol_BASE
+                    limitprice = 1/self.edges_weight_limit[idx_node]
+                    tradetype = Trade.BUY_ORDER
+                    volume = self.edges_vol_BASE[idx_node]*self.edges_weight[idx_node]
                 else:
                     tradesymbols = A+"/"+B
-                    limitprice = askPrice.limitprice
-                    tradetype = Trade.BUY_ORDER
-                    volume = vol_BASE
+                    limitprice = self.edges_weight_limit[idx_node]
+                    tradetype = Trade.SELL_ORDER
+                    volume = self.edges_vol_BASE[idx_node]
                 
                 tradelist.append(Trade(base_exchange,tradesymbols,volume,limitprice,tradetype))
         return tradelist

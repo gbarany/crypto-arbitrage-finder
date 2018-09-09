@@ -1,9 +1,10 @@
 import ast
 
 class OrderBookPrice:
-    def __init__(self,meanprice=None,limitprice=None):
+    def __init__(self,meanprice=None,limitprice=None,vol_BASE=None):
         self.meanprice = meanprice
         self.limitprice = limitprice 
+        self.vol_BASE = vol_BASE
     def __str__(self):
         return "mean price:"+str(self.meanprice)+ ", " + "limit price:"+str(self.limitprice)
 
@@ -43,7 +44,7 @@ class OrderBook:
                 vol = 0
                 break
         if vol==0:
-            return OrderBookPrice(meanprice=vol_price/vol_total, limitprice=entry_price)
+            return OrderBookPrice(meanprice=vol_price/vol_total, limitprice=entry_price,vol_BASE=vol_total)
         else:
             return OrderBookPrice()
 
