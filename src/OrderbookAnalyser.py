@@ -41,8 +41,11 @@ class OrderbookAnalyser:
         self.generateExportFilename()
         self.isRunning = True
 
-    def updateCmcPrice(self,cmcTicker):
+    def updateCoinmarketcapPrice(self,cmcTicker):
         self.cmcTicker = cmcTicker
+
+    def updateForexPrice(self,forexTicker):
+        self.priceStore.updatePriceFromForex(forexTicker)
 
     def logArbitrageDeal(self,id,vol_BTC,timestamp,path):
         df_new = path.toDataFrameLog(id=id, timestamp=timestamp,vol_BTC=vol_BTC,df_columns=self.df_results.columns)
@@ -59,10 +62,10 @@ class OrderbookAnalyser:
             if self.cmcTicker!=None:
                 self.priceStore.updatePriceFromCoinmarketcap(ticker=self.cmcTicker)
             else:
-                logger.info('No CMC ticker received yet, reverting to orderbook pricing')
-                self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
-                
-
+                #logger.info('No CMC ticker received yet, reverting to orderbook pricing')
+                #self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
+                logger.info('No CMC ticker received yet, skipping update')
+                return
         try:
             orderBook = OrderBook(symbol=symbol,asks=asks,bids=bids)
             rate_BTC_to_BASE = self.priceStore.getMeanPrice(symbol_base_ref='BTC',symbol_quote_ref=symbol.split('/')[0],timestamp=timestamp)
