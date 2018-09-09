@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "FrameworkLive",
+            "name": "FrameworkLive Sandbox",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/FrameworkLive.py",
@@ -13,6 +13,18 @@
             "args": [
                 "--noplot",
                 "--resultsdir=./results/"
+            ]
+        },
+        {
+            "name": "FrameworkLive NO Sandbox",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/FrameworkLive.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--noplot",
+                "--resultsdir=./results/",
+                "--live"
             ]
         },
         {
