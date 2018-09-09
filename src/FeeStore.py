@@ -25,17 +25,17 @@ class FeeStore:
 
     def getTakerFee(self,exchangename,symbols):
         try:
-            return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['taker'])
+            return self.numberOrZero(self.getExchange(exchangename.lower()).markets[symbols]['taker'])
         except Exception as e:
-            logger.warn("Couldn't fetch taker fee from exchange, defaulting to "+str(FeeStore.DEFAULT_TAKER_FEE)+" "+str(e.args))
+            logger.warn("Couldn't fetch taker fee from "+ exchangename+", defaulting to "+str(FeeStore.DEFAULT_TAKER_FEE)+" "+str(e.args))
             return FeeStore.DEFAULT_TAKER_FEE
         
 
     def getMakerFee(self,exchangename,symbols):
         try:
-            return self.numberOrZero(self.getExchange(exchangename).markets[symbols]['maker'])
+            return self.numberOrZero(self.getExchange(exchangename.lower()).markets[symbols]['maker'])
         except Exception as e:
-            logger.warn("Couldn't fetch maker fee from exchange, defaulting to "+str(FeeStore.DEFAULT_MAKER_FEE)+" "+str(e.args))
+            logger.warn("Couldn't fetch maker fee from "+ exchangename+", defaulting to "+str(FeeStore.DEFAULT_MAKER_FEE)+" "+str(e.args))
             return FeeStore.DEFAULT_MAKER_FEE
 
 
