@@ -1,5 +1,6 @@
 import ast
 from InitLogger import logger
+import dateutil.parser as dp
 
 class PriceStore:
     def __init__(self,priceTTL=60):
@@ -15,8 +16,22 @@ class PriceStore:
 
         return False
 
+    def updatePriceFromForex(self,forexTicker):
+        symbolsplit = forexTicker['instrument'].split('_')
+        symbol_base  = ('forex',symbolsplit[0])
+        symbol_quote  = ('forex',symbolsplit[1])
+
+        
+        timestamp = int(dp.parse(forexTicker['time']).strftime('%s'))
+        key1 = (symbol_quote,symbol_base)
+        key2 = (symbol_base,symbol_quote)
+        self.price[key1] = (timestamp,1/forexTicker['ask'])
+        self.price[key2] = (timestamp,forexTicker['bid'])
+                        
+
+
     def updatePriceFromCoinmarketcap(self,ticker):
-        self.price.clear()
+        #self.price.clear()
         for symbol, tickeritem in ticker.items():
             try:
                 symbolsplit = symbol.split('/')
@@ -30,6 +45,12 @@ class PriceStore:
                         key2 = (symbol_base,symbol_quote)
                         self.price[key1] = (timestamp,1/price)
                         self.price[key2] = (timestamp,price)
+                        
+                        # convert price to BTC (from USD price)
+                        key3 = (symbol_base,('coinmarketcap','BTC'))
+                        key4 = (('coinmarketcap','BTC'),symbol_base)
+                        self.price[key3] = price*1/ticker['BTC/'+symbol_quote[1]]['last']
+                        self.price[key4] = 1/self.price[key3]
             except Exception as e:
                 logger.error("Error occured parsing CMC ticker "+symbol+" "+str(e.args))
 
