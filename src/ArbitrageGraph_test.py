@@ -3,6 +3,9 @@ import numpy as np
 from ArbitrageGraph import ArbitrageGraph
 
 from OrderBook import OrderBookPrice
+from Trade import Trade
+
+
 class TestClass(object):
 
     def test_one(self):
@@ -48,6 +51,11 @@ class TestClass(object):
         assert path.hops==3
         assert path.exchanges_involved==['kraken']
         assert path.nof_exchanges_involved==1
+
+        segmentedTradeList = path.toSegmentedTradeList()
+        assert (segmentedTradeList[0][0].exchangeName,segmentedTradeList[0][0].symbol,segmentedTradeList[0][0].tradetype) == ('kraken','BTC/USD',Trade.SELL_ORDER)
+        assert (segmentedTradeList[0][1].exchangeName,segmentedTradeList[0][1].symbol,segmentedTradeList[0][1].tradetype) == ('kraken','ETH/USD',Trade.BUY_ORDER)
+        assert (segmentedTradeList[0][2].exchangeName,segmentedTradeList[0][2].symbol,segmentedTradeList[0][2].tradetype) == ('kraken','ETH/BTC',Trade.SELL_ORDER)
 
     def test_TTLTest_one(self):
         arbitrageGraph = ArbitrageGraph(edgeTTL=5)
@@ -99,3 +107,7 @@ class TestClass(object):
         assert path.hops==3
         assert path.exchanges_involved==['kraken']
         assert path.nof_exchanges_involved==1
+
+if __name__ == "__main__":
+    tc=TestClass()
+    tc.test_one()

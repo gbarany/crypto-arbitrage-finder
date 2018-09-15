@@ -105,3 +105,33 @@ class ArbitrageGraphPath:
                 
                 tradelist.append(Trade(base_exchange,tradesymbols,volume,limitprice,tradetype))
         return tradelist
+    
+
+    def isTradeListSingleExchange(tradeList):
+        exchangeName = tradeList[0].exchangeName
+        for trade in tradeList:
+            if trade.exchangeName != exchangeName:
+                return False
+        return True
+
+    def toSegmentedTradeList(self):
+        tradeList = self.toTradeList()
+        if len(tradeList)==0:
+            raise ValueError("Trade list is empty, there are no trades to execute")
+
+        if ArbitrageGraphPath.isTradeListSingleExchange(tradeList) == True:
+            return [tradeList]
+
+        segmentedTradeList = []
+        tradeListCurrentSegment = []
+
+        for idx,trade in enumerate(tradeList):
+            prevTrade = tradeList[(idx-1)%len(tradeList)]
+
+            if prevTrade.exchangeName == trade.exchangeName:
+                tradeListCurrentSegment.append(trade)
+            else:
+                segmentedTradeList.append(tradeListCurrentSegment)
+                tradeListCurrentSegment = []
+                tradeListCurrentSegment.append(trade)
+        return segmentedTradeList
