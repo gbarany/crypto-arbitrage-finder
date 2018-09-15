@@ -1,5 +1,4 @@
-# CryptoArbitrage - Stabilizing crypto price swings accross multiple exchanges,
-whilst pocketing the arbitrage gains
+# CryptoArbitrage - Stabilizing price swings accross multiple exchanges
 
 High level architecture: 
 https://bit.ly/2CLrzK7
