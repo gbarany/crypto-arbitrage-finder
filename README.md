@@ -56,3 +56,7 @@ FrameworkLive orchestrates the components and threads of the live arbitrage trad
     }
 }
 ```
+
+## Testing
+
+Unit tests are implemented in pytest with test py-cov extension for test coverage measurement. Run runtests.sh to get coverage metrics.
