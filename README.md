@@ -5,7 +5,7 @@ https://bit.ly/2CLrzK7
 
 FrameworkLive orchestrates the components and threads of the live arbitrage trading system.
 
-## Components of the live trading framework:
+## Components of the live trading framework
 - Exchange pollers: run in parallel, fetch orderbook data from predefined exchanges and sends data to the Orderbook Analyser
 - Coinmarketcap pollers: fetch cyrpto exchange-wide market price dataand and sends data to the Orderbook Analyser
 - Forex poller: fetches current Forex ask and bid prices (from Oanda) and sends the data to the Orderbook Analyser
@@ -17,22 +17,22 @@ FrameworkLive orchestrates the components and threads of the live arbitrage trad
 - Logging : global logging (errors, warnings, info)
 
 
-Folder structure:
+## Folder structure
 - src : source code and unit tests (*_test.py)
 - cred : contains exchange credentials
 - results : output folder where the system saves the trade log and error log 
 - tools : scripts to analyse the result files
 
 ## Docker
-docker-build.sh : builds the appication docker container
-docker-run-live.sh : starts the docker container
+- docker-build.sh : builds the appication docker container
+- docker-run-live.sh : starts the docker container
 
 ## Credentials
-api_balance.json : api keys with balance query credentials only
-api_trading.json : api keys with trading credentials
-oanda.json : oanda api keys
+- api_balance.json : api keys with balance query credentials only
+- api_trading.json : api keys with trading credentials
+- oanda.json : oanda api keys
 
-Example:
+### Example
 ```javascript
 {
     "gdax": {
