@@ -18,19 +18,19 @@ FrameworkLive orchestrates the components and threads of the live arbitrage trad
 
 
 ## Folder structure
-- src : source code and unit tests (*_test.py)
-- cred : contains exchange credentials
-- results : output folder where the system saves the trade log and error log 
-- tools : scripts to analyse the result files
+- `src` : source code and unit tests (*_test.py)
+- `cred` : contains exchange credentials
+- `results` : output folder where the system saves the trade log and error log 
+- `tools` : scripts to analyse the result files
 
 ## Docker
-- docker-build.sh : builds the appication docker container
-- docker-run-live.sh : starts the docker container
+- `docker-build.sh` : builds the appication docker container
+- `docker-run-live.sh` : starts the docker container
 
 ## Credentials
-- api_balance.json : api keys with balance query credentials only
-- api_trading.json : api keys with trading credentials
-- oanda.json : oanda api keys
+- `api_balance.json` : api keys with balance query credentials only
+- `api_trading.json` : api keys with trading credentials
+- `oanda.json` : oanda api keys
 
 ### Example
 ```javascript
@@ -59,4 +59,4 @@ FrameworkLive orchestrates the components and threads of the live arbitrage trad
 
 ## Testing
 
-Unit tests are implemented in pytest with test py-cov extension for test coverage measurement. Run runtests.sh to get coverage metrics.
+Unit tests are implemented in pytest with test py-cov extension for test coverage measurement. Run `runtests.sh` to get coverage metrics.
