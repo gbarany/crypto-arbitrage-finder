@@ -16,11 +16,12 @@ from InitLogger import logger
 import json
 
 class FrameworkLive:
-    def __init__(self,enablePlotting=False, isSandboxMode=True,resultsdir="./"):
+    def __init__(self,isForexEnabled=False,enablePlotting=False, isSandboxMode=True,resultsdir="./"):
         self.exchanges = {}
         self.symbols = {}
         self.enablePlotting=enablePlotting
         self.isSandboxMode = isSandboxMode
+        self.isForexEnabled = isForexEnabled
         self.resultsdir = resultsdir
         self.exchanges["poloniex"]=ccxt.poloniex({'enableRateLimit': True})
         self.exchanges["kraken"]=ccxt.kraken({'enableRateLimit': True})
@@ -142,9 +143,11 @@ class FrameworkLive:
             asyncio.ensure_future(self.exchangePoller(self.exchanges[exchange],self.symbols[exchange],self.orderbookAnalyser,self.enablePlotting))
         
         asyncio.ensure_future(self.coinmarketcapPoller(self.cmc,self.orderbookAnalyser))
-        with open('./cred/oanda.json') as file:
-            authkeys = json.load(file)
-            asyncio.ensure_future(self.forexPoller(symbols = ['EUR_USD','GBP_USD'],authkey=authkeys['practice'], orderbookAnalyser=self.orderbookAnalyser))
+        
+        if self.isForexEnabled == True:
+            with open('./cred/oanda.json') as file:
+                authkeys = json.load(file)
+                asyncio.ensure_future(self.forexPoller(symbols = ['EUR_USD','GBP_USD'],authkey=authkeys['practice'], orderbookAnalyser=self.orderbookAnalyser))
 
         def stop_loop():
             input('Press <enter> to stop')
@@ -162,10 +165,11 @@ class FrameworkLive:
 def main(argv):
     enablePlotting = True
     isSandboxMode = True
+    isForexEnabled = True
 
     resultsdir = './'
     try:
-        opts, _ = getopt.getopt(argv,"nrl",["noplot","resultsdir=","live"])
+        opts, _ = getopt.getopt(argv,"nrl",["noplot","resultsdir=","live","noforex"])
     except getopt.GetoptError:
         logger.error('Invalid parameter. --noplot: suppress plots, --resultsdir=: output directory, --live:execute trades')
         sys.exit(2)
@@ -176,13 +180,15 @@ def main(argv):
             resultsdir = arg
         if opt in ("-l", "--live"):
             isSandboxMode = False
+        if opt in ("-l", "--noforex"):
+            isForexEnabled = False
 
     if isSandboxMode:
         logger.info("Running in sandbox mode, TRADES WILL NOT BE EXECUTED")
     else:
         logger.info("Running in live mode, TRADES WILL BE EXECUTED")
 
-    frameworkLive=FrameworkLive(enablePlotting=enablePlotting,resultsdir=resultsdir,isSandboxMode=isSandboxMode)
+    frameworkLive=FrameworkLive(isForexEnabled=isForexEnabled,enablePlotting=enablePlotting,resultsdir=resultsdir,isSandboxMode=isSandboxMode)
     frameworkLive.run()
 
 if __name__ == "__main__":
