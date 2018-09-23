@@ -1,6 +1,3 @@
-results
-CryptoArbitrageApp.log
-config.py
 .pytest_cache
 .coverage
-cred
+CryptoArbitrageApp.log
