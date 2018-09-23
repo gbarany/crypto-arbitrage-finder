@@ -106,7 +106,7 @@ class ArbitrageGraphPath:
                 tradelist.append(Trade(base_exchange,tradesymbols,volume,limitprice,tradetype))
         return tradelist
     
-
+    @staticmethod
     def isTradeListSingleExchange(tradeList):
         exchangeName = tradeList[0].exchangeName
         for trade in tradeList:
@@ -131,7 +131,8 @@ class ArbitrageGraphPath:
             if prevTrade.exchangeName == trade.exchangeName:
                 tradeListCurrentSegment.append(trade)
             else:
-                segmentedTradeList.append(tradeListCurrentSegment)
+                if len(tradeListCurrentSegment)!=0:
+                    segmentedTradeList.append(tradeListCurrentSegment)
                 tradeListCurrentSegment = []
                 tradeListCurrentSegment.append(trade)
         return segmentedTradeList

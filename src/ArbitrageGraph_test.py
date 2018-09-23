@@ -1,14 +1,14 @@
 import pytest  
 import numpy as np
 from ArbitrageGraph import ArbitrageGraph
-
+from ArbitrageGraphPath import ArbitrageGraphPath
 from OrderBook import OrderBookPrice
 from Trade import Trade
 
 
 class TestClass(object):
 
-    def test_one(self):
+    def test_intraExchange(self):
         arbitrageGraph = ArbitrageGraph()
         p1=arbitrageGraph.updatePoint(
             symbol="BTC/USD",
@@ -57,6 +57,43 @@ class TestClass(object):
         assert (segmentedTradeList[0][1].exchangeName,segmentedTradeList[0][1].symbol,segmentedTradeList[0][1].tradetype) == ('kraken','ETH/USD',Trade.BUY_ORDER)
         assert (segmentedTradeList[0][2].exchangeName,segmentedTradeList[0][2].symbol,segmentedTradeList[0][2].tradetype) == ('kraken','ETH/BTC',Trade.SELL_ORDER)
 
+    def test_multipleExchanges(self):
+        arbitrageGraph = ArbitrageGraph(edgeTTL=5)
+        
+        arbitrageGraph.updatePoint(
+            symbol="BTC/USD",
+            exchangename="kraken",
+            feeRate=0.0,
+            askPrice=OrderBookPrice(meanprice=10000,limitprice=10000,vol_BASE=1),
+            bidPrice=OrderBookPrice(meanprice=9000,limitprice=9000,vol_BASE=1),
+            timestamp=0)
+
+        arbitrageGraph.updatePoint(
+            symbol="ETH/USD",
+            exchangename="kraken",
+            feeRate=0.0,
+            askPrice=OrderBookPrice(meanprice=200,limitprice=200,vol_BASE=1),
+            bidPrice=OrderBookPrice(meanprice=100,limitprice=100,vol_BASE=1),
+            timestamp=1)
+
+        arbitrageGraph.updatePoint(
+            symbol="BTC/ETH",
+            exchangename="poloniex",
+            feeRate=0.0,
+            askPrice=OrderBookPrice(meanprice=5,limitprice=5,vol_BASE=1),
+            bidPrice=OrderBookPrice(meanprice=4,limitprice=4,vol_BASE=1),
+            timestamp=2)
+        
+        arbitrageGraphPath = ArbitrageGraphPath(
+            gdict=arbitrageGraph.gdict,
+            nodes=['kraken-BTC','kraken-USD','kraken-ETH','poloniex-ETH','poloniex-BTC','kraken-BTC'],
+            timestamp=3,
+            edgeTTL_s=10,
+            isNegativeCycle=None,
+            length=None)
+        segmentedTradeList = arbitrageGraphPath.toSegmentedTradeList()
+        print('fone')
+        
     def test_TTLTest_one(self):
         arbitrageGraph = ArbitrageGraph(edgeTTL=5)
         
@@ -110,4 +147,4 @@ class TestClass(object):
 
 if __name__ == "__main__":
     tc=TestClass()
-    tc.test_one()
+    tc.test_multipleExchanges()
