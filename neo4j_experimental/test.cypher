@@ -56,3 +56,76 @@ WHERE endVal > startVal
 RETURN EXTRACT(n IN NODES(x) | labels(n)[0]+n.name) AS Exchanges, endVal - startVal AS Profit
 ORDER BY Profit DESC
 LIMIT 5
+
+
+//
+CALL algo.allShortestPaths.stream('rate',{nodeQuery:'CryptoCurrency',defaultValue:1.0})
+YIELD sourceNodeId, targetNodeId, distance
+WITH sourceNodeId, targetNodeId, distance
+WHERE algo.isFinite(distance) = true
+
+MATCH (source:CryptoCurrency) WHERE id(source) = sourceNodeId
+MATCH (target:CryptoCurrency) WHERE id(target) = targetNodeId
+WITH source, target, distance //WHERE source = target
+
+RETURN source.name AS source, target.name AS target, distance
+ORDER BY distance DESC
+LIMIT 10
+
+////////
+
+
+MATCH p=(a)-[rels:EXCHANGE]->(b)
+WITH collect(rels.created) as createdList
+FOREACH (r IN relationships(p)| SET r.created = max(createdList) )
+
+MATCH (startNode(r):CryptoCurrency)-[subrel:EXCHANGE]->(endNode(r):CryptoCurrency)
+//WHERE ($now-r.created)<=r.timeToLiveSec
+RETURN subrel.rate
+ORDER BY subrel.created DESC
+LIMIT 1
+
+
+MATCH (a:CryptoCurrency:Kraken)-[subrel:EXCHANGE]->(CryptoCurrency:Kraken:CryptoCurrency)
+WITH subrel, max(collect(subrel.created)) AS mostrecent
+WHERE subrel.created = mostrecent
+RETURN mostrecent
+
+///
+
+MATCH (base:CryptoCurrency)-[r:EXCHANGE]->(quotation:CryptoCurrency)
+WHERE base.exchange = "Kraken" AND base.symbol = "BTC" AND quotation.exchange = "Kraken" AND quotation.symbol = "ETH" AND r.
+SET r.to = 1
+
+MATCH (base:CryptoCurrency),(quotation:CryptoCurrency)
+WHERE base.exchange = "Kraken" AND base.symbol = "BTC" AND quotation.exchange = "Kraken" AND quotation.symbol = "ETH"
+CREATE(base)-[:EXCHANGE {rate:1,from:0,to:1}]->(quotation)
+
+///
+
+MATCH path = (x)-[:EXCHANGE*]-(y)
+  UNWIND NODES(path) AS n
+    WITH path, 
+         SIZE(COLLECT(DISTINCT n)) AS testLength 
+    WHERE testLength = LENGTH(path) + 1
+RETURN path
+
+///
+MATCH x = (c)-[EXCHANGE*2..4]->(c)
+UNWIND NODES(x) AS xx
+WITH SIZE(COLLECT(DISTINCT xx)) AS testLength
+UNWIND testLength as t
+RETURN t
+
+WHERE testLength = LENGTH(x) AND c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a.to<$now) 
+
+
+//
+
+
+
+MATCH path = (c:CryptoCurrency)-[r:EXCHANGE*1..4]->(c)
+UNWIND NODES(path) AS n
+WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r
+WHERE testLength = LENGTH(path)
+RETURN path, nodes(path)[0], relationships(path)
