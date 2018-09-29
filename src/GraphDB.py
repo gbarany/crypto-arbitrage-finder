@@ -81,8 +81,16 @@ class GraphDB(object):
     def _createNode(tx, asset):
         result = tx.run(
             "MERGE (node:Asset:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
+            "ON CREATE SET node.currentAmount=$amount "
+            "WITH node "
             "MERGE (node)-[s:STATE {to:$forever}]->(state:AssetState {name:'State',amount:$amount}) "
             "ON CREATE SET s.from=$now "
+            "WITH node "
+            "MATCH (b:Asset)"
+            "WHERE b.symbol=$symbol AND NOT node=b "
+            "WITH node,b "
+            "MERGE (node)-[r:EXCHANGE]->(b) "
+            "ON CREATE SET r.from=$now, r.to=$forever, r.rate=1 "
             "RETURN id(node)" % (asset.exchange),
             symbol=asset.symbol,
             exchange=asset.exchange,
@@ -115,7 +123,8 @@ class GraphDB(object):
         result = tx.run(
             "MATCH (asset:Asset) "
             "WHERE asset.exchange = $assetExchange AND asset.symbol = $assetSymbol "
-            "CREATE (asset)-[s:STATE {from:$time_from,to:$time_to}]->(state:AssetState {name:'State',amount:$amount})",
+            "CREATE (asset)-[s:STATE {from:$time_from,to:$time_to}]->(state:AssetState {name:'State',amount:$amount})"
+            "SET asset.currentAmount=$amount ",
             assetExchange=asset.getExchange(),
             assetSymbol=asset.getSymbol(),
             time_to=sys.maxsize,
@@ -206,18 +215,19 @@ class GraphDB(object):
             "WITH path AS x, nodes(path)[0] as c, relationships(path) as r, $startVal as startVal "
             "WITH x, REDUCE(s = startVal, e IN r | s * e.rate) AS endVal, startVal "
             "WHERE endVal > startVal "
-            "RETURN EXTRACT(n IN NODES(x) | labels(n)[0]+n.name) AS Exchanges, endVal - startVal AS Profit "
+            "RETURN {rates:EXTRACT(r IN relationships(x) | {rate:r.rate}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
             "ORDER BY Profit DESC "
             "LIMIT 5",
             startVal=100,
             symbol=asset.getSymbol(),
             exchange=asset.getExchange(),
             now=time.time())
-        return [(record["Exchanges"],record["Profit"]) for record in result]
+        return [record["ArbitrageDeal"] for record in result]
 
 if __name__ == "__main__":
     graphDB = GraphDB(resetDBData=True)
 
+    graphDB.createNode(Asset(exchange='Bitfinex',symbol='BTC'))
     
     graphDB.addTradingRelationship(
         TradingRelationship(
@@ -263,14 +273,6 @@ if __name__ == "__main__":
             timeToLiveSec=3)
     )
 
-    graphDB.addTradingRelationship(
-        TradingRelationship(
-            baseAsset=Asset(exchange='Poloniex', symbol='BTC'),
-            quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
-            rate=20,
-            fee=0.002,
-            timeToLiveSec=3)
-    )
 
     graphDB.setAssetState(
         asset=Asset(exchange='Kraken', symbol='BTC'),
