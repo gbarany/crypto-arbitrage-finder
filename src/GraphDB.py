@@ -1,6 +1,7 @@
 from neo4j.v1 import GraphDatabase
 import time
 import sys
+from InitLogger import logger
 
 class Asset:
     def __init__(self, exchange, symbol):
@@ -41,7 +42,11 @@ class TradingRelationship:
 
 class GraphDB(object):
     def __init__(self, uri='bolt://neo4j:neo@localhost:7687', user='neo4j', password='neo',resetDBData=False):
-        self._driver = GraphDatabase.driver(uri, auth=(user, password))
+        try:
+            self._driver = GraphDatabase.driver(uri, auth=(user, password))
+        except Exception:
+            self._driver = None
+            logger.error("Couldn't connect to Neo4j database, saving to database will be disabled")
 
         if resetDBData == True:
             self.resetDBData()
@@ -49,12 +54,6 @@ class GraphDB(object):
 
     def close(self):
         self._driver.close()
-
-    def print_greeting(self, message):
-        with self._driver.session() as session:
-            greeting = session.write_transaction(
-                self._create_and_return_greeting, message)
-            print(greeting)
 
     def resetDBData(self):
         with self._driver.session() as session:

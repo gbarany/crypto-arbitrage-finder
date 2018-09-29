@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 from ArbitrageGraphPath import ArbitrageGraphPath
+from GraphDB import GraphDB, Asset, TradingRelationship
+from InitLogger import logger
 
 class ArbitrageGraphEdge:
     def __init__(self,timestamp=None,meanprice=0.0,limitprice=0.0,feeRate=0,vol_BASE=0):
@@ -12,6 +14,7 @@ class ArbitrageGraphEdge:
         self.limitprice = limitprice
         self.feeRate = feeRate
         self.vol_BASE = vol_BASE
+
     def getLogWeight(self):
         return -1.0 * np.log((1-self.feeRate)*self.meanprice)
 
@@ -23,6 +26,7 @@ class ArbitrageGraph:
         self.plt_ax = None
         self.negativepath = []
         self.edgeTTL = edgeTTL
+        self.graphDB = GraphDB()
         
     def updatePoint(self,symbol,exchangename,feeRate,askPrice,bidPrice,timestamp):
         symbolsplit = symbol.split('/')
@@ -32,7 +36,7 @@ class ArbitrageGraph:
         symbol_base  = (exchangename,symbolsplit[0])
         symbol_quote  = (exchangename,symbolsplit[1])
 
-        
+     
         key1 = (symbol_quote,symbol_base)
         key2 = (symbol_base,symbol_quote)
 
@@ -51,6 +55,16 @@ class ArbitrageGraph:
             self.gdict[key1] = ArbitrageGraphEdge(timestamp=timestamp,meanprice=1/askPrice.meanprice, limitprice=1/askPrice.limitprice,feeRate=feeRate,vol_BASE=askPrice.vol_BASE*askPrice.meanprice)
         if bidPrice.meanprice != None:
             self.gdict[key2] = ArbitrageGraphEdge(timestamp=timestamp,meanprice=bidPrice.meanprice, limitprice=bidPrice.limitprice,feeRate=feeRate,vol_BASE=bidPrice.vol_BASE)
+
+        self.graphDB.addTradingRelationship(
+                TradingRelationship(
+                    baseAsset=Asset(exchange=key1[0][0], symbol=key1[0][1]),
+                    quotationAsset=Asset(exchange=key1[1][0], symbol=key1[1][1]),
+                    rate=1,
+                    timeToLiveSec=4)
+            )
+        r = self.graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
+        logger.info('graphDB arb cycle: '+str(r))
         return self.updateGraph(timestamp=timestamp)
 
     def updateGraph(self,timestamp):
