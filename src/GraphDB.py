@@ -64,21 +64,30 @@ class GraphDB(object):
         result = tx.run("MATCH (n) DETACH DELETE n")
         return result
 
+    def runCypher(self,cypherCode):
+        with self._driver.session() as session:
+            return session.write_transaction(self._runCypher,cypherCode)
+
+    @staticmethod
+    def _runCypher(tx,cypherCode):
+        result = tx.run(cypherCode)
+        return result
+
     def createDBSchema(self):
         with self._driver.session() as session:
-            session.write_transaction(self._createDBSchema)
+            return session.write_transaction(self._createDBSchema)
 
     @staticmethod
     def _createDBSchema(tx):
         result = tx.run("CREATE INDEX ON :Asset(exchange, name)")
         return result
 
-    def createNode(self, asset):
+    def createAssetNode(self, asset):
         with self._driver.session() as session:
-            return session.write_transaction(self._createNode, asset)
+            return session.write_transaction(self._createAssetNode, asset)
 
     @staticmethod
-    def _createNode(tx, asset):
+    def _createAssetNode(tx, asset):
         result = tx.run(
             "MERGE (node:Asset:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
             "ON CREATE SET node.currentAmount=$amount "
@@ -91,7 +100,7 @@ class GraphDB(object):
             "WITH node,b "
             "MERGE (node)-[r:EXCHANGE]->(b) "
             "ON CREATE SET r.from=$now, r.to=$forever, r.rate=1 "
-            "RETURN id(node)" % (asset.exchange),
+            "RETURN id(node) as node" % (asset.exchange),
             symbol=asset.symbol,
             exchange=asset.exchange,
             now = time.time(),
@@ -108,7 +117,7 @@ class GraphDB(object):
     def _setAssetState(tx,  asset, assetState):
         now = time.time()
 
-        #GraphDB._createNode(tx,asset)
+        #GraphDB._createAssetNode(tx,asset)
 
         # create nodes if not existing yet and archive old relationship
         result = tx.run(
@@ -140,8 +149,8 @@ class GraphDB(object):
     def _addTradingRel(tx, tradingRelationship):
         now = time.time()
 
-        GraphDB._createNode(tx,tradingRelationship.getBaseAsset())
-        GraphDB._createNode(tx,tradingRelationship.getQuotationAsset())
+        GraphDB._createAssetNode(tx,tradingRelationship.getBaseAsset())
+        GraphDB._createAssetNode(tx,tradingRelationship.getQuotationAsset())
 
         # create nodes if not existing yet and archive old relationship
         result = tx.run(
@@ -227,7 +236,7 @@ class GraphDB(object):
 if __name__ == "__main__":
     graphDB = GraphDB(resetDBData=True)
 
-    graphDB.createNode(Asset(exchange='Bitfinex',symbol='BTC'))
+    graphDB.createAssetNode(Asset(exchange='Bitfinex',symbol='BTC'))
     
     graphDB.addTradingRelationship(
         TradingRelationship(

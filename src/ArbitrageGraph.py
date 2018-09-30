@@ -60,8 +60,9 @@ class ArbitrageGraph:
                 TradingRelationship(
                     baseAsset=Asset(exchange=key1[0][0], symbol=key1[0][1]),
                     quotationAsset=Asset(exchange=key1[1][0], symbol=key1[1][1]),
-                    rate=1,
-                    timeToLiveSec=4)
+                    rate=1/askPrice.meanprice,
+                    fee=0.002,
+                    timeToLiveSec=30)
             )
         r = self.graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
         logger.info('graphDB arb cycle: '+str(r))
