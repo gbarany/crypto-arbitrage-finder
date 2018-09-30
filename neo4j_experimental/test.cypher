@@ -129,3 +129,19 @@ UNWIND NODES(path) AS n
 WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r
 WHERE testLength = LENGTH(path)
 RETURN path, nodes(path)[0], relationships(path)
+
+
+//
+
+MATCH (n:Asset)-[s:STATE]-(h:AssetState)
+WHERE s.to>=timestamp()/1000
+MATCH (n:Asset)-[r:EXCHANGE]-(k:Asset)
+WHERE r.to>=timestamp()/1000
+RETURN n,r,k,s,h
+
+
+MATCH (n:Asset)-[s:STATE]-(h:AssetState)
+WHERE s.to>1538264086.152025
+MATCH (n:Asset)-[r:EXCHANGE]-(k:Asset)
+WHERE r.to>1538264086.152025
+RETURN n,r,k,s,h
