@@ -1,3 +1,8 @@
 .pytest_cache
 .coverage
 CryptoArbitrageApp.log
+.mypy_cache
+cred
+results
+src/__pycache__
+*.csv

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from Trade import Trade
+from Trade import Trade, TradeStatus, TradeType
 
 class ArbitrageGraphPath:
     def __init__(self,gdict,nodes,timestamp,edgeTTL_s,isNegativeCycle=None,length=None):
@@ -85,22 +85,22 @@ class ArbitrageGraphPath:
                 if A == 'EUR' or A =='USD' or A =='GBP':
                     tradesymbols = B+"/"+A
                     limitprice = 1/self.edges_weight_limit[idx_node]
-                    tradetype = Trade.BUY_ORDER
+                    tradetype = TradeType.BUY
                     volume = self.edges_vol_BASE[idx_node]*self.edges_weight[idx_node]
                 elif A == 'BTC' and B!='EUR' and B!='USD' and B!='GBP':
                     tradesymbols = B+"/"+A
                     limitprice = 1/self.edges_weight_limit[idx_node]
-                    tradetype = Trade.BUY_ORDER
+                    tradetype = TradeType.BUY
                     volume = self.edges_vol_BASE[idx_node]*self.edges_weight[idx_node]
                 elif A == 'ETH' and B!='EUR' and B!='USD' and B!='GBP' and B!='BTC' :
                     tradesymbols = B+"/"+A
                     limitprice = 1/self.edges_weight_limit[idx_node]
-                    tradetype = Trade.BUY_ORDER
+                    tradetype = TradeType.BUY
                     volume = self.edges_vol_BASE[idx_node]*self.edges_weight[idx_node]
                 else:
                     tradesymbols = A+"/"+B
                     limitprice = self.edges_weight_limit[idx_node]
-                    tradetype = Trade.SELL_ORDER
+                    tradetype = TradeType.SELL
                     volume = self.edges_vol_BASE[idx_node]
                 
                 tradelist.append(Trade(base_exchange,tradesymbols,volume,limitprice,tradetype))

@@ -1,24 +1,24 @@
-import pytest  
-from Trade import Trade
+import pytest
+from Trade import Trade, TradeStatus, TradeType
 
 
 class TestClass(object):
 
-    def test_TradeInitialization(self):
-        exchangeName="Coinbase Pro"
+    def test_trade_initialization(self):
+        exchange_name = "Coinbase Pro"
         symbol = "BTC/USD"
-        amount=1
+        amount = 1
         price = 1000
-        tradetype=Trade.BUY_ORDER
-        trade = Trade(exchangeName=exchangeName,symbol=symbol,amount=amount,price=price,tradetype=tradetype)
-        
-        assert trade.exchangeName == exchangeName
+        trade_type = TradeType.BUY
+        trade = Trade(exchangeName=exchange_name, market=symbol, amount=amount, price=price, trade_type=trade_type)
+
+        assert trade.exchangeName == exchange_name
         assert trade.exchangeNameStd == "coinbasepro"
-        assert trade.symbol==symbol
-        assert trade.amount==amount
-        assert trade.price==price
-        assert trade.tradetype==tradetype
-        assert trade.status == Trade.STATUS_INITIAL
+        assert trade.market == symbol
+        assert trade.amount == amount
+        assert trade.price == price
+        assert trade.trade_type == trade_type
+        assert trade.status == TradeStatus.INITIAL
         assert trade.id == None
         assert trade.timestamp == None
         assert trade.datetime == None

@@ -112,7 +112,7 @@ class FrameworkLive:
             logger.info("Received prices from coinmarketcap")
             orderbookAnalyser.updateCoinmarketcapPrice(ticker)
 
-    async def exchangePoller(self,exchange,symbols,orderbookAnalyser,enablePlotting):
+    async def exchangePoller(self,exchange,symbols,orderbookAnalyser: OrderbookAnalyser,enablePlotting):
         id = 0
         async for (symbol, order_book) in self.pollOrderbook(exchange,symbols):
             logger.info("Received "+symbol+" from "+exchange.name)
@@ -126,7 +126,7 @@ class FrameworkLive:
                     )
             id += 1
             if enablePlotting:
-                orderbookAnalyser.plot_graphs()
+                orderbookAnalyser.plotGraphs()
 
     def consumeArbTradeTriggerEvent(self,arbTradeTriggerEvent,arbTradeQueue,isSandboxMode):
         while True:
@@ -134,7 +134,7 @@ class FrameworkLive:
             arbTradeTriggerEvent.wait()  # Blocks until an item is available for consumption.
             # do stuff with the trading queue
             with Trader(exchangeNames=["kraken"],credfile='./cred/api_trading.json',isSandboxMode=isSandboxMode) as trader:
-                trader.executeTrades(arbTradeQueue.pop())
+                trader.execute_trades(arbTradeQueue.pop())
 
             arbTradeTriggerEvent.release()
             logger.info("Arbitrage trade trigger event consumed")

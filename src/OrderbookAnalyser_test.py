@@ -1,6 +1,8 @@
-import pytest  
+from typing import List
+
+import pytest
 from OrderbookAnalyser import OrderbookAnalyser
-from Trade import Trade
+from Trade import Trade, TradeStatus, TradeType
 
 from threading import Condition, Thread
 import time
@@ -70,15 +72,15 @@ class TestClass(object):
         assert len(arbTradeQueue)==len(vol_BTC)
         
         path=arbTradeQueue[0]
-        tradeList=path.toTradeList()
+        tradeList: List[Trade] =path.toTradeList()
         trade=tradeList[0]
-        assert (trade.symbol,trade.amount,trade.price,trade.tradetype,trade.status) == ('BTC/USD',vol_BTC[0],9000,Trade.SELL_ORDER,Trade.STATUS_INITIAL)
+        assert (trade.market, trade.amount, trade.price, trade.trade_type, trade.status) == ('BTC/USD', vol_BTC[0], 9000, TradeType.BUY, TradeStatus.INITIAL)
 
         trade=tradeList[1]
-        assert (trade.symbol,trade.amount,trade.price,trade.tradetype,trade.status) == ('ETH/USD',vol_BTC[0]/cmc['ETH/BTC']['last'],200,Trade.BUY_ORDER,Trade.STATUS_INITIAL)
+        assert (trade.market, trade.amount, trade.price, trade.trade_type, trade.status) == ('ETH/USD', vol_BTC[0] / cmc['ETH/BTC']['last'], 200, TradeType.BUY, TradeStatus.INITIAL)
 
         trade=tradeList[2]
-        assert (trade.symbol,trade.amount,trade.price,trade.tradetype,trade.status) == ('ETH/BTC',vol_BTC[0]/cmc['ETH/BTC']['last'],0.03,Trade.SELL_ORDER,Trade.STATUS_INITIAL)
+        assert (trade.market, trade.amount, trade.price, trade.trade_type, trade.status) == ('ETH/BTC', vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03, TradeType.SELL, TradeStatus.INITIAL)
 
 if __name__ == "__main__":
     tc=TestClass()

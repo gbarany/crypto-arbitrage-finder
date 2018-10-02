@@ -3,7 +3,7 @@ import numpy as np
 from ArbitrageGraph import ArbitrageGraph
 from ArbitrageGraphPath import ArbitrageGraphPath
 from OrderBook import OrderBookPrice
-from Trade import Trade
+from Trade import Trade, TradeStatus, TradeType
 
 
 class TestClass(object):
@@ -53,9 +53,9 @@ class TestClass(object):
         assert path.nof_exchanges_involved==1
 
         segmentedTradeList = path.toSegmentedTradeList()
-        assert (segmentedTradeList[0][0].exchangeName,segmentedTradeList[0][0].symbol,segmentedTradeList[0][0].tradetype) == ('kraken','BTC/USD',Trade.SELL_ORDER)
-        assert (segmentedTradeList[0][1].exchangeName,segmentedTradeList[0][1].symbol,segmentedTradeList[0][1].tradetype) == ('kraken','ETH/USD',Trade.BUY_ORDER)
-        assert (segmentedTradeList[0][2].exchangeName,segmentedTradeList[0][2].symbol,segmentedTradeList[0][2].tradetype) == ('kraken','ETH/BTC',Trade.SELL_ORDER)
+        assert (segmentedTradeList[0][0].exchangeName,segmentedTradeList[0][0].symbol,segmentedTradeList[0][0].tradetype) == ('kraken','BTC/USD',TradeType.SELL)
+        assert (segmentedTradeList[0][1].exchangeName,segmentedTradeList[0][1].symbol,segmentedTradeList[0][1].tradetype) == ('kraken','ETH/USD',TradeType.BUY)
+        assert (segmentedTradeList[0][2].exchangeName,segmentedTradeList[0][2].symbol,segmentedTradeList[0][2].tradetype) == ('kraken','ETH/BTC',TradeType.SELL)
 
     def test_multipleExchanges(self):
         arbitrageGraph = ArbitrageGraph(edgeTTL=5)

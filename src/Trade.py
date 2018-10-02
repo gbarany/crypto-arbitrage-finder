@@ -1,3 +1,18 @@
+from enum import Enum
+
+
+class TradeStatus(Enum):
+    INITIAL = "STATUS_INITIAL"
+    CREATED = "STATUS_CREATED"
+    EXECUTED = "STATUS_EXECUTED "
+    FAILED = "STATUS_FAILED"
+
+
+class TradeType(Enum):
+    BUY = "BUY_ORDER"
+    SELL = "SELL_ORDER"
+
+
 class Trade:
     STATUS_INITIAL = "STATUS_INITIAL"
     STATUS_CREATED = "STATUS_CREATED"
@@ -7,14 +22,14 @@ class Trade:
     BUY_ORDER = "BUY_ORDER"
     SELL_ORDER = "SELL_ORDER"
 
-    def __init__(self,exchangeName,symbol,amount,price,tradetype):
-        self.exchangeName=exchangeName
-        self.exchangeNameStd=exchangeName.lower().replace(" ","")        
-        self.symbol=symbol
-        self.amount=amount
-        self.price=price
-        self.tradetype=tradetype
-        self.status = Trade.STATUS_INITIAL
+    def __init__(self, exchange_name, market, amount, price, trade_type: TradeType):
+        self.exchangeName = exchange_name
+        self.exchangeNameStd = exchange_name.lower().replace(" ", "")
+        self.market = market
+        self.amount = amount
+        self.price = price
+        self.trade_type: TradeType = trade_type
+        self.status: TradeStatus = TradeStatus.INITIAL
         self.id = None
 
         self.timestamp = None
