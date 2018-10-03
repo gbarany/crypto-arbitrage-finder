@@ -5,16 +5,30 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "FrameworkLive Sandbox",
+            "name": "FrameworkLive Sandbox Neo4j-local",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/FrameworkLive.py",
             "console": "integratedTerminal",
             "args": [
                 "--noplot",
-                "--resultsdir=./results/"
+                "--resultsdir=./results/",
+                "--neo4jmode=local"
             ]
         },
+        {
+            "name": "FrameworkLive Sandbox Neo4j-AWS",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/FrameworkLive.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--noplot",
+                "--resultsdir=./results/",
+                "--neo4jmode=aws"
+            ]
+        },
+
         {
             "name": "FrameworkLive NO Sandbox",
             "type": "python",
