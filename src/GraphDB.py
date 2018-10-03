@@ -3,6 +3,7 @@ import time
 import sys
 from InitLogger import logger
 
+
 class Asset:
     def __init__(self, exchange, symbol):
         self.exchange = exchange
@@ -14,13 +15,14 @@ class Asset:
     def getSymbol(self):
         return self.symbol
 
+
 class AssetState:
     def __init__(self, amount):
         self.amount = amount
 
 
 class TradingRelationship:
-    def __init__(self, baseAsset, quotationAsset, rate,fee,timeToLiveSec):
+    def __init__(self, baseAsset, quotationAsset, rate, fee, timeToLiveSec):
         self.baseAsset = baseAsset
         self.quotationAsset = quotationAsset
         self.rate = rate
@@ -34,19 +36,25 @@ class TradingRelationship:
         return self.quotationAsset
 
     def getBaseNodeID(self):
-        return self.baseAsset.exchange+self.baseAsset.symbol
+        return self.baseAsset.exchange + self.baseAsset.symbol
 
     def getQuotationNodeID(self):
-        return self.quotationAsset.exchange+self.quotationAsset.symbol
+        return self.quotationAsset.exchange + self.quotationAsset.symbol
 
 
 class GraphDB(object):
-    def __init__(self, uri='bolt://neo4j:neo@localhost:7687', user='neo4j', password='neo',resetDBData=False):
+    def __init__(self,
+                 uri='bolt://localhost:7687',
+                 user='neo4j',
+                 password='neo',
+                 resetDBData=False):
         try:
             self._driver = GraphDatabase.driver(uri, auth=(user, password))
         except Exception:
             self._driver = None
-            logger.error("Couldn't connect to Neo4j database, saving to database will be disabled")
+            logger.error(
+                "Couldn't connect to Neo4j database, saving to database will be disabled"
+            )
 
         if resetDBData == True:
             self.resetDBData()
@@ -64,12 +72,12 @@ class GraphDB(object):
         result = tx.run("MATCH (n) DETACH DELETE n")
         return result
 
-    def runCypher(self,cypherCode):
+    def runCypher(self, cypherCode):
         with self._driver.session() as session:
-            return session.write_transaction(self._runCypher,cypherCode)
+            return session.write_transaction(self._runCypher, cypherCode)
 
     @staticmethod
-    def _runCypher(tx,cypherCode):
+    def _runCypher(tx, cypherCode):
         result = tx.run(cypherCode)
         return result
 
@@ -103,23 +111,23 @@ class GraphDB(object):
             "RETURN id(node) as node" % (asset.exchange),
             symbol=asset.symbol,
             exchange=asset.exchange,
-            now = time.time(),
-            amount = 0,
-            forever = sys.maxsize)
+            now=time.time(),
+            amount=0,
+            forever=sys.maxsize)
         return result
 
-
-    def setAssetState(self, asset,assetState):
+    def setAssetState(self, asset, assetState):
         with self._driver.session() as session:
             session.write_transaction(self._setAssetState, asset, assetState)
 
     @staticmethod
-    def _setAssetState(tx,  asset, assetState):
+    def _setAssetState(tx, asset, assetState):
         now = time.time()
 
         #GraphDB._createAssetNode(tx,asset)
 
         # create nodes if not existing yet and archive old relationship
+
         result = tx.run(
             "MATCH (asset:Asset)-[s:STATE]->(assetState:AssetState) "
             "WHERE asset.exchange = $assetExchange AND asset.symbol = $assetSymbol AND s.to > $now "
@@ -149,8 +157,8 @@ class GraphDB(object):
     def _addTradingRel(tx, tradingRelationship):
         now = time.time()
 
-        GraphDB._createAssetNode(tx,tradingRelationship.getBaseAsset())
-        GraphDB._createAssetNode(tx,tradingRelationship.getQuotationAsset())
+        GraphDB._createAssetNode(tx, tradingRelationship.getBaseAsset())
+        GraphDB._createAssetNode(tx, tradingRelationship.getQuotationAsset())
 
         # create nodes if not existing yet and archive old relationship
         result = tx.run(
@@ -159,8 +167,10 @@ class GraphDB(object):
             "SET r.to = $now ",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
             baseSymbol=tradingRelationship.getBaseAsset().getSymbol(),
-            quotationExchange=tradingRelationship.getQuotationAsset().getExchange(),
-            quotationSymbol=tradingRelationship.getQuotationAsset().getSymbol(),
+            quotationExchange=tradingRelationship.getQuotationAsset().
+            getExchange(),
+            quotationSymbol=tradingRelationship.getQuotationAsset().
+            getSymbol(),
             now=now)
 
         # create new relationship
@@ -170,24 +180,29 @@ class GraphDB(object):
             "CREATE(base)-[:EXCHANGE {rate:$rate,from:$time_from,to:$time_to}]->(quotation)",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
             baseSymbol=tradingRelationship.getBaseAsset().getSymbol(),
-            quotationExchange=tradingRelationship.getQuotationAsset().getExchange(),
-            quotationSymbol=tradingRelationship.getQuotationAsset().getSymbol(),
+            quotationExchange=tradingRelationship.getQuotationAsset().
+            getExchange(),
+            quotationSymbol=tradingRelationship.getQuotationAsset().
+            getSymbol(),
             rate=tradingRelationship.rate,
             fee=tradingRelationship.fee,
-            time_to=now+tradingRelationship.timeToLiveSec,
+            time_to=now + tradingRelationship.timeToLiveSec,
             time_from=now)
         return result
 
     @staticmethod
     def _create_and_return_greeting(tx, message):
-        result = tx.run("CREATE (a:Greeting) "
-                        "SET a.message = $message "
-                        "RETURN a.message + ', from node ' + id(a)", message=message)
+        result = tx.run(
+            "CREATE (a:Greeting) "
+            "SET a.message = $message "
+            "RETURN a.message + ', from node ' + id(a)",
+            message=message)
         return result.single()[0]
 
     def getLatestTradingRate(self, baseAsset, quotationAsset):
         with self._driver.session() as session:
-            return session.write_transaction(self._agetLatestTradingRate, baseAsset, quotationAsset)
+            return session.write_transaction(self._agetLatestTradingRate,
+                                             baseAsset, quotationAsset)
 
     @staticmethod
     def _agetLatestTradingRate(tx, baseAsset, quotationAsset):
@@ -199,7 +214,7 @@ class GraphDB(object):
             "ORDER BY r.created DESC "
             "LIMIT 1",
             baseExchange=baseAsset.getExchange(),
-            now = time.time(),
+            now=time.time(),
             baseSymbol=baseAsset.getSymbol(),
             quotationExchange=quotationAsset.getExchange(),
             quotationSymbol=quotationAsset.getSymbol())
@@ -233,19 +248,23 @@ class GraphDB(object):
             now=time.time())
         return [record["ArbitrageDeal"] for record in result]
 
-if __name__ == "__main__":
-    graphDB = GraphDB(resetDBData=True)
 
-    graphDB.createAssetNode(Asset(exchange='Bitfinex',symbol='BTC'))
-    
+if __name__ == "__main__":
+    #graphDB = GraphDB(resetDBData=True)
+    graphDB = GraphDB(
+        uri='bolt://3.120.197.59:7687',
+        user='neo4j',
+        password='i-0b4b0106c20014f75')
+
+    graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
+
     graphDB.addTradingRelationship(
         TradingRelationship(
             baseAsset=Asset(exchange='Kraken', symbol='BTC'),
             quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
             rate=1,
             fee=0.002,
-            timeToLiveSec=4)
-    )
+            timeToLiveSec=4))
 
     graphDB.addTradingRelationship(
         TradingRelationship(
@@ -253,16 +272,14 @@ if __name__ == "__main__":
             quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
             rate=2,
             fee=0.002,
-            timeToLiveSec=2)
-    )
+            timeToLiveSec=2))
     graphDB.addTradingRelationship(
         TradingRelationship(
             baseAsset=Asset(exchange='Kraken', symbol='BTC'),
             quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
             rate=3,
             fee=0.002,
-            timeToLiveSec=5)
-    )
+            timeToLiveSec=5))
 
     graphDB.addTradingRelationship(
         TradingRelationship(
@@ -270,8 +287,7 @@ if __name__ == "__main__":
             quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
             rate=4,
             fee=0.002,
-            timeToLiveSec=3)
-    )
+            timeToLiveSec=3))
 
     graphDB.addTradingRelationship(
         TradingRelationship(
@@ -279,9 +295,7 @@ if __name__ == "__main__":
             quotationAsset=Asset(exchange='Poloniex', symbol='BTC'),
             rate=1,
             fee=0.002,
-            timeToLiveSec=3)
-    )
-
+            timeToLiveSec=3))
 
     graphDB.setAssetState(
         asset=Asset(exchange='Kraken', symbol='BTC'),
@@ -305,8 +319,9 @@ if __name__ == "__main__":
     )
 
     print(r)
-    
+
     r = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
     print(r)
     print(time.time())
+
     # graphDB.print_greeting('hello')

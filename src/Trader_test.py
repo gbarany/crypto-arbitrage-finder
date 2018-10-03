@@ -16,16 +16,24 @@ class TestClass(object):
     async def test_execute_trades(self):
         exch = self.exch
         market_symbol = 'ETH/BTC'
-        with Trader(exchangeNames=[exch], credfile='./cred/api_balance.json', isSandboxMode=True) as trader:
+        with Trader(
+                exchangeNames=[exch],
+                credfile='./cred/api_balance.json',
+                isSandboxMode=True) as trader:
             exchange = trader.get_exchange(exch)
             ob = await exchange.fetch_order_book(market_symbol, limit=20)
             print(ob)
-            trade = Trade(exch, market_symbol, trader.get_min_trade_amount(exch, market_symbol), 1, TradeType.BUY)
+            trade = Trade(exch, market_symbol,
+                          trader.get_min_trade_amount(exch, market_symbol), 1,
+                          TradeType.BUY)
             trader.execute_trades([trade])
 
     def test_fetch_balances(self):
         exch = self.exch
-        with Trader(exchangeNames=[exch], credfile='./cred/api_balance.json', isSandboxMode=True) as trader:
+        with Trader(
+                exchangeNames=[exch],
+                credfile='./cred/api_balance.json',
+                isSandboxMode=True) as trader:
             assert trader.isSandboxMode is True
             assert (exch in trader.balance) is False
             trader.fetch_balances()
@@ -35,7 +43,10 @@ class TestClass(object):
 
     def test_transaction_valid(self, mocker):
         exch = self.exch
-        with Trader(exchangeNames=[exch], credfile='./cred/api_balance.json', isSandboxMode=True) as trader:
+        with Trader(
+                exchangeNames=[exch],
+                credfile='./cred/api_balance.json',
+                isSandboxMode=True) as trader:
             # monkeypatch.setattr(trader, 'get_free_balance', lambda: 123)
 
             market = 'ETH/BTC'
@@ -47,13 +58,17 @@ class TestClass(object):
                 trader.is_transaction_valid(exch, market, 0.00000000001)
             with pytest.raises(ValueError):
                 trader.is_transaction_valid(exch, market, 1000000000000)
-            max_amount = trader.exchanges[exch].markets[market]['limits']['price']['max']
-            min_amount = trader.exchanges[exch].markets[market]['limits']['price']['min']
+            max_amount = trader.exchanges[exch].markets[market]['limits'][
+                'price']['max']
+            min_amount = trader.exchanges[exch].markets[market]['limits'][
+                'price']['min']
             with pytest.raises(ValueError):
                 trader.is_transaction_valid(exch, market, max_amount)
 
-            trader.exchanges[exch].markets[market]['limits']['price']['max'] = 2  # MOCK for the test
-            trader.get_free_balance = mocker.MagicMock(return_value=1)  # MOCK for the test
+            trader.exchanges[exch].markets[market]['limits']['price'][
+                'max'] = 2  # MOCK for the test
+            trader.get_free_balance = mocker.MagicMock(
+                return_value=1)  # MOCK for the test
             assert trader.is_transaction_valid(exch, market, 1) is True
             with pytest.raises(ValueError):
                 assert trader.is_transaction_valid(exch, market, 1.5) is True
@@ -62,7 +77,10 @@ class TestClass(object):
 
     def test_fetch_order_statuses(self):
         exch = self.exch
-        with Trader(exchangeNames=[exch], credfile='./cred/api_balance.json', isSandboxMode=True) as trader:
+        with Trader(
+                exchangeNames=[exch],
+                credfile='./cred/api_balance.json',
+                isSandboxMode=True) as trader:
             trader.fetch_order_statuses()
 
     #
@@ -77,6 +95,7 @@ class TestClass(object):
     #         trader.executeTrades(trade_list)
     #         assert ('binance' in trader.balance) is True
     #         print("done")
+
 
 # if __name__ == "__main__":
 #     TC = TestClass()

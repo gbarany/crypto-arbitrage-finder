@@ -3,14 +3,18 @@ from Trade import Trade, TradeStatus, TradeType
 
 
 class TestClass(object):
-
     def test_trade_initialization(self):
         exchange_name = "Coinbase Pro"
         symbol = "BTC/USD"
         amount = 1
         price = 1000
         trade_type = TradeType.BUY
-        trade = Trade(exchangeName=exchange_name, market=symbol, amount=amount, price=price, trade_type=trade_type)
+        trade = Trade(
+            exchangeName=exchange_name,
+            market=symbol,
+            amount=amount,
+            price=price,
+            trade_type=trade_type)
 
         assert trade.exchangeName == exchange_name
         assert trade.exchangeNameStd == "coinbasepro"

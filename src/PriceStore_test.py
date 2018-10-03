@@ -20,7 +20,8 @@ def get_cmc_sample_fetch():
         'percent_change_1h': '0.2',
         'percent_change_24h': '0.17',
         'percent_change_7d': '-7.76',
-        'last_updated': '1536357442'}
+        'last_updated': '1536357442'
+    }
 
     ticker['BTC/USD'] = {
         'symbol': 'BTC/USD',
@@ -42,29 +43,50 @@ def get_cmc_sample_fetch():
         'average': None,
         'baseVolume': None,
         'quoteVolume': 4348848637.63,
-        'info': info}
+        'info': info
+    }
     return ticker
 
 
 class TestClass(object):
-
     def test_onepricefromorderbookwithinttl(self):
         price_store = PriceStore()
-        price_store.updatePriceFromOrderBook(symbol="BTC/USD", exchangename="kraken", asks=[[10000, 1]],
-                                             bids=[[9000, 1]], timestamp=1)
-        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=30) == 9500
+        price_store.updatePriceFromOrderBook(
+            symbol="BTC/USD",
+            exchangename="kraken",
+            asks=[[10000, 1]],
+            bids=[[9000, 1]],
+            timestamp=1)
+        assert price_store.getMeanPrice(
+            symbol_base_ref='BTC', symbol_quote_ref='USD',
+            timestamp=30) == 9500
         with pytest.raises(ValueError):
-            price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
+            price_store.getMeanPrice(
+                symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
 
     def test_twopricefromorderbookonewithinoneoutofttl(self):
         price_store = PriceStore()
-        price_store.updatePriceFromOrderBook(symbol="BTC/USD", exchangename="bitfinex", asks=[[20000, 1]],
-                                             bids=[[9000, 1]], timestamp=0)
-        price_store.updatePriceFromOrderBook(symbol="BTC/USD", exchangename="kraken", asks=[[10000, 1]],
-                                             bids=[[9000, 1]], timestamp=1)
-        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=20) == 12000
-        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=60) == 12000
-        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=61) == 9500
+        price_store.updatePriceFromOrderBook(
+            symbol="BTC/USD",
+            exchangename="bitfinex",
+            asks=[[20000, 1]],
+            bids=[[9000, 1]],
+            timestamp=0)
+        price_store.updatePriceFromOrderBook(
+            symbol="BTC/USD",
+            exchangename="kraken",
+            asks=[[10000, 1]],
+            bids=[[9000, 1]],
+            timestamp=1)
+        assert price_store.getMeanPrice(
+            symbol_base_ref='BTC', symbol_quote_ref='USD',
+            timestamp=20) == 12000
+        assert price_store.getMeanPrice(
+            symbol_base_ref='BTC', symbol_quote_ref='USD',
+            timestamp=60) == 12000
+        assert price_store.getMeanPrice(
+            symbol_base_ref='BTC', symbol_quote_ref='USD',
+            timestamp=61) == 9500
 
     def test_pricefromcoinmarketcap(self):
         price_store = PriceStore()
@@ -72,19 +94,31 @@ class TestClass(object):
         price_store.updatePriceFromCoinmarketcap(ticker)
 
         with pytest.raises(ValueError):
-            price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
-        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD',
-                                        timestamp=1536357080000 + 1) == 6500
+            price_store.getMeanPrice(
+                symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
+        assert price_store.getMeanPrice(
+            symbol_base_ref='BTC',
+            symbol_quote_ref='USD',
+            timestamp=1536357080000 + 1) == 6500
 
     def test_ob_cmc_combo(self):
         price_store = PriceStore()
         ticker = get_cmc_sample_fetch()
-        price_store.updatePriceFromOrderBook(symbol="BTC/USD", exchangename="kraken", asks=[[10000, 1]],
-                                             bids=[[9000, 1]], timestamp=1)
-        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=30) == 9500
+        price_store.updatePriceFromOrderBook(
+            symbol="BTC/USD",
+            exchangename="kraken",
+            asks=[[10000, 1]],
+            bids=[[9000, 1]],
+            timestamp=1)
+        assert price_store.getMeanPrice(
+            symbol_base_ref='BTC', symbol_quote_ref='USD',
+            timestamp=30) == 9500
 
         price_store.updatePriceFromCoinmarketcap(ticker)
         with pytest.raises(ValueError):
-            price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
-        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD',
-                                        timestamp=1536357080000 + 1) == 6500
+            price_store.getMeanPrice(
+                symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
+        assert price_store.getMeanPrice(
+            symbol_base_ref='BTC',
+            symbol_quote_ref='USD',
+            timestamp=1536357080000 + 1) == 6500
