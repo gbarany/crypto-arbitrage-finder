@@ -9,7 +9,7 @@ import dill
 import datetime
 import logging
 from Trader import Trader
-
+from FWLiveParams import FWLiveParams
 logger = logging.getLogger('CryptoArbitrageApp')
 
 
@@ -25,17 +25,22 @@ class OrderbookAnalyser:
                  tradeLogFilename="tradelog.csv",
                  priceSource=PRICE_SOURCE_ORDERBOOK,
                  arbTradeTriggerEvent=None,
-                 arbTradeQueue=None):
+                 arbTradeQueue=None,
+                 neo4j_mode=FWLiveParams.neo4j_mode_disabled):
+
+        # create Arbitrage Graph objects
         self.arbitrageGraphs = [
-            ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))
-        ]  # create Arbitrage Graph objects
+            ArbitrageGraph(
+                edgeTTL=edgeTTL,
+                neo4j_mode=neo4j_mode) for count in range(len(vol_BTC))]
+        
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
         self.resultsdir = resultsdir
         self.timestamp_start = datetime.datetime.now()
         self.cmcTicker = None
-
+        self.neo4j_mode = neo4j_mode
         self.arbTradeTriggerEvent = arbTradeTriggerEvent
         self.arbTradeQueue = arbTradeQueue
         self.priceSource = priceSource
@@ -83,12 +88,12 @@ class OrderbookAnalyser:
                 bids=bids,
                 timestamp=timestamp)
         elif self.priceSource == OrderbookAnalyser.PRICE_SOURCE_CMC:
-            if self.cmcTicker != None:
+            if self.cmcTicker is not None:
                 self.priceStore.updatePriceFromCoinmarketcap(
                     ticker=self.cmcTicker)
             else:
-                #logger.info('No CMC ticker received yet, reverting to orderbook pricing')
-                #self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
+                # logger.info('No CMC ticker received yet, reverting to orderbook pricing')
+                # self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
                 logger.info('No CMC ticker received yet, skipping update')
                 return
         try:
@@ -97,6 +102,11 @@ class OrderbookAnalyser:
                 symbol_base_ref='BTC',
                 symbol_quote_ref=symbol.split('/')[0],
                 timestamp=timestamp)
+            
+            # Price store doesn't have an exchange rate for this trading pair
+            # therefore trading graph won't be updated
+            if rate_BTC_to_BASE is None:
+                return
 
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
                 vol_BASE = self.vol_BTC[idx] * rate_BTC_to_BASE
@@ -112,7 +122,7 @@ class OrderbookAnalyser:
                     bidPrice=bidPrice,
                     timestamp=timestamp)
 
-                if path.isNegativeCycle == True:
+                if path.isNegativeCycle is True:
                     logger.info("Found arbitrage deal")
                     self.logArbitrageDeal(
                         id=id,
@@ -120,7 +130,7 @@ class OrderbookAnalyser:
                         vol_BTC=self.vol_BTC[idx],
                         path=path)
 
-                    if self.arbTradeTriggerEvent != None and self.arbTradeQueue != None:
+                    if self.arbTradeTriggerEvent is not None and self.arbTradeQueue is not None:
                         self.arbTradeTriggerEvent.acquire()
                         self.arbTradeQueue.append(path)
                         self.arbTradeTriggerEvent.notify()
@@ -138,7 +148,7 @@ class OrderbookAnalyser:
                          " symbol:" + symbol + ":" + str(e))
 
     def generateExportFilename(self, exchangeList=None):
-        if exchangeList == None:
+        if exchangeList is None:
             self.exportFilename = "arbitrage_Vol=%s" % ("-".join(
                 [str(i) + "BTC" for i in self.vol_BTC]))
         else:

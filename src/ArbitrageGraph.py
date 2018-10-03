@@ -6,6 +6,7 @@ import itertools
 from ArbitrageGraphPath import ArbitrageGraphPath
 from GraphDB import GraphDB, Asset, TradingRelationship
 from InitLogger import logger
+from FWLiveParams import FWLiveParams
 
 
 class ArbitrageGraphEdge:
@@ -26,14 +27,28 @@ class ArbitrageGraphEdge:
 
 
 class ArbitrageGraph:
-    def __init__(self, edgeTTL=5):
+    def __init__(self,
+                 edgeTTL=5,
+                 neo4j_mode=FWLiveParams.neo4j_mode_disabled):
+
         self.gdict = {}
         self.glist = []
         self.G = nx.DiGraph()
         self.plt_ax = None
         self.negativepath = []
         self.edgeTTL = edgeTTL
-        self.graphDB = GraphDB()
+        if neo4j_mode == FWLiveParams.neo4j_mode_aws_cloud:
+            self.graphDB = GraphDB(
+                uri='bolt://3.120.197.59:7687',
+                user='neo4j',
+                password='i-0b4b0106c20014f75')
+        elif neo4j_mode == FWLiveParams.neo4j_mode_localhost:
+            self.graphDB = GraphDB(
+                uri='bolt://localhost:7687',
+                user='neo4j',
+                password='neo')
+        else:
+            self.graphDB = None
 
     def updatePoint(self, symbol, exchangename, feeRate, askPrice, bidPrice,
                     timestamp):
@@ -59,14 +74,14 @@ class ArbitrageGraph:
         connectSameCurrenciesOnDifferentExchanges(symbol_base, uniqueNodes)
         connectSameCurrenciesOnDifferentExchanges(symbol_quote, uniqueNodes)
 
-        if askPrice.meanprice != None:
+        if askPrice.meanprice is not None:
             self.gdict[key1] = ArbitrageGraphEdge(
                 timestamp=timestamp,
                 meanprice=1 / askPrice.meanprice,
                 limitprice=1 / askPrice.limitprice,
                 feeRate=feeRate,
                 vol_BASE=askPrice.vol_BASE * askPrice.meanprice)
-        if bidPrice.meanprice != None:
+        if bidPrice.meanprice is not None:
             self.gdict[key2] = ArbitrageGraphEdge(
                 timestamp=timestamp,
                 meanprice=bidPrice.meanprice,
@@ -74,16 +89,19 @@ class ArbitrageGraph:
                 feeRate=feeRate,
                 vol_BASE=bidPrice.vol_BASE)
 
-        self.graphDB.addTradingRelationship(
-            TradingRelationship(
-                baseAsset=Asset(exchange=key1[0][0], symbol=key1[0][1]),
-                quotationAsset=Asset(exchange=key1[1][0], symbol=key1[1][1]),
-                rate=1 / askPrice.meanprice,
-                fee=0.002,
-                timeToLiveSec=30))
-        r = self.graphDB.getArbitrageCycle(
-            Asset(exchange='Kraken', symbol='BTC'))
-        logger.info('graphDB arb cycle: ' + str(r))
+        if self.graphDB is not None:
+            self.graphDB.addTradingRelationship(
+                TradingRelationship(
+                    baseAsset=Asset(exchange=key1[0][0], symbol=key1[0][1]),
+                    quotationAsset=Asset(
+                        exchange=key1[1][0], symbol=key1[1][1]),
+                    rate=1 / askPrice.meanprice,
+                    fee=0.002,
+                    timeToLiveSec=30))
+            r = self.graphDB.getArbitrageCycle(
+                Asset(exchange='Kraken', symbol='BTC'))
+            logger.info('graphDB arb cycle: ' + str(r))
+
         return self.updateGraph(timestamp=timestamp)
 
     def updateGraph(self, timestamp):

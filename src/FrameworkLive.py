@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import sys, getopt
+import sys
+import getopt
 import asyncio
 import aiohttp
 
@@ -14,20 +15,14 @@ from threading import Condition, Thread
 import datetime
 from InitLogger import logger
 import json
+from FWLiveParams import FWLiveParams
 
 
 class FrameworkLive:
-    def __init__(self,
-                 isForexEnabled=False,
-                 enablePlotting=False,
-                 isSandboxMode=True,
-                 resultsdir="./"):
+    def __init__(self, frameworklive_parameters):
         self.exchanges = {}
         self.symbols = {}
-        self.enablePlotting = enablePlotting
-        self.isSandboxMode = isSandboxMode
-        self.isForexEnabled = isForexEnabled
-        self.resultsdir = resultsdir
+        self.parameters = frameworklive_parameters
         self.exchanges["poloniex"] = ccxt.poloniex({'enableRateLimit': True})
         self.exchanges["kraken"] = ccxt.kraken({'enableRateLimit': True})
         self.exchanges["coinfloor"] = ccxt.coinfloor({'enableRateLimit': True})
@@ -59,7 +54,7 @@ class FrameworkLive:
             'ETC/ETH', 'LSK/ETH', 'LSK/BTC', 'LTC/USDT'
         ]
 
-        if enablePlotting:
+        if self.parameters.enable_plotting is True:
             plt.figure(1)
             plt.plot(1, 2)
             plt.ion()
@@ -71,14 +66,15 @@ class FrameworkLive:
 
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
         self.orderbookAnalyser = OrderbookAnalyser(
-            vol_BTC=[1],  #[1,0.1,0.01],
+            vol_BTC=[1],  # [1,0.1,0.01],
             edgeTTL=30,
             priceTTL=60,
-            resultsdir=resultsdir,
+            resultsdir=self.parameters.results_dir,
             tradeLogFilename='tradelog_live.csv',
             priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
             arbTradeTriggerEvent=self.arbTradeTriggerEvent,
-            arbTradeQueue=self.arbTradeQueue)
+            arbTradeQueue=self.arbTradeQueue,
+            neo4j_mode=self.parameters.neo4j_mode)
 
     async def pollOrderbook(self, exchange, symbols):
         i = 0
@@ -121,7 +117,7 @@ class FrameworkLive:
 
     async def pollCoinmarketcap(self, cmc):
         i = 0
-        symbols = ['USD', 'EUR', 'GBP']
+        symbols = ['USD', 'BTC', 'ETH', 'EUR', 'GBP']
         while True:
             symbol_quote = symbols[i % len(symbols)]
             try:
@@ -179,13 +175,15 @@ class FrameworkLive:
         for exchange in self.exchanges.keys():
             asyncio.ensure_future(
                 self.exchangePoller(
-                    self.exchanges[exchange], self.symbols[exchange],
-                    self.orderbookAnalyser, self.enablePlotting))
+                    exchange=self.exchanges[exchange],
+                    symbols=self.symbols[exchange],
+                    orderbookAnalyser=self.orderbookAnalyser,
+                    enablePlotting=self.parameters.enable_plotting))
 
         asyncio.ensure_future(
             self.coinmarketcapPoller(self.cmc, self.orderbookAnalyser))
 
-        if self.isForexEnabled == True:
+        if self.parameters.is_forex_enabled is True:
             with open('./cred/oanda.json') as file:
                 authkeys = json.load(file)
                 asyncio.ensure_future(
@@ -203,7 +201,7 @@ class FrameworkLive:
         Thread(
             target=self.consumeArbTradeTriggerEvent,
             args=(self.arbTradeTriggerEvent, self.arbTradeQueue,
-                  self.isSandboxMode)).start()
+                  self.parameters.is_sandbox_mode)).start()
         loop.run_forever()
 
         self.orderbookAnalyser.generateExportFilename(
@@ -213,39 +211,51 @@ class FrameworkLive:
 
 
 def main(argv):
-    enablePlotting = True
-    isSandboxMode = True
-    isForexEnabled = True
-
-    resultsdir = './'
+    frameworklive_parameters = FWLiveParams()
     try:
         opts, _ = getopt.getopt(argv, "nrl",
-                                ["noplot", "resultsdir=", "live", "noforex"])
+                                ["noplot",
+                                 "resultsdir=",
+                                 "resultsdir=",
+                                 "neo4jmode=",
+                                 "live",
+                                 "noforex"])
     except getopt.GetoptError:
         logger.error(
-            'Invalid parameter. --noplot: suppress plots, --resultsdir=: output directory, --live:execute trades'
+            'Invalid parameter(s) entered. List of valid parameters:\n'
+            ' --noplot: suppress graph plots\n'
+            ' --resultsdir=path: output directory\n'
+            ' --live: trades are executed in live mode\n'
+            ' --noforex: disable forex\n'
+            ' --neo4jmode=local: connect to neo4j running on localhost\n'
+            ' --neo4jmode=aws: connect to neo4j running in AWS\n'
         )
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-n", "--noplot"):
-            enablePlotting = False
+            frameworklive_parameters.enable_plotting = False
         if opt in ("-r", "--resultsdir"):
-            resultsdir = arg
-        if opt in ("-l", "--live"):
-            isSandboxMode = False
-        if opt in ("-l", "--noforex"):
-            isForexEnabled = False
+            frameworklive_parameters.results_dir = arg
+        if opt in ("-r", "--neo4jmode"):
+            if arg == 'local':
+                frameworklive_parameters.neo4j_mode = FWLiveParams.neo4j_mode_localhost
+            if arg == 'aws':
+                frameworklive_parameters.neo4j_mode = FWLiveParams.neo4j_mode_aws_cloud
+            if arg not in ['local', 'aws']:
+                logger.error('Invalid neo4j mode in parameter')
+                return
 
-    if isSandboxMode:
+        if opt in ("-l", "--live"):
+            frameworklive_parameters.is_sandbox_mode = False
+        if opt in ("-l", "--noforex"):
+            frameworklive_parameters.is_forex_enabled = False
+
+    if frameworklive_parameters.is_sandbox_mode is True:
         logger.info("Running in sandbox mode, TRADES WILL NOT BE EXECUTED")
     else:
         logger.info("Running in live mode, TRADES WILL BE EXECUTED")
 
-    frameworkLive = FrameworkLive(
-        isForexEnabled=isForexEnabled,
-        enablePlotting=enablePlotting,
-        resultsdir=resultsdir,
-        isSandboxMode=isSandboxMode)
+    frameworkLive = FrameworkLive(frameworklive_parameters)
     frameworkLive.run()
 
 

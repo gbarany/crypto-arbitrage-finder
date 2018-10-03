@@ -56,7 +56,7 @@ class GraphDB(object):
                 "Couldn't connect to Neo4j database, saving to database will be disabled"
             )
 
-        if resetDBData == True:
+        if resetDBData is True:
             self.resetDBData()
             self.createDBSchema()
 
@@ -124,7 +124,7 @@ class GraphDB(object):
     def _setAssetState(tx, asset, assetState):
         now = time.time()
 
-        #GraphDB._createAssetNode(tx,asset)
+        # GraphDB._createAssetNode(tx,asset)
 
         # create nodes if not existing yet and archive old relationship
 
@@ -250,7 +250,7 @@ class GraphDB(object):
 
 
 if __name__ == "__main__":
-    #graphDB = GraphDB(resetDBData=True)
+    # graphDB = GraphDB(resetDBData=True)
     graphDB = GraphDB(
         uri='bolt://3.120.197.59:7687',
         user='neo4j',
