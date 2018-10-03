@@ -29,7 +29,7 @@ class PriceStore:
         self.price[key2] = (timestamp, forexTicker['bid'])
 
     def updatePriceFromCoinmarketcap(self, ticker):
-        #self.price.clear()
+        # self.price.clear()
         for symbol, tickeritem in ticker.items():
             try:
                 symbolsplit = symbol.split('/')
@@ -37,7 +37,7 @@ class PriceStore:
                 symbol_quote = ('coinmarketcap', symbolsplit[1])
                 price = tickeritem['last']
                 timestamp = tickeritem['timestamp']
-                if price != None:
+                if price is not None:
                     if price > 0:
                         key1 = (symbol_quote, symbol_base)
                         key2 = (symbol_base, symbol_quote)
@@ -98,13 +98,13 @@ class PriceStore:
             if symbol_base_ref == symbol_base \
                 and symbol_quote_ref == symbol_quote \
                 and exchange_base == exchange_quote \
-                and (timestamp-ts)<=self.priceTTL \
-                and timestamp>ts:
+                and (timestamp-ts) <= self.priceTTL \
+                and timestamp > ts:
                 acc += rate
                 cntr += 1
         if cntr != 0:
             return acc / cntr
         else:
-            raise ValueError(
+            logger.info(
                 'Price information not available %s/%s timestamp %f' %
                 (symbol_base_ref, symbol_quote_ref, timestamp))
