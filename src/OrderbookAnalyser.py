@@ -1,5 +1,6 @@
 import numpy as np
 from ArbitrageGraph import ArbitrageGraph
+from ArbitrageGraphNeo import ArbitrageGraphNeo
 from FeeStore import FeeStore
 from OrderBook import OrderBook
 from PriceStore import PriceStore
@@ -29,10 +30,8 @@ class OrderbookAnalyser:
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled):
 
         # create Arbitrage Graph objects
-        self.arbitrageGraphs = [
-            ArbitrageGraph(
-                edgeTTL=edgeTTL,
-                neo4j_mode=neo4j_mode) for count in range(len(vol_BTC))]
+        self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))]
+        self.arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode)
         
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
@@ -97,19 +96,26 @@ class OrderbookAnalyser:
                 logger.info('No CMC ticker received yet, skipping update')
                 return
         try:
-            orderBook = OrderBook(symbol=symbol, asks=asks, bids=bids)
-            rate_BTC_to_BASE = self.priceStore.getMeanPrice(
+            rate_BTC_to_base = self.priceStore.getMeanPrice(
                 symbol_base_ref='BTC',
                 symbol_quote_ref=symbol.split('/')[0],
                 timestamp=timestamp)
+            orderBook = OrderBook(symbol=symbol, asks=asks, bids=bids,rate_BTC_to_base=rate_BTC_to_base)
             
             # Price store doesn't have an exchange rate for this trading pair
             # therefore trading graph won't be updated
-            if rate_BTC_to_BASE is None:
+            if rate_BTC_to_base is None:
                 return
 
+            self.arbitrage_graph_neo.updatePoint(
+                symbol=symbol,
+                exchange_name=exchangename,
+                fee_rate=self.feeStore.getTakerFee(exchangename, symbol),
+                orderbook=orderBook
+            )
+
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-                vol_BASE = self.vol_BTC[idx] * rate_BTC_to_BASE
+                vol_BASE = self.vol_BTC[idx] * rate_BTC_to_base
 
                 askPrice = orderBook.getAskPrice(vol=vol_BASE)
                 bidPrice = orderBook.getBidPrice(vol=vol_BASE)
