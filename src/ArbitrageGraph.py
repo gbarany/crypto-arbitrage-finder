@@ -4,10 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 from ArbitrageGraphPath import ArbitrageGraphPath
-from GraphDB import GraphDB, Asset, TradingRelationship
 from InitLogger import logger
 from FWLiveParams import FWLiveParams
-
 
 class ArbitrageGraphEdge:
     def __init__(self,
@@ -37,18 +35,6 @@ class ArbitrageGraph:
         self.plt_ax = None
         self.negativepath = []
         self.edgeTTL = edgeTTL
-        if neo4j_mode == FWLiveParams.neo4j_mode_aws_cloud:
-            self.graphDB = GraphDB(
-                uri='bolt://3.120.197.59:7687',
-                user='neo4j',
-                password='i-0b4b0106c20014f75')
-        elif neo4j_mode == FWLiveParams.neo4j_mode_localhost:
-            self.graphDB = GraphDB(
-                uri='bolt://localhost:7687',
-                user='neo4j',
-                password='neo')
-        else:
-            self.graphDB = None
 
     def updatePoint(self, symbol, exchangename, feeRate, askPrice, bidPrice,
                     timestamp):
@@ -63,7 +49,7 @@ class ArbitrageGraph:
         key2 = (symbol_base, symbol_quote)
 
         def connectSameCurrenciesOnDifferentExchanges(node, uniqueNodes):
-            if not node in uniqueNodes:
+            if node not in uniqueNodes:
                 for nodeIterator in uniqueNodes:
                     if nodeIterator[1] == node[1]:
                         self.gdict[(node, nodeIterator)] = ArbitrageGraphEdge()
@@ -88,19 +74,6 @@ class ArbitrageGraph:
                 limitprice=bidPrice.limitprice,
                 feeRate=feeRate,
                 vol_BASE=bidPrice.vol_BASE)
-
-        if self.graphDB is not None:
-            self.graphDB.addTradingRelationship(
-                TradingRelationship(
-                    baseAsset=Asset(exchange=key1[0][0], symbol=key1[0][1]),
-                    quotationAsset=Asset(
-                        exchange=key1[1][0], symbol=key1[1][1]),
-                    rate=1 / askPrice.meanprice,
-                    fee=0.002,
-                    timeToLiveSec=30))
-            r = self.graphDB.getArbitrageCycle(
-                Asset(exchange='Kraken', symbol='BTC'))
-            logger.info('graphDB arb cycle: ' + str(r))
 
         return self.updateGraph(timestamp=timestamp)
 
@@ -150,7 +123,7 @@ class ArbitrageGraph:
         edges = self.G.edges()
         colors = []
         weights = []
-        if self.negativepath != None:
+        if self.negativepath is not None:
             for u, v in edges:
                 try:
                     idx1 = self.negativepath.index(u)
