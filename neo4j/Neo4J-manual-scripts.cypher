@@ -135,7 +135,7 @@ RETURN path, nodes(path)[0], relationships(path)
 
 MATCH (n:Asset)-[s:STATE]-(h:AssetState)
 WHERE s.to>=timestamp()/1000
-MATCH (n:Asset)-[r:EXCHANGE]-(k:Asset)
+MATCH (n:Asset)-[r:EXCHANGE|:ORDERBOOK]-(k:Asset)
 WHERE r.to>=timestamp()/1000
 RETURN n,r,k,s,h
 
