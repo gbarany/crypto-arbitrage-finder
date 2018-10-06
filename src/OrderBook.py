@@ -76,20 +76,20 @@ class OrderBook:
         return '['+','.join(['['+str(pair[0])+','+str(pair[1])+']' for pair in list])+']'
 
     @staticmethod
-    def flip_nested_list(list):
-        return [[lst[1], lst[0]] for lst in list]
+    def rebase_nested_list(list):
+        return [[1/lst[0], lst[0]*lst[1]] for lst in list]
 
     def get_asks_str(self):
         return OrderBook.convert_nested_list_to_str(self.asks)
 
     def get_asks_in_base_str(self):
-        return OrderBook.convert_nested_list_to_str(OrderBook.flip_nested_list(self.asks))
+        return OrderBook.convert_nested_list_to_str(OrderBook.rebase_nested_list(self.asks))
 
     def get_bids_str(self):
         return OrderBook.convert_nested_list_to_str(self.bids)
 
     def get_bids_in_base_str(self):
-        return OrderBook.convert_nested_list_to_str(OrderBook.flip_nested_list(self.bids))
+        return OrderBook.convert_nested_list_to_str(OrderBook.rebase_nested_list(self.bids))
 
 
 if __name__ == "__main__":
