@@ -98,30 +98,42 @@ class GraphDB(object):
 
     @staticmethod
     def _createAssetNode(tx, asset):
+        now = time.time()
         result = tx.run(
             "MERGE (node:Asset:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
             "ON CREATE SET node.currentAmount=$amount "
             "WITH node "
             "MERGE (node)-[s:STATE {to:$forever}]->(state:AssetState {name:'State',amount:$amount}) "
             "ON CREATE SET s.from=$now "
-            "WITH node "
-            "MATCH (b:Asset)"
-            "WHERE b.symbol=$symbol AND NOT node=b "
-            "WITH node,b "
-            "MERGE (node)-[r:EXCHANGE]->(b) "
-            "ON CREATE SET r.from=$now, "
-            "r.to=$forever, "
-            "r.mean_price=$mean_price, "
-            "r.limit_price=$limit_price "
             "RETURN id(node) as node" % (asset.exchange),
             symbol=asset.symbol,
             exchange=asset.exchange,
-            now=time.time(),
+            now=now,
             amount=0,
             mean_price=1,
             limit_price=1,
             forever=sys.maxsize)
-        return result
+        nodeids =  [record["node"] for record in result]
+
+        result = tx.run(
+                    "MATCH (node:Asset) "
+                    "WHERE id(node) = $nodeid "
+                    "MATCH (b:Asset) "
+                    "WHERE b.symbol=$symbol AND NOT node=b "
+                    "WITH node,b "
+                    "MERGE (node)-[r:EXCHANGE]->(b) "
+                    "ON CREATE SET r.from=$now, r.to=$forever, r.mean_price=$mean_price, r.limit_price=$limit_price "
+                    "WITH node,b "
+                    "MERGE (b)-[r:EXCHANGE]->(node) "
+                    "ON CREATE SET r.from=$now, r.to=$forever, r.mean_price=$mean_price, r.limit_price=$limit_price "
+                    "RETURN id(node) as node",
+                    symbol=asset.symbol,                    
+                    now=now,
+                    mean_price=1,
+                    limit_price=1,
+                    nodeid=nodeids[0],
+                    forever=sys.maxsize)
+        return nodeids
 
     def setAssetState(self, asset, assetState):
         with self._driver.session() as session:
