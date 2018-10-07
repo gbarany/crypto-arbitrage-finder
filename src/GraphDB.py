@@ -248,12 +248,12 @@ class GraphDB(object):
         except Exception:
             return []
 
-    def getArbitrageCycle(self, asset):
+    def getArbitrageCycle(self, asset, match_lookback_sec):
         with self._driver.session() as session:
-            return session.write_transaction(self._getArbitrageCycle, asset)
+            return session.write_transaction(self._getArbitrageCycle, asset,match_lookback_sec)
 
     @staticmethod
-    def _getArbitrageCycle(tx, asset):
+    def _getArbitrageCycle(tx, asset, match_lookback_sec):
         now = time.time()
         result = tx.run(
             "MATCH path = (c:Asset)-[r:EXCHANGE*1..4]->(c) "
@@ -274,47 +274,43 @@ class GraphDB(object):
 
         arbitrage_deals = [record["ArbitrageDeal"] for record in result]
 
-        for arbitrage_deal in arbitrage_deals:
-            #arbitrage_rels=list(map(lambda x: {'start_node':x['start_node'],'end_node':x['end_node']},arbitrage_deal['path']))
-            #result = tx.run(
-            #    "UNWIND $arbitrage_rels as rels "
-            #    "WITH rels.start_node as Aid, rels.end_node AS Bid "
-            #    "MATCH (A),(B) "
-            #    "WHERE id(A)=Aid AND id(B)=Bid "
-            #    "CREATE (A)-[:ARBITRAGE {from:0,to:0}]->(B) ",
-            #    arbitrage_rels=arbitrage_rels)
-            
+        for arbitrage_deal in arbitrage_deals:            
             cypher_match = []
-            cypher_merge = []
-            cypher_merge_oncreate = []
-            cypher_merge_onmatch = []
+            cypher_match_set = []
+            cypher_create_set = []
+            cypher_match2 = []
+            cypher_match3 = []
             for idx,x in enumerate(arbitrage_deal['assets']):
                 nodename=chr(ord('a') + idx)
                 
                 cypher_match.append("("+nodename+":Asset {symbol:'"+str(x['symbol'])+"',exchange:'"+str(x['exchange'])+"'})")
-                
-                cypher_merge.append("("+nodename+")")
+                cypher_match2.append("("+nodename+":Asset {symbol:'"+str(x['symbol'])+"',exchange:'"+str(x['exchange'])+"'})")
+                cypher_match3.append("("+nodename+")")
 
                 # setting relationship properties
                 if idx < (len(arbitrage_deal['assets'])-1):
-                    cypher_merge.append("-[r"+str(idx)+":ARBITRAGE]->")
+                    cypher_match.append("-[r"+str(idx)+":ARBITRAGE]->")
+                    cypher_match3.append("-[r"+str(idx)+":ARBITRAGE]->")
+                    cypher_match_set.append("r"+str(idx)+".to=$now")
                     
-                    cypher_merge_oncreate.append("r"+str(idx)+".to=$now")
-                    cypher_merge_oncreate.append("r"+str(idx)+".from=$now")
-                    cypher_merge_oncreate.append("r"+str(idx)+".uuid=uuid")
+                    cypher_create_set.append("r"+str(idx)+".to=$now")
+                    cypher_create_set.append("r"+str(idx)+".from=$now")
+                    cypher_create_set.append("r"+str(idx)+".uuid=uuid")
                     
-                    cypher_merge_onmatch.append("r"+str(idx)+".to=$now")
-
-            cypher_cmd  = ' WITH randomUUID() as uuid'
-            cypher_cmd += ' MATCH path = '+'-->'.join(cypher_match)
-            cypher_cmd += ' MERGE '+''.join(cypher_merge)
-            cypher_cmd += ' ON CREATE SET ' + ', '.join(cypher_merge_oncreate)
-            cypher_cmd += ' ON MATCH SET ' + ', '.join(cypher_merge_onmatch)
+            cypher_cmd  = ' MATCH path = '+''.join(cypher_match)
+            cypher_cmd += " WHERE ALL (a in rels(path) WHERE ($now-a.to)<=$match_lookback_sec ) "
+            cypher_cmd += " SET " + ','.join(cypher_match_set)
+            cypher_cmd += " RETURN count(*) AS nof_matches"
+            result = tx.run(cypher_cmd,now=now,match_lookback_sec=match_lookback_sec)
+            nof_matches = result.single()['nof_matches']
             
-
-            #path_nodeid=list(map(lambda x: "(:Asset {id:'"+str(x['nodeid'])+"'})",arbitrage_deal['assets']))
-            #cypher_cmd2='MERGE '+'-[:ARBITRAGE]->'.join(path_nodeid)
-            result = tx.run(cypher_cmd,now=now)
+            if nof_matches == 0: # new arbitrage deal to be created
+                cypher_cmd  = ' WITH randomUUID() as uuid'
+                cypher_cmd += ' MATCH '+','.join(cypher_match2)
+                cypher_cmd += ' CREATE '+''.join(cypher_match3)
+                cypher_cmd += " SET " + ','.join(cypher_create_set)
+                result = tx.run(cypher_cmd,now=now)
+                
             print(cypher_cmd)
         return arbitrage_deals
 
