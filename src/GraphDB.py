@@ -104,7 +104,7 @@ class GraphDB(object):
             "MERGE (node:Asset:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
             "ON CREATE SET node.currentAmount=$amount "
             "WITH node "
-            "MERGE (node)-[s:STATE {to:$forever}]->(state:AssetState {name:'State',amount:$amount}) "
+            "MERGE (node)-[s:STATE {to:$forever}]->(state:AssetState {amount:$amount}) "
             "ON CREATE SET s.from=$now "
             "RETURN id(node) as node" % (asset.exchange),
             symbol=asset.symbol,
@@ -160,7 +160,7 @@ class GraphDB(object):
         result = tx.run(
             "MATCH (asset:Asset) "
             "WHERE asset.exchange = $assetExchange AND asset.symbol = $assetSymbol "
-            "CREATE (asset)-[s:STATE {from:$time_from,to:$time_to}]->(state:AssetState {name:'State',amount:$amount})"
+            "CREATE (asset)-[s:STATE {from:$time_from,to:$time_to}]->(state:AssetState {amount:$amount})"
             "SET asset.currentAmount=$amount ",
             assetExchange=asset.getExchange(),
             assetSymbol=asset.getSymbol(),
@@ -313,91 +313,3 @@ class GraphDB(object):
                 
             print(cypher_cmd)
         return arbitrage_deals
-
-
-if __name__ == "__main__":
-    graphDB = GraphDB(resetDBData=True)
-    # graphDB = GraphDB(
-    #    uri='bolt://3.120.197.59:7687',
-    #    user='neo4j',
-    #    password='i-0b4b0106c20014f75')
-
-    graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
-
-    graphDB.addTradingRelationship(
-        TradingRelationship(
-            baseAsset=Asset(exchange='Kraken', symbol='BTC'),
-            quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-            mean_price=1,
-            limit_price=1,
-            orderbook='[[1,1]]',
-            fee=0.002,
-            timeToLiveSec=4))
-
-    graphDB.addTradingRelationship(
-        TradingRelationship(
-            baseAsset=Asset(exchange='Kraken', symbol='BTC'),
-            quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-            mean_price=2,
-            limit_price=2,
-            orderbook='[[2,1]]',
-            fee=0.002,
-            timeToLiveSec=2))
-    graphDB.addTradingRelationship(
-        TradingRelationship(
-            baseAsset=Asset(exchange='Kraken', symbol='BTC'),
-            quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-            mean_price=3,
-            limit_price=3,
-            orderbook='[[3,1]]',
-            fee=0.002,
-            timeToLiveSec=5))
-
-    graphDB.addTradingRelationship(
-        TradingRelationship(
-            baseAsset=Asset(exchange='Kraken', symbol='ETH'),
-            quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
-            mean_price=4,
-            limit_price=4,
-            orderbook='[[4,1]]',
-            fee=0.002,
-            timeToLiveSec=3))
-
-    graphDB.addTradingRelationship(
-        TradingRelationship(
-            baseAsset=Asset(exchange='Kraken', symbol='BTC'),
-            quotationAsset=Asset(exchange='Poloniex', symbol='BTC'),
-            mean_price=1,
-            limit_price=1,
-            orderbook='[[1,1]]',
-            fee=0.002,
-            timeToLiveSec=3))
-
-    graphDB.setAssetState(
-        asset=Asset(exchange='Kraken', symbol='BTC'),
-        assetState=AssetState(amount=1))
-
-    time.sleep(1)
-
-    graphDB.setAssetState(
-        asset=Asset(exchange='Kraken', symbol='BTC'),
-        assetState=AssetState(amount=2))
-
-    time.sleep(1)
-
-    graphDB.setAssetState(
-        asset=Asset(exchange='Kraken', symbol='BTC'),
-        assetState=AssetState(amount=3))
-
-    r = graphDB.get_latest_prices(
-        baseAsset=Asset(exchange='Kraken', symbol='BTC'),
-        quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-    )
-
-    print(r)
-
-    r = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
-    print(r)
-    print(time.time())
-
-    # graphDB.print_greeting('hello')
