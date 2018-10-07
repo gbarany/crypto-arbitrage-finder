@@ -90,6 +90,7 @@ class GraphDB(object):
     @staticmethod
     def _createDBSchema(tx):
         result = tx.run("CREATE INDEX ON :Asset(exchange, name)")
+        #result = tx.run("CREATE CONSTRAINT ON (asset:Asset) ASSERT (asset.exchange, asset.symbol) IS NODE KEY")
         return result
 
     def createAssetNode(self, asset):
@@ -253,7 +254,7 @@ class GraphDB(object):
 
     @staticmethod
     def _getArbitrageCycle(tx, asset):
-
+        now = time.time()
         result = tx.run(
             "MATCH path = (c:Asset)-[r:EXCHANGE*1..4]->(c) "
             "WHERE c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a.to<$now) "
@@ -261,16 +262,61 @@ class GraphDB(object):
             "WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r "
             "WHERE testLength = LENGTH(path) "
             "WITH path AS x, nodes(path)[0] as c, relationships(path) as r, $startVal as startVal "
-            "WITH x, REDUCE(s = startVal, e IN r | s * e.mean_price) AS endVal, startVal "
+            "WITH x, REDUCE(s = startVal, e IN r | s * e.mean_price) AS endVal, startVal, COLLECT(nodes(x)) as elems "
             "WHERE endVal > startVal "
-            "RETURN {rates:EXTRACT(r IN relationships(x) | {mean_price:r.mean_price}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
+            "RETURN {path:EXTRACT(r IN relationships(x) | {mean_price:r.mean_price,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
             "ORDER BY Profit DESC "
             "LIMIT 5",
             startVal=100,
             symbol=asset.getSymbol(),
             exchange=asset.getExchange(),
-            now=time.time())
-        return [record["ArbitrageDeal"] for record in result]
+            now=now)
+
+        arbitrage_deals = [record["ArbitrageDeal"] for record in result]
+
+        for arbitrage_deal in arbitrage_deals:
+            #arbitrage_rels=list(map(lambda x: {'start_node':x['start_node'],'end_node':x['end_node']},arbitrage_deal['path']))
+            #result = tx.run(
+            #    "UNWIND $arbitrage_rels as rels "
+            #    "WITH rels.start_node as Aid, rels.end_node AS Bid "
+            #    "MATCH (A),(B) "
+            #    "WHERE id(A)=Aid AND id(B)=Bid "
+            #    "CREATE (A)-[:ARBITRAGE {from:0,to:0}]->(B) ",
+            #    arbitrage_rels=arbitrage_rels)
+            
+            cypher_match = []
+            cypher_merge = []
+            cypher_merge_oncreate = []
+            cypher_merge_onmatch = []
+            for idx,x in enumerate(arbitrage_deal['assets']):
+                nodename=chr(ord('a') + idx)
+                
+                cypher_match.append("("+nodename+":Asset {symbol:'"+str(x['symbol'])+"',exchange:'"+str(x['exchange'])+"'})")
+                
+                cypher_merge.append("("+nodename+")")
+
+                # setting relationship properties
+                if idx < (len(arbitrage_deal['assets'])-1):
+                    cypher_merge.append("-[r"+str(idx)+":ARBITRAGE]->")
+                    
+                    cypher_merge_oncreate.append("r"+str(idx)+".to=$now")
+                    cypher_merge_oncreate.append("r"+str(idx)+".from=$now")
+                    cypher_merge_oncreate.append("r"+str(idx)+".uuid=uuid")
+                    
+                    cypher_merge_onmatch.append("r"+str(idx)+".to=$now")
+
+            cypher_cmd  = ' WITH randomUUID() as uuid'
+            cypher_cmd += ' MATCH path = '+'-->'.join(cypher_match)
+            cypher_cmd += ' MERGE '+''.join(cypher_merge)
+            cypher_cmd += ' ON CREATE SET ' + ', '.join(cypher_merge_oncreate)
+            cypher_cmd += ' ON MATCH SET ' + ', '.join(cypher_merge_onmatch)
+            
+
+            #path_nodeid=list(map(lambda x: "(:Asset {id:'"+str(x['nodeid'])+"'})",arbitrage_deal['assets']))
+            #cypher_cmd2='MERGE '+'-[:ARBITRAGE]->'.join(path_nodeid)
+            result = tx.run(cypher_cmd,now=now)
+            print(cypher_cmd)
+        return arbitrage_deals
 
 
 if __name__ == "__main__":
