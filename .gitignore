@@ -7,3 +7,4 @@ results
 src/__pycache__
 *.csv
 cov.xml
+.vscode/.ropeproject
