@@ -6,3 +6,4 @@ cred
 results
 src/__pycache__
 *.csv
+cov.xml
