@@ -4,7 +4,8 @@ from GraphDB import GraphDB, Asset,TradingRelationship
 import time
 
 class TestClass(object):
-    def create_single_asset_node(self):
+
+    def test_create_single_asset_node(self):
         graphDB = GraphDB(resetDBData=True)
         nodeid =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
 
@@ -30,7 +31,7 @@ class TestClass(object):
         assert result_validation2[0]['amount'] == 0
         assert result_validation2[0]['name'] == 'State'
 
-    def create_two_asset_nodes_on_two_exchanges(self):
+    def test_create_two_asset_nodes_on_two_exchanges(self):
         graphDB = GraphDB(resetDBData=True)
         nodeid1 =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
         nodeid2 =  graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'))
@@ -71,7 +72,7 @@ class TestClass(object):
         assert result_validation4[0]['mean_price']==1
         assert result_validation4[0]['to']==sys.maxsize
     
-    def arbitrage_test_with_three_nodes(self):
+    def test_arbitrage_test_with_three_nodes(self):
         graphDB = GraphDB(resetDBData=True)
         nodeid1 =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
         nodeid2 =  graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'))
@@ -96,7 +97,7 @@ class TestClass(object):
                 orderbook='[[0.6,1]]',
                 fee=0,
                 timeToLiveSec=5))
-        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5)
         assert len(arbitrage_cycles) == 1    
         assert (arbitrage_cycles[0]['assets'][0]['amount'],arbitrage_cycles[0]['assets'][0]['exchange'],arbitrage_cycles[0]['assets'][0]['symbol']) == (0,'Kraken','BTC')
         assert (arbitrage_cycles[0]['assets'][1]['amount'],arbitrage_cycles[0]['assets'][1]['exchange'],arbitrage_cycles[0]['assets'][1]['symbol']) == (0,'Kraken','ETH')
@@ -104,12 +105,8 @@ class TestClass(object):
         assert (arbitrage_cycles[0]['profit']) == (2.0*0.6)*100-100
         assert (arbitrage_cycles[0]['path'][0]['mean_price']) == 2
         assert (arbitrage_cycles[0]['path'][1]['mean_price']) == 0.6        
-        print(arbitrage_cycles)
 
-        time.sleep(2)
-        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
-if __name__ == "__main__":
-    tc = TestClass()
-    #tc.create_single_asset_node()
-    #tc.create_two_asset_nodes_on_two_exchanges()
-    tc.arbitrage_test_with_three_nodes()
+        time.sleep(1)
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.1)
+        time.sleep(0.6)
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=0.5)
