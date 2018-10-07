@@ -55,6 +55,5 @@ class ArbitrageGraphNeo:
                 fee=fee_rate,
                 timeToLiveSec=self.edgeTTL))
 
-        r = self.graphDB.getArbitrageCycle(
-            Asset(exchange='Kraken', symbol='BTC'))
+        r = self.graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
         logger.info('graphDB arb cycle: ' + str(r))
