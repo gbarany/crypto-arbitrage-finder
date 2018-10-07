@@ -135,7 +135,7 @@ RETURN path, nodes(path)[0], relationships(path)
 
 MATCH (n:Asset)-[s:STATE]-(h:AssetState)
 WHERE s.to>=timestamp()/1000
-MATCH (n:Asset)-[r:EXCHANGE|:ORDERBOOK]-(k:Asset)
+MATCH (n:Asset)-[r:EXCHANGE|ORDERBOOK|ARBITRAGE]-(k:Asset)
 WHERE r.to>=timestamp()/1000
 RETURN n,r,k,s,h
 
@@ -145,3 +145,23 @@ WHERE s.to>1538264086.152025
 MATCH (n:Asset)-[r:EXCHANGE]-(k:Asset)
 WHERE r.to>1538264086.152025
 RETURN n,r,k,s,h
+
+MATCH (n:Asset)-[r:ARBITRAGE]-(k:Asset)
+WHERE r.from>=1538936162
+RETURN n,r,k
+
+MATCH (n)-[r:ARBITRAGE]->(k)
+
+// GET LATEST ARBITRAGE DEAL
+MATCH ()-[r:ARBITRAGE]->() 
+WITH max(r.to) AS latest
+MATCH (n)-[r:ARBITRAGE]->(k) 
+WHERE r.to = latest
+RETURN n,k,r
+
+// GET LATEST ORDERBOOK ENTRY
+MATCH ()-[r:ORDERBOOK]->() 
+WITH max(r.to) AS latest
+MATCH (n)-[r:ORDERBOOK]->(k) 
+WHERE r.to = latest
+RETURN n,k,r
