@@ -1,9 +1,34 @@
 import pytest
 import sys
-from GraphDB import GraphDB, Asset,TradingRelationship
+from GraphDB import GraphDB, Asset,TradingRelationship, AssetState
 import time
 
 class TestClass(object):
+
+    def test_setAssetState(self):
+        graphDB = GraphDB(resetDBData=True)
+        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
+
+        result_validation = [
+            record["node"] for record in graphDB.runCypher(
+                "MATCH (n)-[r:STATE]->(s) WHERE n.exchange='Bitfinex' AND n.symbol='BTC' RETURN {id:id(n),currentAmount:n.currentAmount,amount:s.amount,stateRelFrom:r.from,stateRelTo:r.to} AS node"
+            )
+        ]
+        assert len(result_validation) == 1
+        assert result_validation[0]['amount'] == 0
+        assert result_validation[0]['currentAmount'] == 0
+        assert result_validation[0]['stateRelTo'] == sys.maxsize
+
+        graphDB.setAssetState(Asset(exchange='Bitfinex', symbol='BTC'),AssetState(amount=2))
+        result_validation2 = [
+            record["node"] for record in graphDB.runCypher(
+                "MATCH (n)-[r:STATE]->(s) WHERE n.exchange='Bitfinex' AND n.symbol='BTC' RETURN {id:id(n),currentAmount:n.currentAmount,amount:s.amount,stateRelFrom:r.from,stateRelTo:r.to} AS node"
+            )
+        ]
+        assert len(result_validation2) == 2
+        assert result_validation2[1]['stateRelTo'] == result_validation2[0]['stateRelFrom']
+        assert result_validation2[0]['amount'] == 2
+        assert result_validation2[1]['amount'] == 0
 
     def test_create_single_asset_node(self):
         graphDB = GraphDB(resetDBData=True)
@@ -74,9 +99,9 @@ class TestClass(object):
     
     def test_arbitrage_test_with_three_nodes(self):
         graphDB = GraphDB(resetDBData=True)
-        nodeid1 =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
-        nodeid2 =  graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'))
-        nodeid3 =  graphDB.createAssetNode(Asset(exchange='Kraken', symbol='ETH'))
+        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
+        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'))
+        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='ETH'))
 
         graphDB.addTradingRelationship(
             TradingRelationship(
@@ -110,3 +135,84 @@ class TestClass(object):
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.1)
         time.sleep(0.6)
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=0.5)
+
+    def test_arbitrage_test_with_four_nodes(self):
+        graphDB = GraphDB(resetDBData=True)
+
+        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'))
+
+        graphDB.addTradingRelationship(
+            TradingRelationship(
+                baseAsset=Asset(exchange='Kraken', symbol='BTC'),
+                quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
+                mean_price=1,
+                limit_price=1,
+                orderbook='[[1,1]]',
+                fee=0.002,
+                timeToLiveSec=4))
+
+        graphDB.addTradingRelationship(
+            TradingRelationship(
+                baseAsset=Asset(exchange='Kraken', symbol='BTC'),
+                quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
+                mean_price=2,
+                limit_price=2,
+                orderbook='[[2,1]]',
+                fee=0.002,
+                timeToLiveSec=2))
+        graphDB.addTradingRelationship(
+            TradingRelationship(
+                baseAsset=Asset(exchange='Kraken', symbol='BTC'),
+                quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
+                mean_price=3,
+                limit_price=3,
+                orderbook='[[3,1]]',
+                fee=0.002,
+                timeToLiveSec=5))
+
+        graphDB.addTradingRelationship(
+            TradingRelationship(
+                baseAsset=Asset(exchange='Kraken', symbol='ETH'),
+                quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
+                mean_price=4,
+                limit_price=4,
+                orderbook='[[4,1]]',
+                fee=0.002,
+                timeToLiveSec=3))
+
+        graphDB.addTradingRelationship(
+            TradingRelationship(
+                baseAsset=Asset(exchange='Kraken', symbol='BTC'),
+                quotationAsset=Asset(exchange='Poloniex', symbol='BTC'),
+                mean_price=1,
+                limit_price=1,
+                orderbook='[[1,1]]',
+                fee=0.002,
+                timeToLiveSec=3))
+
+        graphDB.setAssetState(
+            asset=Asset(exchange='Kraken', symbol='BTC'),
+            assetState=AssetState(amount=1))
+
+        time.sleep(1)
+
+        graphDB.setAssetState(
+            asset=Asset(exchange='Kraken', symbol='BTC'),
+            assetState=AssetState(amount=2))
+
+        time.sleep(1)
+
+        graphDB.setAssetState(
+            asset=Asset(exchange='Kraken', symbol='BTC'),
+            assetState=AssetState(amount=3))
+
+        r = graphDB.get_latest_prices(
+            baseAsset=Asset(exchange='Kraken', symbol='BTC'),
+            quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
+        )
+
+        print(r)
+
+        r = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5)
+        print(r)
+        print(time.time())
