@@ -144,6 +144,9 @@ class TestClass(object):
         with GraphDB(resetDBData=True) as graphDB:        
             graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=0)
 
+            ###################################################################
+            # Update trade relationship multiple (3x) times to verify that
+            # relationships are properly end-dated and new relationships are created
             graphDB.addTradingRelationship(
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
@@ -162,7 +165,7 @@ class TestClass(object):
                     limit_price=2,
                     orderbook='[[2,1]]',
                     fee=0.002,
-                    timeToLiveSec=2),now=1)
+                    timeToLiveSec=2),now=2)
             
             graphDB.addTradingRelationship(
                 TradingRelationship(
@@ -172,7 +175,7 @@ class TestClass(object):
                     limit_price=3,
                     orderbook='[[3,1]]',
                     fee=0.002,
-                    timeToLiveSec=5),now=2)
+                    timeToLiveSec=5),now=3)
 
             graphDB.addTradingRelationship(
                 TradingRelationship(
@@ -182,8 +185,11 @@ class TestClass(object):
                     limit_price=4,
                     orderbook='[[4,1]]',
                     fee=0.002,
-                    timeToLiveSec=3),now=2)
+                    timeToLiveSec=3),now=3)
 
+            ###################################################################
+            # Add extra-exchange relationship
+            # 
             graphDB.addTradingRelationship(
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
@@ -194,17 +200,16 @@ class TestClass(object):
                     fee=0.002,
                     timeToLiveSec=3),now=3)
 
+            ###################################################################
+            # Update trade relationship multiple (3x) times to verify that
+            # state are properly end-dated and new states are created
             graphDB.setAssetState(
                 asset=Asset(exchange='Kraken', symbol='BTC'),
                 assetState=AssetState(amount=1),now=4)
 
-            time.sleep(1)
-
             graphDB.setAssetState(
                 asset=Asset(exchange='Kraken', symbol='BTC'),
                 assetState=AssetState(amount=2),now=4.1)
-
-            time.sleep(1)
 
             graphDB.setAssetState(
                 asset=Asset(exchange='Kraken', symbol='BTC'),
@@ -236,7 +241,7 @@ class TestClass(object):
                 "RETURN apoc.util.md5(propresult) as hash, propresult, startNode(r) as startNode, endNode(r) as endNode, r "
                 "ORDER BY hash DESC ")]
 
-            reference_hash=['ec10fcbdfa1e7ca674f2a0b9d601cda9','da4da11df103c6f26a51ebd2fb34aa67','d6563434efcee33c6ac3ad9ebe0787f5','c0b4427029541c7684e98427cbd96879','b7d4604016369997ce690aace8046853','b320728309742c4eb21d41f21a03bd71','b08833550d8ade29e79e6b4920039041','a63104dcec0c22e268c284214b122379','a63104dcec0c22e268c284214b122379','a49053d9a38a3224ab83d1776d552f93','88b96342b6de4f381d5f71963abd7588','6d2a632e8fab0dc7d0f21368563e53af','6d2a632e8fab0dc7d0f21368563e53af','6d2a632e8fab0dc7d0f21368563e53af','4c9e92370a8ad1abad2fe220ff403b25','4471bedca0fc544d95028ed73970c9c3','3a8069803372183aafc781ce9ac7a625','39d74f889ff2798f991fcc1e07a8dcfd','39b9b007f53dd928c53167eb5aa16689','3810b20f1ee0cbfd2f7bcba1d7b6ca9e','26da9c8253d4dd61209cf748f841b8e1','21fc5c91d41e4a8d55f013688e5ff2c5','01c6e0568879cdc039cf52aebe15cb4f']
+            reference_hash=['fd6e1f185a35a2042c64b97f834656f7','ec10fcbdfa1e7ca674f2a0b9d601cda9','c4d43e1375bc396312ffb36791b34715','c0b4427029541c7684e98427cbd96879','b7d4604016369997ce690aace8046853','b08833550d8ade29e79e6b4920039041','a63104dcec0c22e268c284214b122379','a63104dcec0c22e268c284214b122379','a49053d9a38a3224ab83d1776d552f93','6d2a632e8fab0dc7d0f21368563e53af','6d2a632e8fab0dc7d0f21368563e53af','6d2a632e8fab0dc7d0f21368563e53af','637a2b7cba2bc723468ec71cfe0d3be7','5143198f9b34006e9e12056ffb9dc8ae','4c9e92370a8ad1abad2fe220ff403b25','4471bedca0fc544d95028ed73970c9c3','3b0019a126cfd32991c9b7d65f335daa','39b9b007f53dd928c53167eb5aa16689','3810b20f1ee0cbfd2f7bcba1d7b6ca9e','29682f4faed9afeed822943c1db4589f','1f9348d04b9de6cf012f2d5fef334679','100a8e68fef0f5755c02100f6073430e','01c6e0568879cdc039cf52aebe15cb4f']
             pairs = zip(result_validation_hash, reference_hash)
             assert any(x != y for x, y in pairs) == False
 
@@ -244,9 +249,3 @@ class TestClass(object):
                 baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                 quotationAsset=Asset(exchange='Kraken', symbol='ETH'),now=time.time()
             )
-
-            print(r)
-        
-            r = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=time.time())
-            print(r)
-            print(time.time())
