@@ -1,6 +1,7 @@
 from FWLiveParams import FWLiveParams
 from GraphDB import GraphDB, Asset, TradingRelationship
 from InitLogger import logger
+import time
 
 class ArbitrageGraphNeo:
     def __init__(self,
@@ -34,7 +35,7 @@ class ArbitrageGraphNeo:
 
         askPrice = orderbook.get_ask_price_by_BTC_volume(vol_BTC=1)
         bidPrice = orderbook.get_bid_price_by_BTC_volume(vol_BTC=1)
-
+        now = time.time()
         self.graphDB.addTradingRelationship(
             TradingRelationship(
                 baseAsset=Asset(exchange=exchange_name, symbol=symbol_quote),
@@ -43,7 +44,7 @@ class ArbitrageGraphNeo:
                 limit_price=1/askPrice.limitprice,
                 orderbook=orderbook.get_asks_in_base_str(),
                 fee=fee_rate,
-                timeToLiveSec=self.edgeTTL))
+                timeToLiveSec=self.edgeTTL),now=now)
 
         self.graphDB.addTradingRelationship(
             TradingRelationship(
@@ -53,7 +54,7 @@ class ArbitrageGraphNeo:
                 limit_price=bidPrice.limitprice,
                 orderbook=orderbook.get_bids_str(),
                 fee=fee_rate,
-                timeToLiveSec=self.edgeTTL))
+                timeToLiveSec=self.edgeTTL),now=now)
 
-        r = self.graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'))
+        r = self.graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=now)
         logger.info('graphDB arb cycle: ' + str(r))

@@ -1,5 +1,4 @@
 from neo4j.v1 import GraphDatabase
-import time
 import sys
 from InitLogger import logger
 
@@ -61,9 +60,16 @@ class GraphDB(object):
         if resetDBData is True:
             self.resetDBData()
             self.createDBSchema()
+    
+    def __enter__(self):
+        return self
+        
+    def __exit__(self,exc_type, exc_value, traceback):
+        self.close()
 
     def close(self):
-        self._driver.close()
+        if self._driver is not None:
+            self._driver.close()
 
     def resetDBData(self):
         with self._driver.session() as session:
@@ -93,18 +99,17 @@ class GraphDB(object):
         #result = tx.run("CREATE CONSTRAINT ON (asset:Asset) ASSERT (asset.exchange, asset.symbol) IS NODE KEY")
         return result
 
-    def createAssetNode(self, asset):
+    def createAssetNode(self, asset,now):
         with self._driver.session() as session:
-            return session.write_transaction(self._createAssetNode, asset)
+            return session.write_transaction(self._createAssetNode, asset,now)
 
     @staticmethod
-    def _createAssetNode(tx, asset):
-        now = time.time()
+    def _createAssetNode(tx, asset,now):
         result = tx.run(
             "MERGE (node:Asset:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
             "ON CREATE SET node.currentAmount=$amount "
             "WITH node "
-            "MERGE (node)-[s:STATE {to:$forever}]->(state:AssetState {amount:$amount}) "
+            "MERGE (node)-[s:STATE {to:$forever}]->(state:AssetState {name:'State',amount:$amount}) "
             "ON CREATE SET s.from=$now "
             "RETURN id(node) as node" % (asset.exchange),
             symbol=asset.symbol,
@@ -136,14 +141,12 @@ class GraphDB(object):
                     forever=sys.maxsize)
         return nodeids
 
-    def setAssetState(self, asset, assetState):
+    def setAssetState(self, asset, assetState,now):
         with self._driver.session() as session:
-            session.write_transaction(self._setAssetState, asset, assetState)
+            session.write_transaction(self._setAssetState, asset, assetState,now)
 
     @staticmethod
-    def _setAssetState(tx, asset, assetState):
-        now = time.time()
-
+    def _setAssetState(tx, asset, assetState,now):
         # GraphDB._createAssetNode(tx,asset)
 
         # create nodes if not existing yet and archive old relationship
@@ -160,7 +163,7 @@ class GraphDB(object):
         result = tx.run(
             "MATCH (asset:Asset) "
             "WHERE asset.exchange = $assetExchange AND asset.symbol = $assetSymbol "
-            "CREATE (asset)-[s:STATE {from:$time_from,to:$time_to}]->(state:AssetState {amount:$amount})"
+            "CREATE (asset)-[s:STATE {from:$time_from,to:$time_to}]->(state:AssetState {name:'State',amount:$amount})"
             "SET asset.currentAmount=$amount ",
             assetExchange=asset.getExchange(),
             assetSymbol=asset.getSymbol(),
@@ -169,16 +172,15 @@ class GraphDB(object):
             amount=assetState.amount)
         return result
 
-    def addTradingRelationship(self, tradingRelationship):
+    def addTradingRelationship(self, tradingRelationship,now):
         with self._driver.session() as session:
-            session.write_transaction(self._addTradingRel, tradingRelationship)
+            session.write_transaction(self._addTradingRel, tradingRelationship,now)
 
     @staticmethod
-    def _addTradingRel(tx, tradingRelationship):
-        now = time.time()
+    def _addTradingRel(tx, tradingRelationship,now):
 
-        GraphDB._createAssetNode(tx, tradingRelationship.getBaseAsset())
-        GraphDB._createAssetNode(tx, tradingRelationship.getQuotationAsset())
+        GraphDB._createAssetNode(tx, tradingRelationship.getBaseAsset(),now)
+        GraphDB._createAssetNode(tx, tradingRelationship.getQuotationAsset(),now)
 
         # create nodes if not existing yet and archive old relationship
         result = tx.run(
@@ -225,12 +227,12 @@ class GraphDB(object):
         return result
 
 
-    def get_latest_prices(self, baseAsset, quotationAsset):
+    def get_latest_prices(self, baseAsset, quotationAsset, now):
         with self._driver.session() as session:
-            session.write_transaction(self._get_latest_prices, baseAsset, quotationAsset)
+            session.write_transaction(self._get_latest_prices, baseAsset, quotationAsset,now)
 
     @staticmethod
-    def _get_latest_prices(tx, baseAsset, quotationAsset):
+    def _get_latest_prices(tx, baseAsset, quotationAsset, now):
 
         result = tx.run(
             "MATCH (base:Asset)-[r:EXCHANGE]->(quotation:Asset) "
@@ -239,7 +241,7 @@ class GraphDB(object):
             "ORDER BY r.created DESC "
             "LIMIT 1",
             baseExchange=baseAsset.getExchange(),
-            now=time.time(),
+            now=now,
             baseSymbol=baseAsset.getSymbol(),
             quotationExchange=quotationAsset.getExchange(),
             quotationSymbol=quotationAsset.getSymbol())
@@ -248,13 +250,12 @@ class GraphDB(object):
         except Exception:
             return []
 
-    def getArbitrageCycle(self, asset, match_lookback_sec):
+    def getArbitrageCycle(self, asset, match_lookback_sec,now):
         with self._driver.session() as session:
-            return session.write_transaction(self._getArbitrageCycle, asset,match_lookback_sec)
+            return session.write_transaction(self._getArbitrageCycle, asset,match_lookback_sec,now)
 
     @staticmethod
-    def _getArbitrageCycle(tx, asset, match_lookback_sec):
-        now = time.time()
+    def _getArbitrageCycle(tx, asset, match_lookback_sec,now):
         result = tx.run(
             "MATCH path = (c:Asset)-[r:EXCHANGE*1..4]->(c) "
             "WHERE c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a.to<$now) "
