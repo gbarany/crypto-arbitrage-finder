@@ -11,6 +11,7 @@ import datetime
 import logging
 from Trader import Trader
 from FWLiveParams import FWLiveParams
+import time
 logger = logging.getLogger('CryptoArbitrageApp')
 
 
@@ -111,7 +112,8 @@ class OrderbookAnalyser:
                 symbol=symbol,
                 exchange_name=exchangename,
                 fee_rate=self.feeStore.getTakerFee(exchangename, symbol),
-                orderbook=orderBook
+                orderbook=orderBook,
+                now = time.time()
             )
 
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):

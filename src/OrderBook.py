@@ -1,45 +1,55 @@
 import ast
-
+import copy
 
 class OrderBookPrice:
-    def __init__(self, meanprice=None, limitprice=None, vol_BASE=None):
-        self.meanprice = meanprice
-        self.limitprice = limitprice
-        self.vol_BASE = vol_BASE
-
+    def __init__(self, meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None):
+        self.meanPrice = meanPrice
+        self.limitPrice = limitPrice
+        self.volumeBase = volumeBase
+        self.volumeBTC = volumeBTC
     def __str__(self):
         return "mean price:" + str(
-            self.meanprice) + ", " + "limit price:" + str(self.limitprice)
+            self.meanPrice) + ", " + "limit price:" + str(self.limitPrice)
 
+class OrderBookPair:
+    def __init__(self,symbol,asks,bids,rateBTCxBase,rateBTCxQuote):
+            self.bids = OrderBook(symbol=symbol,orderbook=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
+            self.asks = OrderBook(symbol=symbol,orderbook=asks,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
+            pass
+
+    def getBidsOrderbook(self):
+        return self.bids
+
+    def getAsksOrderbook(self):
+        return self.asks
+
+    def getRebasedAsksOrderbook(self):
+        return self.asks.getRebasedOrderbook()
 
 class OrderBook:
-    def __init__(self, symbol, asks, bids, rate_BTC_to_base=None):
+    def __init__(self, symbol, orderbook, rateBTCxBase, rateBTCxQuote):
         self.symbol = symbol
-        if isinstance(asks, str):
-            self.asks = list(ast.literal_eval(asks))
+        if isinstance(orderbook, str):
+            self.orderbook = list(ast.literal_eval(orderbook))
         else:
-            self.asks = asks
+            self.orderbook = orderbook
 
-        if isinstance(bids, str):
-            self.bids = list(ast.literal_eval(bids))
-        else:
-            self.bids = bids
-
-        self.rate_BTC_to_base = rate_BTC_to_base
+        self.rateBTCxBase = rateBTCxBase
+        self.rateBTCxQuote = rateBTCxQuote
 
     def __eq__(self, other):
         return isinstance(
             other, self.__class__
-        ) and self.symbol == other.symbol and self.asks == other.asks and self.bids == other.bids
+        ) and self.symbol == other.symbol and self.orderbook == other.orderbook
 
-    def getPrice(self, orderbook, vol_total):
+    def getPrice(self, vol_total):
         vol_price = 0
         vol = vol_total
 
         if vol_total <= 0:
             return OrderBookPrice()
 
-        for entry in orderbook:
+        for entry in self.orderbook:
             entry_price = entry[0]
             entry_vol = entry[1]
             if vol >= entry_vol:
@@ -53,50 +63,35 @@ class OrderBook:
                 break
         if vol == 0:
             return OrderBookPrice(
-                meanprice=vol_price / vol_total,
-                limitprice=entry_price,
-                vol_BASE=vol_total)
+                meanPrice=vol_price / vol_total,
+                limitPrice=entry_price,
+                volumeBase=vol_total,
+                volumeBTC=vol_total/self.rateBTCxBase)
         else:
             return OrderBookPrice()
 
-    def getAskPrice(self, vol):
-        return self.getPrice(self.asks, vol)
 
-    def get_ask_price_by_BTC_volume(self, vol_BTC):
-        return self.getPrice(self.asks, vol_BTC*self.rate_BTC_to_base)
+    def getPriceByBTCVolume(self, vol_BTC):
+        return self.getPrice(vol_BTC*self.rateBTCxBase)
 
-    def getBidPrice(self, vol):
-        return self.getPrice(self.bids, vol)
-
-    def get_bid_price_by_BTC_volume(self, vol_BTC):
-        return self.getPrice(self.bids, vol_BTC*self.rate_BTC_to_base)
 
     @staticmethod
-    def convert_nested_list_to_str(list):
+    def convertNestedListToStr(list):
         return '['+','.join(['['+str(pair[0])+','+str(pair[1])+']' for pair in list])+']'
 
-    @staticmethod
-    def rebase_nested_list(list):
-        return [[1/lst[0], lst[0]*lst[1]] for lst in list]
+    def getOrderbookStr(self):
+        return OrderBook.convertNestedListToStr(self.orderbook)
 
-    def get_asks_str(self):
-        return OrderBook.convert_nested_list_to_str(self.asks)
+    def getRebasedOrderbook(self):
+        newobj = copy.copy(self)
+        # flip symbols
+        symbols = newobj.symbol.split('/')
+        newobj.symbol = symbols[1]+'/'+symbols[0]
+        # flip orderbook
+        newobj.orderbook = [[1/lst[0], lst[0]*lst[1]] for lst in self.orderbook]
+        
+        # adjust base conversion
+        newobj.rateBTCxBase = self.rateBTCxQuote
+        newobj.rateBTCxQuote = self.rateBTCxBase
+        return newobj
 
-    def get_asks_in_base_str(self):
-        return OrderBook.convert_nested_list_to_str(OrderBook.rebase_nested_list(self.asks))
-
-    def get_bids_str(self):
-        return OrderBook.convert_nested_list_to_str(self.bids)
-
-    def get_bids_in_base_str(self):
-        return OrderBook.convert_nested_list_to_str(OrderBook.rebase_nested_list(self.bids))
-
-
-if __name__ == "__main__":
-    orderBook = OrderBook(
-        symbol="BTC/USD",
-        asks="[[7500, 1],[8000, 1]]",
-        bids="[[7000, 1],[6500, 1]]")
-
-    print("Ask:", orderBook.getAskPrice(1))
-    print("Bid:", orderBook.getBidPrice(1))

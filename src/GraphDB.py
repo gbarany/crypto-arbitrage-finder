@@ -21,14 +21,15 @@ class AssetState:
 
 
 class TradingRelationship:
-    def __init__(self, baseAsset, quotationAsset, mean_price, limit_price, orderbook, fee, timeToLiveSec):
+    def __init__(self, baseAsset, quotationAsset, orderbook, feeRate, timeToLiveSec):
         self.baseAsset = baseAsset
         self.quotationAsset = quotationAsset
-        self.mean_price = mean_price
-        self.limit_price = limit_price
         self.orderbook = orderbook
-        self.fee = fee
+        self.feeRate = feeRate
         self.timeToLiveSec = timeToLiveSec
+
+    def getPriceByBTCVolume(self,volumeBTC):
+        return self.orderbook.getPriceByBTCVolume(vol_BTC=volumeBTC)
 
     def getBaseAsset(self):
         return self.baseAsset
@@ -116,8 +117,8 @@ class GraphDB(object):
             exchange=asset.exchange,
             now=now,
             amount=0,
-            mean_price=1,
-            limit_price=1,
+            meanPrice=1,
+            limitPrice=1,
             forever=sys.maxsize)
         nodeids =  [record["node"] for record in result]
 
@@ -128,18 +129,49 @@ class GraphDB(object):
                     "WHERE b.symbol=$symbol AND NOT node=b "
                     "WITH node,b "
                     "MERGE (node)-[r:EXCHANGE]->(b) "
-                    "ON CREATE SET r.from=$now, r.to=$forever, r.mean_price=$mean_price, r.limit_price=$limit_price "
+                    "ON CREATE SET r.from=$now, r.to=$forever, r.meanPrice=$meanPrice, r.limitPrice=$limitPrice "
                     "WITH node,b "
                     "MERGE (b)-[r:EXCHANGE]->(node) "
-                    "ON CREATE SET r.from=$now, r.to=$forever, r.mean_price=$mean_price, r.limit_price=$limit_price "
+                    "ON CREATE SET r.from=$now, r.to=$forever, r.meanPrice=$meanPrice, r.limitPrice=$limitPrice "
                     "RETURN id(node) as node",
                     symbol=asset.symbol,                    
                     now=now,
-                    mean_price=1,
-                    limit_price=1,
+                    meanPrice=1,
+                    limitPrice=1,
                     nodeid=nodeids[0],
                     forever=sys.maxsize)
         return nodeids
+
+    def getNodesPropertyHash(self):
+        with self._driver.session() as session:
+            return session.write_transaction(self._getNodesPropertyHash)
+
+    @staticmethod
+    def _getNodesPropertyHash(tx):
+        hash = [record["hash"] for record in tx.run(
+            "MATCH (n) "
+            "WITH n " 
+            "ORDER BY n.symbol, n.exchange " 
+            "WITH collect(properties(n)) AS propresult, n " 
+            "RETURN apoc.util.md5(propresult) as hash, propresult, id(n) as nodeid " 
+            "ORDER BY hash DESC ")]
+        return hash
+
+    def getRelsPropertyHash(self):
+        with self._driver.session() as session:
+            return session.write_transaction(self._getRelsPropertyHash)
+
+    @staticmethod
+    def _getRelsPropertyHash(tx):
+        hash = [record["hash"] for record in tx.run(
+                "MATCH (n)-[r]->(k) "
+                "WITH r "
+                "ORDER BY r.uuid "
+                "WITH collect(properties(r)) AS propresult,r "
+                "RETURN apoc.util.md5(propresult) as hash, propresult, startNode(r) as startNode, endNode(r) as endNode, r "
+                "ORDER BY hash DESC ")]
+        return hash
+
 
     def setAssetState(self, asset, assetState,now):
         with self._driver.session() as session:
@@ -163,12 +195,12 @@ class GraphDB(object):
         result = tx.run(
             "MATCH (asset:Asset) "
             "WHERE asset.exchange = $assetExchange AND asset.symbol = $assetSymbol "
-            "CREATE (asset)-[s:STATE {from:$time_from,to:$time_to}]->(state:AssetState {name:'State',amount:$amount})"
+            "CREATE (asset)-[s:STATE {from:$timeFrom,to:$timeTo}]->(state:AssetState {name:'State',amount:$amount})"
             "SET asset.currentAmount=$amount ",
             assetExchange=asset.getExchange(),
             assetSymbol=asset.getSymbol(),
-            time_to=sys.maxsize,
-            time_from=now,
+            timeTo=sys.maxsize,
+            timeFrom=now,
             amount=assetState.amount)
         return result
 
@@ -189,40 +221,46 @@ class GraphDB(object):
             "SET r.to = $now ",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
             baseSymbol=tradingRelationship.getBaseAsset().getSymbol(),
-            quotationExchange=tradingRelationship.getQuotationAsset().
-            getExchange(),
-            quotationSymbol=tradingRelationship.getQuotationAsset().
-            getSymbol(),
+            quotationExchange=tradingRelationship.getQuotationAsset().getExchange(),
+            quotationSymbol=tradingRelationship.getQuotationAsset().getSymbol(),
             now=now)
 
         # create new trading relationship
+        orderBookPrice = tradingRelationship.getPriceByBTCVolume(volumeBTC=1)
+        
         result = tx.run(
             "MATCH (base:Asset),(quotation:Asset) "
             "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
-            "CREATE(base)-[:EXCHANGE {mean_price:$mean_price,limit_price:$limit_price,from:$time_from,to:$time_to}]->(quotation)",
+            "CREATE(base)-[:EXCHANGE {volumeBTC:$volumeBTC,volumeBase:$volumeBase,feeAmount:$feeAmount,feeRate:$feeRate,meanPrice:$meanPrice,limitPrice:$limitPrice,from:$timeFrom,to:$timeTo}]->(quotation)",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
             baseSymbol=tradingRelationship.getBaseAsset().getSymbol(),
             quotationExchange=tradingRelationship.getQuotationAsset().getExchange(),
             quotationSymbol=tradingRelationship.getQuotationAsset().getSymbol(),
-            mean_price=tradingRelationship.mean_price,
-            limit_price=tradingRelationship.limit_price,
-            fee=tradingRelationship.fee,
-            time_to=now + tradingRelationship.timeToLiveSec,
-            time_from=now)
+            meanPrice=orderBookPrice.meanPrice,
+            meanPrice_net = orderBookPrice.meanPrice*(1-tradingRelationship.feeRate),
+            limitPrice=orderBookPrice.limitPrice,
+            feeRate=tradingRelationship.feeRate,
+            feeAmount=0, # TODO
+            volumeBase=orderBookPrice.volumeBase,
+            volumeBTC=orderBookPrice.volumeBTC,
+            timeTo=now + tradingRelationship.timeToLiveSec,
+            timeFrom=now)
 
         # create new orderbook relationship
         result = tx.run(
             "MATCH (base:Asset),(quotation:Asset) "
             "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
-            "CREATE(base)-[:ORDERBOOK {orderbook:$orderbook,from:$time_from,to:$time_to}]->(quotation)",
+            "CREATE(base)-[:ORDERBOOK {rateBTCxBase:$rateBTCxBase,rateBTCxQuote:$rateBTCxQuote,feeRate:$feeRate,orderbook:$orderbook,from:$timeFrom,to:$timeTo}]->(quotation)",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
             baseSymbol=tradingRelationship.getBaseAsset().getSymbol(),
             quotationExchange=tradingRelationship.getQuotationAsset().getExchange(),
             quotationSymbol=tradingRelationship.getQuotationAsset().getSymbol(),
-            orderbook=tradingRelationship.orderbook,
-            fee=tradingRelationship.fee,
-            time_to=now + tradingRelationship.timeToLiveSec,
-            time_from=now)
+            orderbook=tradingRelationship.orderbook.getOrderbookStr(),
+            rateBTCxBase=tradingRelationship.orderbook.rateBTCxBase,
+            rateBTCxQuote=tradingRelationship.orderbook.rateBTCxQuote,
+            feeRate=tradingRelationship.feeRate,
+            timeTo=now + tradingRelationship.timeToLiveSec,
+            timeFrom=now)
 
         return result
 
@@ -237,7 +275,7 @@ class GraphDB(object):
         result = tx.run(
             "MATCH (base:Asset)-[r:EXCHANGE]->(quotation:Asset) "
             "WHERE r.to>=$now AND base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
-            "RETURN r.mean_price, r.limit_price "
+            "RETURN r.meanPrice, r.limitPrice "
             "ORDER BY r.created DESC "
             "LIMIT 1",
             baseExchange=baseAsset.getExchange(),
@@ -246,7 +284,7 @@ class GraphDB(object):
             quotationExchange=quotationAsset.getExchange(),
             quotationSymbol=quotationAsset.getSymbol())
         try:
-            return [{'market_price': record["market_price"],'limit_price':record["limit_price"]} for record in result]
+            return [{'market_price': record["market_price"],'limitPrice':record["limitPrice"]} for record in result]
         except Exception:
             return []
 
@@ -263,9 +301,9 @@ class GraphDB(object):
             "WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r "
             "WHERE testLength = LENGTH(path) "
             "WITH path AS x, nodes(path)[0] as c, relationships(path) as r, $startVal as startVal "
-            "WITH x, REDUCE(s = startVal, e IN r | s * e.mean_price) AS endVal, startVal, COLLECT(nodes(x)) as elems "
+            "WITH x, REDUCE(s = startVal, e IN r | s * e.meanPrice) AS endVal, startVal, COLLECT(nodes(x)) as elems "
             "WHERE endVal > startVal "
-            "RETURN {path:EXTRACT(r IN relationships(x) | {mean_price:r.mean_price,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
+            "RETURN {path:EXTRACT(r IN relationships(x) | {meanPrice:r.meanPrice,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
             "ORDER BY Profit DESC "
             "LIMIT 5",
             startVal=100,
