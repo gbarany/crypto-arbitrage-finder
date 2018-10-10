@@ -96,8 +96,8 @@ class GraphDB(object):
 
     @staticmethod
     def _createDBSchema(tx):
-        result = tx.run("CREATE INDEX ON :Asset(exchange, name)")
-        #result = tx.run("CREATE CONSTRAINT ON (asset:Asset) ASSERT (asset.exchange, asset.symbol) IS NODE KEY")
+        result = tx.run("CREATE INDEX ON :AssetStock(exchange, name)")
+        #result = tx.run("CREATE CONSTRAINT ON (asset:AssetStock) ASSERT (asset.exchange, asset.symbol) IS NODE KEY")
         return result
 
     def createAssetNode(self, asset,now):
@@ -107,10 +107,10 @@ class GraphDB(object):
     @staticmethod
     def _createAssetNode(tx, asset,now):
         result = tx.run(
-            "MERGE (node:Asset:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
+            "MERGE (node:AssetStock:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
             "ON CREATE SET node.currentAmount=$amount "
             "WITH node "
-            "MERGE (node)-[s:STATE {to:$forever}]->(state:AssetState {name:'State',amount:$amount}) "
+            "MERGE (node)-[s:STATE {to:$forever}]->(state:StockState {name:'State',amount:$amount}) "
             "ON CREATE SET s.from=$now "
             "RETURN id(node) as node" % (asset.exchange),
             symbol=asset.symbol,
@@ -123,9 +123,9 @@ class GraphDB(object):
         nodeids =  [record["node"] for record in result]
 
         result = tx.run(
-                    "MATCH (node:Asset) "
+                    "MATCH (node:AssetStock) "
                     "WHERE id(node) = $nodeid "
-                    "MATCH (b:Asset) "
+                    "MATCH (b:AssetStock) "
                     "WHERE b.symbol=$symbol AND NOT node=b "
                     "WITH node,b "
                     "MERGE (node)-[r:EXCHANGE]->(b) "
@@ -173,6 +173,39 @@ class GraphDB(object):
         return hash
 
 
+    def setAssetMarketPrice(self, assetBaseSymbol, assetQuotationSymbol, marketPrice,now):
+        with self._driver.session() as session:
+            session.write_transaction(self._setAssetMarketPrice, assetBaseSymbol, assetQuotationSymbol, marketPrice,now)
+
+    @staticmethod
+    def _setAssetMarketPrice(tx, assetBaseSymbol, assetQuotationSymbol, marketPrice,now):
+        # create nodes if not existing yet and archive old relationship
+        result = tx.run(
+            "MATCH (assetBase:Asset)-[rel:MARKETPRICE]->(assetQuotation:Asset) "
+            "WHERE assetBase.symbol = $assetBaseSymbol AND assetQuotation.symbol = $assetQuotationSymbol AND rel.to > $now "
+            "SET rel.to = $now "
+            "WITH assetBase, assetQuotation "
+            "MATCH (assetQuotation:Asset)-[rel:MARKETPRICE]->(assetBase:Asset) "
+            "SET rel.to = $now ",
+            assetBaseSymbol=assetBaseSymbol,
+            assetQuotationSymbol=assetQuotationSymbol,
+            to=sys.maxsize,
+            marketPrice=marketPrice,
+            now=now)
+        
+        result = tx.run(
+            "MERGE (assetBaseNew:Asset {symbol:$assetBaseSymbol}) "
+            "MERGE (assetQuotationNew:Asset {symbol:$assetQuotationSymbol})  "
+            "MERGE (assetBaseNew)-[:MARKETPRICE {from:$now, to:$to,marketPrice:$marketPrice}]->(assetQuotationNew) "
+            "MERGE (assetQuotationNew)-[:MARKETPRICE {from:$now, to:$to,marketPrice:$marketPriceRebased}]->(assetBaseNew) ",
+            assetBaseSymbol=assetBaseSymbol,
+            assetQuotationSymbol=assetQuotationSymbol,
+            to=sys.maxsize,
+            marketPrice=marketPrice,
+            marketPriceRebased=1/marketPrice,
+            now=now)
+
+
     def setAssetState(self, asset, assetState,now):
         with self._driver.session() as session:
             session.write_transaction(self._setAssetState, asset, assetState,now)
@@ -184,7 +217,7 @@ class GraphDB(object):
         # create nodes if not existing yet and archive old relationship
 
         result = tx.run(
-            "MATCH (asset:Asset)-[s:STATE]->(assetState:AssetState) "
+            "MATCH (asset:AssetStock)-[s:STATE]->(assetState:StockState) "
             "WHERE asset.exchange = $assetExchange AND asset.symbol = $assetSymbol AND s.to > $now "
             "SET s.to = $now ",
             assetExchange=asset.getExchange(),
@@ -193,9 +226,9 @@ class GraphDB(object):
 
         # create new relationship
         result = tx.run(
-            "MATCH (asset:Asset) "
+            "MATCH (asset:AssetStock) "
             "WHERE asset.exchange = $assetExchange AND asset.symbol = $assetSymbol "
-            "CREATE (asset)-[s:STATE {from:$timeFrom,to:$timeTo}]->(state:AssetState {name:'State',amount:$amount})"
+            "CREATE (asset)-[s:STATE {from:$timeFrom,to:$timeTo}]->(state:StockState {name:'State',amount:$amount})"
             "SET asset.currentAmount=$amount ",
             assetExchange=asset.getExchange(),
             assetSymbol=asset.getSymbol(),
@@ -216,7 +249,7 @@ class GraphDB(object):
 
         # create nodes if not existing yet and archive old relationship
         result = tx.run(
-            "MATCH (base:Asset)-[r:EXCHANGE|ORDERBOOK]->(quotation:Asset) "
+            "MATCH (base:AssetStock)-[r:EXCHANGE|ORDERBOOK]->(quotation:AssetStock) "
             "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol AND r.to >= $now "
             "SET r.to = $now ",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
@@ -229,7 +262,7 @@ class GraphDB(object):
         orderBookPrice = tradingRelationship.getPriceByBTCVolume(volumeBTC=1)
         
         result = tx.run(
-            "MATCH (base:Asset),(quotation:Asset) "
+            "MATCH (base:AssetStock),(quotation:AssetStock) "
             "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
             "CREATE(base)-[:EXCHANGE {volumeBTC:$volumeBTC,volumeBase:$volumeBase,feeAmount:$feeAmount,feeRate:$feeRate,meanPrice:$meanPrice,limitPrice:$limitPrice,from:$timeFrom,to:$timeTo}]->(quotation)",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
@@ -248,7 +281,7 @@ class GraphDB(object):
 
         # create new orderbook relationship
         result = tx.run(
-            "MATCH (base:Asset),(quotation:Asset) "
+            "MATCH (base:AssetStock),(quotation:AssetStock) "
             "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
             "CREATE(base)-[:ORDERBOOK {rateBTCxBase:$rateBTCxBase,rateBTCxQuote:$rateBTCxQuote,feeRate:$feeRate,orderbook:$orderbook,from:$timeFrom,to:$timeTo}]->(quotation)",
             baseExchange=tradingRelationship.getBaseAsset().getExchange(),
@@ -273,7 +306,7 @@ class GraphDB(object):
     def _get_latest_prices(tx, baseAsset, quotationAsset, now):
 
         result = tx.run(
-            "MATCH (base:Asset)-[r:EXCHANGE]->(quotation:Asset) "
+            "MATCH (base:AssetStock)-[r:EXCHANGE]->(quotation:AssetStock) "
             "WHERE r.to>=$now AND base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
             "RETURN r.meanPrice, r.limitPrice "
             "ORDER BY r.created DESC "
@@ -295,7 +328,7 @@ class GraphDB(object):
     @staticmethod
     def _getArbitrageCycle(tx, asset, match_lookback_sec,now):
         result = tx.run(
-            "MATCH path = (c:Asset)-[r:EXCHANGE*1..4]->(c) "
+            "MATCH path = (c:AssetStock)-[r:EXCHANGE*1..4]->(c) "
             "WHERE c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a.to<$now) "
             "UNWIND NODES(path) AS n "
             "WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r "
@@ -322,8 +355,8 @@ class GraphDB(object):
             for idx,x in enumerate(arbitrage_deal['assets']):
                 nodename=chr(ord('a') + idx)
                 
-                cypher_match.append("("+nodename+":Asset {symbol:'"+str(x['symbol'])+"',exchange:'"+str(x['exchange'])+"'})")
-                cypher_match2.append("("+nodename+":Asset {symbol:'"+str(x['symbol'])+"',exchange:'"+str(x['exchange'])+"'})")
+                cypher_match.append("("+nodename+":AssetStock {symbol:'"+str(x['symbol'])+"',exchange:'"+str(x['exchange'])+"'})")
+                cypher_match2.append("("+nodename+":AssetStock {symbol:'"+str(x['symbol'])+"',exchange:'"+str(x['exchange'])+"'})")
                 cypher_match3.append("("+nodename+")")
 
                 # setting relationship properties

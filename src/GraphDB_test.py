@@ -32,6 +32,61 @@ class TestClass(object):
         assert result_validation2[1]['stateRelTo'] == result_validation2[0]['stateRelFrom']
         assert result_validation2[0]['amount'] == 2
         assert result_validation2[1]['amount'] == 0
+ 
+    def test_setAssetMarketPrice(self):
+        graphDB = GraphDB(resetDBData=True)
+        graphDB.setAssetMarketPrice(assetBaseSymbol='BTC', assetQuotationSymbol='USD',marketPrice=5000,now=1)
+
+        result_validation = [
+            record["rel"] for record in graphDB.runCypher(
+                "MATCH (n)-[r:MARKETPRICE]->(s) RETURN {endNode:endNode(r).symbol,startNode:startNode(r).symbol,from:r.from,to:r.to,marketPrice:r.marketPrice} AS rel ORDER BY r.marketPrice DESC"
+            )
+        ]
+        assert len(result_validation) == 2
+        assert result_validation[0]['startNode'] == 'BTC'
+        assert result_validation[0]['endNode'] == 'USD'
+        assert result_validation[0]['from'] == 1
+        assert result_validation[0]['to'] == sys.maxsize
+        assert result_validation[0]['marketPrice'] == 5000
+
+        assert result_validation[1]['startNode'] == 'USD'
+        assert result_validation[1]['endNode'] == 'BTC'
+        assert result_validation[1]['from'] == 1
+        assert result_validation[1]['to'] == sys.maxsize
+        assert result_validation[1]['marketPrice'] == 1/5000
+
+        graphDB.setAssetMarketPrice(assetBaseSymbol='BTC', assetQuotationSymbol='USD',marketPrice=8000,now=2)
+
+        result_validation2 = [
+            record["rel"] for record in graphDB.runCypher(
+                "MATCH (n)-[r:MARKETPRICE]->(s) RETURN {endNode:endNode(r).symbol,startNode:startNode(r).symbol,from:r.from,to:r.to,marketPrice:r.marketPrice} AS rel ORDER BY r.marketPrice DESC"
+            )
+        ]
+        assert len(result_validation2) == 4
+        
+        assert result_validation2[3]['startNode'] == 'USD'
+        assert result_validation2[3]['endNode'] == 'BTC'
+        assert result_validation2[3]['from'] == 2
+        assert result_validation2[3]['to'] == sys.maxsize
+        assert result_validation2[3]['marketPrice'] == 1/8000
+        
+        assert result_validation2[2]['startNode'] == 'USD'
+        assert result_validation2[2]['endNode'] == 'BTC'
+        assert result_validation2[2]['from'] == 1
+        assert result_validation2[2]['to'] == 2
+        assert result_validation2[2]['marketPrice'] == 1/5000
+        
+        assert result_validation2[0]['startNode'] == 'BTC'
+        assert result_validation2[0]['endNode'] == 'USD'        
+        assert result_validation2[0]['from'] == 2
+        assert result_validation2[0]['to'] == sys.maxsize
+        assert result_validation2[0]['marketPrice'] == 8000
+
+        assert result_validation2[1]['startNode'] == 'BTC'
+        assert result_validation2[1]['endNode'] == 'USD'
+        assert result_validation2[1]['from'] == 1
+        assert result_validation2[1]['to'] == 2
+        assert result_validation2[1]['marketPrice'] == 5000
 
     def test_create_single_asset_node(self):
         graphDB = GraphDB(resetDBData=True)
