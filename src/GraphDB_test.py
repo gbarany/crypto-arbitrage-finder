@@ -14,7 +14,7 @@ class TestClass(object):
 
         result_validation = [
             record["node"] for record in graphDB.runCypher(
-                "MATCH (n)-[r:STATE]->(s) WHERE n.exchange='Bitfinex' AND n.symbol='BTC' RETURN {id:id(n),currentAmount:n.currentAmount,amount:s.amount,stateRelFrom:r.from,stateRelTo:r.to} AS node"
+                "MATCH (n)-[r:STATE]->(s) WHERE n.exchange='Bitfinex' AND n.symbol='BTC' RETURN {id:id(n),currentAmount:n.currentAmount,amount:s.amount,stateRelFrom:r._from,stateRelTo:r._to} AS node"
             )
         ]
         assert len(result_validation) == 1
@@ -25,7 +25,7 @@ class TestClass(object):
         graphDB.setAssetState(Asset(exchange='Bitfinex', symbol='BTC'),AssetState(amount=2),now=time.time())
         result_validation2 = [
             record["node"] for record in graphDB.runCypher(
-                "MATCH (n)-[r:STATE]->(s) WHERE n.exchange='Bitfinex' AND n.symbol='BTC' RETURN {id:id(n),currentAmount:n.currentAmount,amount:s.amount,stateRelFrom:r.from,stateRelTo:r.to} AS node"
+                "MATCH (n)-[r:STATE]->(s) WHERE n.exchange='Bitfinex' AND n.symbol='BTC' RETURN {id:id(n),currentAmount:n.currentAmount,amount:s.amount,stateRelFrom:r._from,stateRelTo:r._to} AS node"
             )
         ]
         assert len(result_validation2) == 2
@@ -39,7 +39,7 @@ class TestClass(object):
 
         result_validation = [
             record["rel"] for record in graphDB.runCypher(
-                "MATCH (n)-[r:MARKETPRICE]->(s) RETURN {endNode:endNode(r).symbol,startNode:startNode(r).symbol,from:r.from,to:r.to,marketPrice:r.marketPrice} AS rel ORDER BY r.marketPrice DESC"
+                "MATCH (n)-[r:MARKETPRICE]->(s) RETURN {endNode:endNode(r).symbol,startNode:startNode(r).symbol,from:r._from,to:r._to,marketPrice:r.marketPrice} AS rel ORDER BY r.marketPrice DESC"
             )
         ]
         assert len(result_validation) == 2
@@ -59,7 +59,7 @@ class TestClass(object):
 
         result_validation2 = [
             record["rel"] for record in graphDB.runCypher(
-                "MATCH (n)-[r:MARKETPRICE]->(s) RETURN {endNode:endNode(r).symbol,startNode:startNode(r).symbol,from:r.from,to:r.to,marketPrice:r.marketPrice} AS rel ORDER BY r.marketPrice DESC"
+                "MATCH (n)-[r:MARKETPRICE]->(s) RETURN {endNode:endNode(r).symbol,startNode:startNode(r).symbol,from:r._from,to:r._to,marketPrice:r.marketPrice} AS rel ORDER BY r.marketPrice DESC"
             )
         ]
         assert len(result_validation2) == 4
@@ -87,6 +87,7 @@ class TestClass(object):
         assert result_validation2[1]['from'] == 1
         assert result_validation2[1]['to'] == 2
         assert result_validation2[1]['marketPrice'] == 5000
+        graphDB.setAssetMarketPrice(assetBaseSymbol='BTC', assetQuotationSymbol='USD',marketPrice=10000,now=3)
 
     def test_create_single_asset_node(self):
         graphDB = GraphDB(resetDBData=True)
@@ -106,7 +107,7 @@ class TestClass(object):
         # validate that state node creation
         result_validation2 = [
             record["data"] for record in graphDB.runCypher(
-                "MATCH (n)-[r:STATE]->(s:AssetState) WHERE id(n)=%d RETURN {to:r.to,amount:s.amount,name:s.name} AS data" % nodeid[0]
+                "MATCH (n)-[r:STATE]->(s:StockState) WHERE id(n)=%d RETURN {to:r._to,amount:s.amount,name:s.name} AS data" % nodeid[0]
             )
         ]
         assert len(result_validation2) == 1
@@ -137,7 +138,7 @@ class TestClass(object):
 
         result_validation3 = [
             record["rel"] for record in graphDB.runCypher(
-                "MATCH (a)-[r:EXCHANGE]->(b) WHERE a.exchange='Kraken' AND a.symbol='BTC' AND b.exchange='Bitfinex' AND a.symbol='BTC' RETURN {limitPrice:r.limitPrice,meanPrice:r.meanPrice,to:r.to} AS rel"
+                "MATCH (a)-[r:EXCHANGE]->(b) WHERE a.exchange='Kraken' AND a.symbol='BTC' AND b.exchange='Bitfinex' AND a.symbol='BTC' RETURN {limitPrice:r.limitPrice,meanPrice:r.meanPrice,to:r._to} AS rel"
             )
         ]
         assert len(result_validation3) == 1    
@@ -147,7 +148,7 @@ class TestClass(object):
 
         result_validation4 = [
             record["rel"] for record in graphDB.runCypher(
-                "MATCH (a)-[r:EXCHANGE]->(b) WHERE a.exchange='Bitfinex' AND a.symbol='BTC' AND b.exchange='Kraken' AND a.symbol='BTC' RETURN {limitPrice:r.limitPrice,meanPrice:r.meanPrice,to:r.to} AS rel"
+                "MATCH (a)-[r:EXCHANGE]->(b) WHERE a.exchange='Bitfinex' AND a.symbol='BTC' AND b.exchange='Kraken' AND a.symbol='BTC' RETURN {limitPrice:r.limitPrice,meanPrice:r.meanPrice,to:r._to} AS rel"
             )
         ]
         assert len(result_validation4) == 1    
@@ -165,7 +166,7 @@ class TestClass(object):
             TradingRelationship(
                 baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                 quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                orderbook=OrderBook(symbol='BTC/ETH',orderbook=[[2,1]],rateBTCxBase=1),
+                orderbook=OrderBook(symbol='BTC/ETH',orderbook=[[2,1]],rateBTCxBase=1,rateBTCxQuote=2),
                 feeRate=0,
                 timeToLiveSec=5),now=time.time())
 
@@ -173,7 +174,7 @@ class TestClass(object):
             TradingRelationship(
                 baseAsset=Asset(exchange='Kraken', symbol='ETH'),
                 quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
-                orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[0.6,1000]]',rateBTCxBase=1/0.6),
+                orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[0.6,1000]]',rateBTCxBase=1/0.6,rateBTCxQuote=1),
                 feeRate=0,
                 timeToLiveSec=5),now=time.time())
 
@@ -202,7 +203,7 @@ class TestClass(object):
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[1,1]]',rateBTCxBase=1),
+                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[1,1]]',rateBTCxBase=1,rateBTCxQuote=1),
                     feeRate=0.002,
                     timeToLiveSec=4),now=1)
 
@@ -210,7 +211,7 @@ class TestClass(object):
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[2,1]]',rateBTCxBase=1),
+                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[2,1]]',rateBTCxBase=1,rateBTCxQuote=2),
                     feeRate=0.002,
                     timeToLiveSec=2),now=2)
             
@@ -218,7 +219,7 @@ class TestClass(object):
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[3,1]]',rateBTCxBase=1),
+                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[3,1]]',rateBTCxBase=1,rateBTCxQuote=3),
                     feeRate=0.002,
                     timeToLiveSec=5),now=3)
 
@@ -226,7 +227,7 @@ class TestClass(object):
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='ETH'),
                     quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
-                    orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[4,1]]',rateBTCxBase=1/4),
+                    orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[4,1]]',rateBTCxBase=1/4,rateBTCxQuote=1),
                     feeRate=0.002,
                     timeToLiveSec=3),now=3)
 
@@ -237,7 +238,7 @@ class TestClass(object):
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Poloniex', symbol='BTC'),
-                    orderbook=OrderBook(symbol='BTC/BTC',orderbook='[[1,1]]',rateBTCxBase=1),
+                    orderbook=OrderBook(symbol='BTC/BTC',orderbook='[[1,1]]',rateBTCxBase=1,rateBTCxQuote=1),
                     feeRate=0.002,
                     timeToLiveSec=3),now=3)
 
@@ -259,22 +260,26 @@ class TestClass(object):
             ###################################################################
             # validate the properties of all nodes by hash
             #
-            result_validation_hash = graphDB.getNodesPropertyHash()
+            nodesHash = graphDB.getNodesPropertyHash()
             # RUN this to recalculate reference hashes: pprint.pformat(result_validation_hash).replace('\n','').replace(' ','')
-            reference_hash = ['ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','a19a688ef054e56101317f7dac3dda6e','9887c14ada99b8c72b7996a460afda1e','905ed9c758ce981d7ea0fb1bef55873c','89586e3b288ac93f329280eb9f025d18','7b54e3841e6574caaf429917c88e2bac','17032c1a5da060b45d736930551267b7','0f67e27fbf10b058924b76dce3774945']
-            pairs = zip(result_validation_hash, reference_hash)
+            nodesHash_ref = ['ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','a19a688ef054e56101317f7dac3dda6e','9887c14ada99b8c72b7996a460afda1e','905ed9c758ce981d7ea0fb1bef55873c','89586e3b288ac93f329280eb9f025d18','7b54e3841e6574caaf429917c88e2bac','17032c1a5da060b45d736930551267b7','0f67e27fbf10b058924b76dce3774945']
+
+            pairs = zip(nodesHash, nodesHash_ref)
             assert any(x != y for x, y in pairs) == False
 
             ###################################################################
             # validate the properties of all relationships by hash
             #
-            result_validation_hash = graphDB.getRelsPropertyHash()
+            relsHash = graphDB.getRelsPropertyHash()
 
-            reference_hash=['fd6e1f185a35a2042c64b97f834656f7','ec10fcbdfa1e7ca674f2a0b9d601cda9','c4d43e1375bc396312ffb36791b34715','c0b4427029541c7684e98427cbd96879','b7d4604016369997ce690aace8046853','b08833550d8ade29e79e6b4920039041','a63104dcec0c22e268c284214b122379','a63104dcec0c22e268c284214b122379','a49053d9a38a3224ab83d1776d552f93','6d2a632e8fab0dc7d0f21368563e53af','6d2a632e8fab0dc7d0f21368563e53af','6d2a632e8fab0dc7d0f21368563e53af','637a2b7cba2bc723468ec71cfe0d3be7','5143198f9b34006e9e12056ffb9dc8ae','4c9e92370a8ad1abad2fe220ff403b25','4471bedca0fc544d95028ed73970c9c3','3b0019a126cfd32991c9b7d65f335daa','39b9b007f53dd928c53167eb5aa16689','3810b20f1ee0cbfd2f7bcba1d7b6ca9e','29682f4faed9afeed822943c1db4589f','1f9348d04b9de6cf012f2d5fef334679','100a8e68fef0f5755c02100f6073430e','01c6e0568879cdc039cf52aebe15cb4f']
-            pairs = zip(result_validation_hash, reference_hash)
+            relsHash_ref=['ed7127753c7561aff65aa934c3ec0b08','dfc283f9c1abdcf0149686398f22b42b','dd7d2733c82633e5a2b92d69b917ad0f','d10dd681cd3c15d953fd5ddf4e35730e','cd114e0f17696cf539dedd2f71acd881','cd114e0f17696cf539dedd2f71acd881','cd114e0f17696cf539dedd2f71acd881','ca279cb0e9016bc582a76fb36c6fb678','b7ce49bb20b4d32d31a1861e48b7c6c2','ab575c242a6e2111badc21dee2409fc3','9189f2f8081734c378a924a7fc818f63','909c239aa4101a8394cf96f8b7bd216f','9062679b13a5bf1e9a3896aae1a3fe48','8ebdbdd4fbd496a13f02113c97bad76c','7bf967d53beda3653c66b4b013c8ef2e','7bf967d53beda3653c66b4b013c8ef2e','7a519a3f90b4f903841bca9690f6c189','6d4c16b4fe29860e9d59307e5813ecf9','3ab3d46ae90b2899ca7e48b8d454e6e8','37a062864b4cdcc4fec3faa0030f9e86','11a2fb79dcb1a216a3a062aa90e44e95','1130f54c147f2e6b8f0fab0620c150ca','0d27de7eb5fd078e734a027283db52f8']
+            pairs = zip(relsHash, relsHash_ref)
             assert any(x != y for x, y in pairs) == False
 
-            r = graphDB.get_latest_prices(
+            price_validation = graphDB.getLatestExchangePrices(
                 baseAsset=Asset(exchange='Kraken', symbol='BTC'),
-                quotationAsset=Asset(exchange='Kraken', symbol='ETH'),now=time.time()
-            )
+                quotationAsset=Asset(exchange='Kraken', symbol='ETH'),now=5
+                )
+            assert price_validation[0]['meanPriceNet'] == 3*(1-0.002)
+            assert price_validation[0]['meanPrice'] == 3
+            assert price_validation[0]['limitPrice'] == 3

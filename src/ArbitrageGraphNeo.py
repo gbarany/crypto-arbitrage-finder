@@ -6,9 +6,12 @@ from InitLogger import logger
 class ArbitrageGraphNeo:
     def __init__(self,
                  edgeTTL=5,
+                 volumeBTCs=[1],
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled,resetDBData=False):
 
         self.edgeTTL = edgeTTL
+        self.volumeBTCs=volumeBTCs
+
         if neo4j_mode == FWLiveParams.neo4j_mode_aws_cloud:
             self.graphDB = GraphDB(
                 uri='bolt://3.120.197.59:7687',
@@ -49,7 +52,8 @@ class ArbitrageGraphNeo:
                 #orderbook=orderbook.get_asks_in_base_str(),
                 orderbook = orderBookPair.getRebasedAsksOrderbook(),
                 feeRate=feeRate,
-                timeToLiveSec=self.edgeTTL),now=now)
+                timeToLiveSec=self.edgeTTL),now=now,
+                volumeBTCs=self.volumeBTCs)
 
         self.graphDB.addTradingRelationship(
             TradingRelationship(
@@ -60,7 +64,8 @@ class ArbitrageGraphNeo:
                 #orderbook=orderbook.get_bids_str(),
                 orderbook=orderBookPair.getBidsOrderbook(),
                 feeRate=feeRate,
-                timeToLiveSec=self.edgeTTL),now=now)
+                timeToLiveSec=self.edgeTTL),now=now,
+                volumeBTCs=self.volumeBTCs)
 
         r = self.graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=now)
         logger.info('graphDB arb cycle: ' + str(r))
