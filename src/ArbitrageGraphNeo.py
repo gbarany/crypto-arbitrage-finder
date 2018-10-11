@@ -39,17 +39,11 @@ class ArbitrageGraphNeo:
 
         symbol_base = symbolsplit[0]
         symbol_quote = symbolsplit[1]
-
-        #askPrice = orderbook.get_ask_price_by_BTC_volume(vol_BTC=1)
-        #bidPrice = orderbook.get_bid_price_by_BTC_volume(vol_BTC=1)
         
         self.graphDB.addTradingRelationship(
             TradingRelationship(
                 baseAsset=Asset(exchange=exchange, symbol=symbol_quote),
                 quotationAsset=Asset(exchange=exchange, symbol=symbol_base),
-                #mean_price=1/askPrice.meanprice,
-                #limit_price=1/askPrice.limitprice,
-                #orderbook=orderbook.get_asks_in_base_str(),
                 orderbook = orderBookPair.getRebasedAsksOrderbook(),
                 feeRate=feeRate,
                 timeToLiveSec=self.edgeTTL),now=now,
@@ -59,9 +53,6 @@ class ArbitrageGraphNeo:
             TradingRelationship(
                 baseAsset=Asset(exchange=exchange, symbol=symbol_base),
                 quotationAsset=Asset(exchange=exchange, symbol=symbol_quote),
-                #mean_price=bidPrice.meanprice,
-                #limit_price=bidPrice.limitprice,
-                #orderbook=orderbook.get_bids_str(),
                 orderbook=orderBookPair.getBidsOrderbook(),
                 feeRate=feeRate,
                 timeToLiveSec=self.edgeTTL),now=now,

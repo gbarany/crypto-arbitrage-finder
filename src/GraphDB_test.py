@@ -157,10 +157,11 @@ class TestClass(object):
         assert result_validation4[0]['to']==sys.maxsize
     
     def test_arbitrage_test_with_three_nodes(self):
+        volumeBTCs = [0.1,1]
         graphDB = GraphDB(resetDBData=True)
-        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=time.time())
-        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'),now=time.time())
-        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='ETH'),now=time.time())
+        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=0)
+        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'),now=0.1)
+        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='ETH'),now=0.2)
 
         graphDB.addTradingRelationship(
             TradingRelationship(
@@ -168,7 +169,7 @@ class TestClass(object):
                 quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
                 orderbook=OrderBook(symbol='BTC/ETH',orderbook=[[2,1]],rateBTCxBase=1,rateBTCxQuote=2),
                 feeRate=0,
-                timeToLiveSec=5),now=time.time())
+                timeToLiveSec=5),now=0.3,volumeBTCs=volumeBTCs)
 
         graphDB.addTradingRelationship(
             TradingRelationship(
@@ -176,21 +177,22 @@ class TestClass(object):
                 quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
                 orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[0.6,1000]]',rateBTCxBase=1/0.6,rateBTCxQuote=1),
                 feeRate=0,
-                timeToLiveSec=5),now=time.time())
+                timeToLiveSec=5),now=0.4,volumeBTCs=volumeBTCs)
 
-        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=time.time())
-        assert len(arbitrage_cycles) == 1    
-        assert (arbitrage_cycles[0]['assets'][0]['amount'],arbitrage_cycles[0]['assets'][0]['exchange'],arbitrage_cycles[0]['assets'][0]['symbol']) == (0,'Kraken','BTC')
-        assert (arbitrage_cycles[0]['assets'][1]['amount'],arbitrage_cycles[0]['assets'][1]['exchange'],arbitrage_cycles[0]['assets'][1]['symbol']) == (0,'Kraken','ETH')
-        assert (arbitrage_cycles[0]['assets'][2]['amount'],arbitrage_cycles[0]['assets'][2]['exchange'],arbitrage_cycles[0]['assets'][2]['symbol']) == (0,'Kraken','BTC')
-        assert (arbitrage_cycles[0]['profit']) == (2.0*0.6)*100-100
-        assert (arbitrage_cycles[0]['path'][0]['meanPrice']) == 2
-        assert (arbitrage_cycles[0]['path'][1]['meanPrice']) == 0.6        
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=0.5,volumeBTCs=volumeBTCs )
+        assert len(arbitrage_cycles) == 2   
+        assert (arbitrage_cycles[0]['volumeBTC']) == 0.1
+        for i in range(2):
+            assert (arbitrage_cycles[i]['assets'][0]['amount'],arbitrage_cycles[0]['assets'][0]['exchange'],arbitrage_cycles[0]['assets'][0]['symbol']) == (0,'Kraken','BTC')
+            assert (arbitrage_cycles[i]['assets'][1]['amount'],arbitrage_cycles[0]['assets'][1]['exchange'],arbitrage_cycles[0]['assets'][1]['symbol']) == (0,'Kraken','ETH')
+            assert (arbitrage_cycles[i]['assets'][2]['amount'],arbitrage_cycles[0]['assets'][2]['exchange'],arbitrage_cycles[0]['assets'][2]['symbol']) == (0,'Kraken','BTC')
+            assert (arbitrage_cycles[i]['profit']) == (2.0*0.6)*100-100
+            assert (arbitrage_cycles[i]['path'][0]['meanPrice']) == 2
+            assert (arbitrage_cycles[i]['path'][1]['meanPrice']) == 0.6        
 
-        time.sleep(1)
-        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.1,now=time.time())
-        time.sleep(0.6)
-        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=0.5,now=time.time())
+
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.1,now=1.5,volumeBTCs=volumeBTCs)
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=0.5,now=2.1,volumeBTCs=volumeBTCs)
 
     def test_arbitrage_test_with_four_nodes(self):
         with GraphDB(resetDBData=True) as graphDB:        

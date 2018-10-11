@@ -15,7 +15,6 @@ class OrderBookPair:
     def __init__(self,symbol,asks,bids,rateBTCxBase,rateBTCxQuote):
             self.bids = OrderBook(symbol=symbol,orderbook=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
             self.asks = OrderBook(symbol=symbol,orderbook=asks,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
-            pass
 
     def getBidsOrderbook(self):
         return self.bids
@@ -42,11 +41,11 @@ class OrderBook:
             other, self.__class__
         ) and self.symbol == other.symbol and self.orderbook == other.orderbook
 
-    def getPrice(self, vol_total):
+    def getPrice(self, volumeBase):
         vol_price = 0
-        vol = vol_total
+        vol = volumeBase
 
-        if vol_total <= 0:
+        if volumeBase <= 0:
             return OrderBookPrice()
 
         for entry in self.orderbook:
@@ -63,16 +62,16 @@ class OrderBook:
                 break
         if vol == 0:
             return OrderBookPrice(
-                meanPrice=vol_price / vol_total,
+                meanPrice=vol_price / volumeBase,
                 limitPrice=entry_price,
-                volumeBase=vol_total,
-                volumeBTC=vol_total/self.rateBTCxBase)
+                volumeBase=volumeBase,
+                volumeBTC=volumeBase/self.rateBTCxBase if self.rateBTCxBase is not None else None)
         else:
             return OrderBookPrice()
 
 
-    def getPriceByBTCVolume(self, vol_BTC):
-        return self.getPrice(vol_BTC*self.rateBTCxBase)
+    def getPriceByBTCVolume(self, volumeBTC):
+        return self.getPrice(volumeBTC*self.rateBTCxBase)
 
 
     @staticmethod

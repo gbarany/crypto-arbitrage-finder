@@ -5,6 +5,7 @@ from OrderbookAnalyser import OrderbookAnalyser
 from Trade import Trade, TradeStatus, TradeType
 
 from threading import Condition, Thread
+from FWLiveParams import FWLiveParams
 import time
 
 arbTradeTriggerEvent = Condition()
@@ -22,7 +23,8 @@ def getOrderbookAnalyser():
         tradeLogFilename='tradelog_live_test.csv',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         arbTradeTriggerEvent=arbTradeTriggerEvent,
-        arbTradeQueue=arbTradeQueue)
+        arbTradeQueue=arbTradeQueue,
+        neo4j_mode=FWLiveParams.neo4j_mode_localhost)
 
 
 @pytest.fixture(scope="class")
@@ -42,11 +44,12 @@ class TestClass(object):
     def test_one(self):
 
         orderbookAnalyser = getOrderbookAnalyser()
+        orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
         cmc = getCMCSampleFetch()
 
         def feedSamples():
             time.sleep(0.2)
-            orderbookAnalyser.updateCmcPrice(cmc)
+            orderbookAnalyser.updateCoinmarketcapPrice(cmc)
             orderbookAnalyser.update(
                 'kraken',
                 'BTC/USD',
@@ -84,7 +87,7 @@ class TestClass(object):
         tradeList: List[Trade] = path.toTradeList()
         trade = tradeList[0]
         assert (trade.market, trade.amount, trade.price, trade.trade_type,
-                trade.status) == ('BTC/USD', vol_BTC[0], 9000, TradeType.BUY,
+                trade.status) == ('BTC/USD', vol_BTC[0], 9000, TradeType.SELL,
                                   TradeStatus.INITIAL)
 
         trade = tradeList[1]
@@ -98,8 +101,3 @@ class TestClass(object):
                 trade.status) == ('ETH/BTC',
                                   vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,
                                   TradeType.SELL, TradeStatus.INITIAL)
-
-
-if __name__ == "__main__":
-    tc = TestClass()
-    tc.test_one()

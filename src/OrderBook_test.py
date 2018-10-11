@@ -1,19 +1,18 @@
 import pytest
-
+from OrderBook import OrderBook, OrderBookPair
 
 @pytest.fixture
-def orderbookStrInit():
-    from OrderBook import OrderBook
-    return OrderBook(
+def orderbookPairStrInit():
+    
+    return OrderBookPair(
         symbol="BTC/USD",
         asks="[[7500, 1],[8000, 1]]",
         bids="[[7000, 1],[6500, 1]]")
 
 
 @pytest.fixture
-def orderbookListInit():
-    from OrderBook import OrderBook
-    return OrderBook(
+def orderbookPairListInit():
+    return OrderBookPair(
         symbol="BTC/USD",
         asks=[[7500, 1], [8000, 1]],
         bids=[[7000, 1], [6500, 1]])
@@ -21,36 +20,38 @@ def orderbookListInit():
 
 class TestClass(object):
     def test_one(self):
-        orderBook = orderbookStrInit()
-        askprice = orderBook.getAskPrice(1)
-        bidprice = orderBook.getBidPrice(1)
+        orderBookPair = orderbookPairStrInit()
+        askprice = orderBookPair.asks.getPrice(1)
+        bidprice = orderBookPair.bids.getPrice(1)
 
-        assert askprice.meanprice == 7500
-        assert askprice.limitprice == 7500
-        assert bidprice.meanprice == 7000
-        assert bidprice.limitprice == 7000
+        assert askprice.meanPrice == 7500
+        assert askprice.limitPrice == 7500
+        assert bidprice.meanPrice == 7000
+        assert bidprice.limitPrice == 7000
 
     def test_two(self):
-        orderBook = orderbookStrInit()
-        askprice = orderBook.getAskPrice(2)
-        bidprice = orderBook.getBidPrice(2)
+        orderBookPair = orderbookPairStrInit()
+        askprice = orderBookPair.asks.getPrice(2)
+        bidprice = orderBookPair.bids.getPrice(2)
 
-        assert askprice.meanprice == 7750
-        assert askprice.limitprice == 8000
-        assert bidprice.meanprice == 6750
-        assert bidprice.limitprice == 6500
+        assert askprice.meanPrice == 7750
+        assert askprice.limitPrice == 8000
+        assert bidprice.meanPrice == 6750
+        assert bidprice.limitPrice == 6500
 
     def test_zero(self):
-        orderBook = orderbookStrInit()
-        askprice = orderBook.getAskPrice(0)
-        bidprice = orderBook.getBidPrice(0)
+        orderBookPair = orderbookPairStrInit()
+        askprice = orderBookPair.asks.getPrice(3)
+        bidprice = orderBookPair.bids.getPrice(3)
 
-        assert askprice.meanprice == None
-        assert askprice.limitprice == None
-        assert bidprice.meanprice == None
-        assert bidprice.limitprice == None
+        assert askprice.meanPrice == None
+        assert askprice.limitPrice == None
+        assert bidprice.meanPrice == None
+        assert bidprice.limitPrice == None
 
     def test_equivalence(self):
-        orderBook1 = orderbookStrInit()
-        orderBook2 = orderbookListInit()
+        orderBookPair1 = orderbookPairStrInit()
+        orderBookPair2 = orderbookPairListInit()
+        orderBook1 = orderBookPair1.asks
+        orderBook2 = orderBookPair2.asks
         assert orderBook1 == orderBook2

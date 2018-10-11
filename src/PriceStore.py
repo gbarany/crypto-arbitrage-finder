@@ -99,7 +99,7 @@ class PriceStore:
                 and symbol_quote_ref == symbol_quote \
                 and exchange_base == exchange_quote \
                 and (timestamp-ts) <= self.priceTTL \
-                and timestamp > ts:
+                and timestamp >= ts:
                 acc += rate
                 cntr += 1
         if cntr != 0:

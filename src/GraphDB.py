@@ -29,7 +29,7 @@ class TradingRelationship:
         self.timeToLiveSec = timeToLiveSec
 
     def getPriceByBTCVolume(self,volumeBTC):
-        return self.orderbook.getPriceByBTCVolume(vol_BTC=volumeBTC)
+        return self.orderbook.getPriceByBTCVolume(volumeBTC=volumeBTC)
 
     def getBaseAsset(self):
         return self.baseAsset
@@ -204,7 +204,8 @@ class GraphDB(object):
             marketPrice=marketPrice,
             marketPriceRebased=1/marketPrice,
             now=now)
-
+        
+        return result
 
     def setAssetState(self, asset, assetState,now):
         with self._driver.session() as session:
@@ -323,30 +324,33 @@ class GraphDB(object):
         except Exception:
             return []
 
-    def getArbitrageCycle(self, asset, match_lookback_sec,now):
+    def getArbitrageCycle(self, asset, match_lookback_sec,now,volumeBTCs=[1]):
         with self._driver.session() as session:
-            return session.write_transaction(self._getArbitrageCycle, asset,match_lookback_sec,now)
+            return session.write_transaction(self._getArbitrageCycle, asset,match_lookback_sec,now,volumeBTCs)
 
     @staticmethod
-    def _getArbitrageCycle(tx, asset, match_lookback_sec,now):
-        result = tx.run(
-            "MATCH path = (c:AssetStock)-[r:EXCHANGE*1..4]->(c) "
-            "WHERE c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a._to<$now) "
-            "UNWIND NODES(path) AS n "
-            "WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r "
-            "WHERE testLength = LENGTH(path) "
-            "WITH path AS x, nodes(path)[0] as c, relationships(path) as r, $startVal as startVal "
-            "WITH x, REDUCE(s = startVal, e IN r | s * e.meanPrice) AS endVal, startVal, COLLECT(nodes(x)) as elems "
-            "WHERE endVal > startVal "
-            "RETURN {path:EXTRACT(r IN relationships(x) | {meanPrice:r.meanPrice,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
-            "ORDER BY Profit DESC "
-            "LIMIT 5",
-            startVal=100,
-            symbol=asset.getSymbol(),
-            exchange=asset.getExchange(),
-            now=now)
+    def _getArbitrageCycle(tx, asset, match_lookback_sec,now,volumeBTCs):
+        arbitrage_deals = []
+        for volumeBTC in volumeBTCs:
+            result = tx.run(
+                "MATCH path = (c:AssetStock)-[r:EXCHANGE*1..4 {volumeBTC:$volumeBTC}]->(c) "
+                "WHERE c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a._to<$now) "
+                "UNWIND NODES(path) AS n "
+                "WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r "
+                "WHERE testLength = LENGTH(path) "
+                "WITH path AS x, nodes(path)[0] as c, relationships(path) as r, $startVal as startVal "
+                "WITH x, REDUCE(s = startVal, e IN r | s * e.meanPriceNet) AS endVal, startVal, COLLECT(nodes(x)) as elems "
+                "WHERE endVal > startVal "
+                "RETURN {volumeBTC:$volumeBTC,path:EXTRACT(r IN relationships(x) | {meanPrice:r.meanPrice,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
+                "ORDER BY Profit DESC "
+                "LIMIT 5",
+                startVal=100,
+                symbol=asset.getSymbol(),
+                exchange=asset.getExchange(),
+                volumeBTC=volumeBTC,
+                now=now)
 
-        arbitrage_deals = [record["ArbitrageDeal"] for record in result]
+            arbitrage_deals.extend([record["ArbitrageDeal"] for record in result])
 
         for arbitrage_deal in arbitrage_deals:            
             cypher_match = []
@@ -370,12 +374,14 @@ class GraphDB(object):
                     cypher_create_set.append("r"+str(idx)+"._to=$now")
                     cypher_create_set.append("r"+str(idx)+"._from=$now")
                     cypher_create_set.append("r"+str(idx)+".uuid=uuid")
+                    cypher_create_set.append("r"+str(idx)+".volumeBTC=$volumeBTC")
+                    cypher_create_set.append("r"+str(idx)+".meanPrice=%f"%(arbitrage_deal['path'][idx]['meanPrice']))
                     
             cypher_cmd  = ' MATCH path = '+''.join(cypher_match)
-            cypher_cmd += " WHERE ALL (a in rels(path) WHERE ($now-a._to)<=$match_lookback_sec ) "
+            cypher_cmd += " WHERE ALL (a in rels(path) WHERE ($now-a._to)<=$match_lookback_sec ) AND ALL (a in rels(path) WHERE (a.volumeBTC)=$volumeBTC) "
             cypher_cmd += " SET " + ','.join(cypher_match_set)
             cypher_cmd += " RETURN count(*) AS nof_matches"
-            result = tx.run(cypher_cmd,now=now,match_lookback_sec=match_lookback_sec)
+            result = tx.run(cypher_cmd,now=now,match_lookback_sec=match_lookback_sec,volumeBTC=arbitrage_deal['volumeBTC'])
             nof_matches = result.single()['nof_matches']
             
             if nof_matches == 0: # new arbitrage deal to be created
@@ -383,7 +389,8 @@ class GraphDB(object):
                 cypher_cmd += ' MATCH '+','.join(cypher_match2)
                 cypher_cmd += ' CREATE '+''.join(cypher_match3)
                 cypher_cmd += " SET " + ','.join(cypher_create_set)
-                result = tx.run(cypher_cmd,now=now)
+                #cypher_cmd += " CREATE (arb:ArbitrageDeal {uuid:uuid,volumeBTC:$volumeBTC})"
+                result = tx.run(cypher_cmd,now=now,volumeBTC=arbitrage_deal['volumeBTC'])
                 
             print(cypher_cmd)
         return arbitrage_deals

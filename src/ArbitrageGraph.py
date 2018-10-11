@@ -10,24 +10,22 @@ from FWLiveParams import FWLiveParams
 class ArbitrageGraphEdge:
     def __init__(self,
                  timestamp=None,
-                 meanprice=0.0,
-                 limitprice=0.0,
+                 meanPrice=0.0,
+                 limitPrice=0.0,
                  feeRate=0,
-                 vol_BASE=0):
+                 volumeBase=0):
         self.timestamp = timestamp
-        self.meanprice = meanprice
-        self.limitprice = limitprice
+        self.meanPrice = meanPrice
+        self.limitPrice = limitPrice
         self.feeRate = feeRate
-        self.vol_BASE = vol_BASE
+        self.volumeBase = volumeBase
 
     def getLogWeight(self):
-        return -1.0 * np.log((1 - self.feeRate) * self.meanprice)
+        return -1.0 * np.log((1 - self.feeRate) * self.meanPrice)
 
 
 class ArbitrageGraph:
-    def __init__(self,
-                 edgeTTL=5,
-                 neo4j_mode=FWLiveParams.neo4j_mode_disabled):
+    def __init__(self, edgeTTL=5):
 
         self.gdict = {}
         self.glist = []
@@ -60,20 +58,20 @@ class ArbitrageGraph:
         connectSameCurrenciesOnDifferentExchanges(symbol_base, uniqueNodes)
         connectSameCurrenciesOnDifferentExchanges(symbol_quote, uniqueNodes)
 
-        if askPrice.meanprice is not None:
+        if askPrice.meanPrice is not None:
             self.gdict[key1] = ArbitrageGraphEdge(
                 timestamp=timestamp,
-                meanprice=1 / askPrice.meanprice,
-                limitprice=1 / askPrice.limitprice,
+                meanPrice=1 / askPrice.meanPrice,
+                limitPrice=1 / askPrice.limitPrice,
                 feeRate=feeRate,
-                vol_BASE=askPrice.vol_BASE * askPrice.meanprice)
-        if bidPrice.meanprice is not None:
+                volumeBase=askPrice.volumeBase * askPrice.meanPrice)
+        if bidPrice.meanPrice is not None:
             self.gdict[key2] = ArbitrageGraphEdge(
                 timestamp=timestamp,
-                meanprice=bidPrice.meanprice,
-                limitprice=bidPrice.limitprice,
+                meanPrice=bidPrice.meanPrice,
+                limitPrice=bidPrice.limitPrice,
                 feeRate=feeRate,
-                vol_BASE=bidPrice.vol_BASE)
+                volumeBase=bidPrice.volumeBase)
 
         return self.updateGraph(timestamp=timestamp)
 

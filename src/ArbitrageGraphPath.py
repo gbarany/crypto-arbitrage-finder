@@ -13,7 +13,7 @@ class ArbitrageGraphPath:
                  isNegativeCycle=None,
                  length=None):
         edges_weight = []
-        edges_vol_BASE = []
+        edges_volumeBase = []
         edges_weight_log = []
         edges_weight_limit = []
         edges_age_s = []
@@ -44,9 +44,9 @@ class ArbitrageGraphPath:
                 else:
                     edges_age_s.append(0)
                 edges_weight_log.append(v.getLogWeight())
-                edges_weight.append(v.meanprice)
-                edges_weight_limit.append(v.limitprice)
-                edges_vol_BASE.append(v.vol_BASE)
+                edges_weight.append(v.meanPrice)
+                edges_weight_limit.append(v.limitPrice)
+                edges_volumeBase.append(v.volumeBase)
             exchanges_involved = sorted(set(exchanges_involved), key=str.lower)
             nof_exchanges_involved = len(exchanges_involved)
             hops = len(nodes) - 1
@@ -55,7 +55,7 @@ class ArbitrageGraphPath:
         self.edges_weight = edges_weight
         self.edges_age_s = edges_age_s
         self.edges_weight_limit = edges_weight_limit
-        self.edges_vol_BASE = edges_vol_BASE
+        self.edges_volumeBase = edges_volumeBase
         self.hops = hops
         self.exchanges_involved = exchanges_involved
         self.nof_exchanges_involved = nof_exchanges_involved
@@ -90,30 +90,30 @@ class ArbitrageGraphPath:
 
                 if A == 'EUR' or A == 'USD' or A == 'GBP':
                     tradesymbols = B + "/" + A
-                    limitprice = 1 / self.edges_weight_limit[idx_node]
+                    limitPrice = 1 / self.edges_weight_limit[idx_node]
                     tradetype = TradeType.BUY
-                    volume = self.edges_vol_BASE[idx_node] * self.edges_weight[
+                    volume = self.edges_volumeBase[idx_node] * self.edges_weight[
                         idx_node]
                 elif A == 'BTC' and B != 'EUR' and B != 'USD' and B != 'GBP':
                     tradesymbols = B + "/" + A
-                    limitprice = 1 / self.edges_weight_limit[idx_node]
+                    limitPrice = 1 / self.edges_weight_limit[idx_node]
                     tradetype = TradeType.BUY
-                    volume = self.edges_vol_BASE[idx_node] * self.edges_weight[
+                    volume = self.edges_volumeBase[idx_node] * self.edges_weight[
                         idx_node]
                 elif A == 'ETH' and B != 'EUR' and B != 'USD' and B != 'GBP' and B != 'BTC':
                     tradesymbols = B + "/" + A
-                    limitprice = 1 / self.edges_weight_limit[idx_node]
+                    limitPrice = 1 / self.edges_weight_limit[idx_node]
                     tradetype = TradeType.BUY
-                    volume = self.edges_vol_BASE[idx_node] * self.edges_weight[
+                    volume = self.edges_volumeBase[idx_node] * self.edges_weight[
                         idx_node]
                 else:
                     tradesymbols = A + "/" + B
-                    limitprice = self.edges_weight_limit[idx_node]
+                    limitPrice = self.edges_weight_limit[idx_node]
                     tradetype = TradeType.SELL
-                    volume = self.edges_vol_BASE[idx_node]
+                    volume = self.edges_volumeBase[idx_node]
 
                 tradelist.append(
-                    Trade(base_exchange, tradesymbols, volume, limitprice,
+                    Trade(base_exchange, tradesymbols, volume, limitPrice,
                           tradetype))
         return tradelist
 

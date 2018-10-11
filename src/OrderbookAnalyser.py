@@ -2,7 +2,7 @@ import numpy as np
 from ArbitrageGraph import ArbitrageGraph
 from ArbitrageGraphNeo import ArbitrageGraphNeo
 from FeeStore import FeeStore
-from OrderBook import OrderBook
+from OrderBook import OrderBook, OrderBookPair
 from PriceStore import PriceStore
 import pandas as pd
 import os
@@ -11,9 +11,9 @@ import datetime
 import logging
 from Trader import Trader
 from FWLiveParams import FWLiveParams
+from GraphDB import Asset
 import time
 logger = logging.getLogger('CryptoArbitrageApp')
-
 
 class OrderbookAnalyser:
     PRICE_SOURCE_ORDERBOOK = "PRICE_SOURCE_ORDERBOOK"
@@ -32,7 +32,7 @@ class OrderbookAnalyser:
 
         # create Arbitrage Graph objects
         self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))]
-        self.arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode)
+        self.arbitrageGraphNeo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode)
         
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
@@ -97,30 +97,41 @@ class OrderbookAnalyser:
                 logger.info('No CMC ticker received yet, skipping update')
                 return
         try:
-            rate_BTC_to_base = self.priceStore.getMeanPrice(
+            rateBTCxBase = self.priceStore.getMeanPrice(
                 symbol_base_ref='BTC',
                 symbol_quote_ref=symbol.split('/')[0],
                 timestamp=timestamp)
-            orderBook = OrderBook(symbol=symbol, asks=asks, bids=bids,rate_BTC_to_base=rate_BTC_to_base)
-            
+
+            rateBTCxQuote = self.priceStore.getMeanPrice(
+                symbol_base_ref='BTC',
+                symbol_quote_ref=symbol.split('/')[1],
+                timestamp=timestamp)
+
             # Price store doesn't have an exchange rate for this trading pair
             # therefore trading graph won't be updated
-            if rate_BTC_to_base is None:
+            if rateBTCxBase is None or rateBTCxQuote is None :
                 return
 
-            self.arbitrage_graph_neo.updatePoint(
+            orderBookPair = OrderBookPair(symbol=symbol, asks=asks, bids=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
+
+            self.arbitrageGraphNeo.updatePoint(
                 symbol=symbol,
-                exchange_name=exchangename,
-                fee_rate=self.feeStore.getTakerFee(exchangename, symbol),
-                orderbook=orderBook,
+                exchange=exchangename,
+                feeRate=self.feeStore.getTakerFee(exchangename, symbol),
+                orderBookPair=orderBookPair,
                 now = time.time()
             )
+            arbitrage_cycles = self.arbitrageGraphNeo.graphDB.getArbitrageCycle(
+                Asset(exchange='Kraken', symbol='BTC'),
+                match_lookback_sec=500,
+                now=timestamp,
+                volumeBTCs=self.vol_BTC)
 
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-                vol_BASE = self.vol_BTC[idx] * rate_BTC_to_base
+                vol_BASE = self.vol_BTC[idx] * rateBTCxBase
 
-                askPrice = orderBook.getAskPrice(vol=vol_BASE)
-                bidPrice = orderBook.getBidPrice(vol=vol_BASE)
+                askPrice = orderBookPair.asks.getPrice(volumeBase=vol_BASE)
+                bidPrice = orderBookPair.bids.getPrice(volumeBase=vol_BASE)
 
                 path = arbitrageGraph.updatePoint(
                     symbol=symbol,
@@ -143,13 +154,10 @@ class OrderbookAnalyser:
                         self.arbTradeQueue.append(path)
                         self.arbTradeTriggerEvent.notify()
                         self.arbTradeTriggerEvent.release()
-                        logger.info(
-                            "Arbitrage trade event created succesfully")
+                        logger.info("Arbitrage trade event created succesfully")
 
                     else:
-                        logger.info(
-                            "Creating arbitrage trade event failed, invalid event or queue"
-                        )
+                        logger.info("Creating arbitrage trade event failed, invalid event or queue")
 
         except Exception as e:
             logger.error("Exception on exchangename:" + exchangename +
