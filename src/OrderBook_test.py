@@ -7,7 +7,9 @@ def orderbookPairStrInit():
     return OrderBookPair(
         symbol="BTC/USD",
         asks="[[7500, 1],[8000, 1]]",
-        bids="[[7000, 1],[6500, 1]]")
+        bids="[[7000, 1],[6500, 1]]",
+        rateBTCxBase=1,
+        rateBTCxQuote=7750)
 
 
 @pytest.fixture
@@ -15,7 +17,9 @@ def orderbookPairListInit():
     return OrderBookPair(
         symbol="BTC/USD",
         asks=[[7500, 1], [8000, 1]],
-        bids=[[7000, 1], [6500, 1]])
+        bids=[[7000, 1], [6500, 1]],
+        rateBTCxBase=1,
+        rateBTCxQuote=7750)
 
 
 class TestClass(object):

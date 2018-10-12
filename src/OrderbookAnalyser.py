@@ -12,7 +12,6 @@ import logging
 from Trader import Trader
 from FWLiveParams import FWLiveParams
 from GraphDB import Asset
-import time
 logger = logging.getLogger('CryptoArbitrageApp')
 
 class OrderbookAnalyser:
@@ -32,7 +31,7 @@ class OrderbookAnalyser:
 
         # create Arbitrage Graph objects
         self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))]
-        self.arbitrageGraphNeo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode)
+        self.arbitrageGraphNeo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,volumeBTCs=vol_BTC)
         
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
@@ -119,10 +118,10 @@ class OrderbookAnalyser:
                 exchange=exchangename,
                 feeRate=self.feeStore.getTakerFee(exchangename, symbol),
                 orderBookPair=orderBookPair,
-                now = time.time()
+                now = timestamp
             )
             arbitrage_cycles = self.arbitrageGraphNeo.graphDB.getArbitrageCycle(
-                Asset(exchange='Kraken', symbol='BTC'),
+                Asset(exchange='kraken', symbol='BTC'),
                 match_lookback_sec=500,
                 now=timestamp,
                 volumeBTCs=self.vol_BTC)

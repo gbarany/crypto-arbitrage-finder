@@ -14,7 +14,7 @@ class TestClass(object):
     def test_singleOderbookEntry(self):
         edgeTTL=5
         neo4j_mode = FWLiveParams.neo4j_mode_localhost
-        arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,resetDBData=True)
+        arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,resetDBData=True,volumeBTCs=[1])
         
         orderBookPair = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5000)
         
@@ -46,7 +46,7 @@ class TestClass(object):
     def test_twoOderbookEntries(self):
         edgeTTL=5
         neo4j_mode = FWLiveParams.neo4j_mode_localhost
-        arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,resetDBData=True)
+        arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,resetDBData=True,volumeBTCs=[1])
         
         orderBookPair1 = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5500)
         orderBookPair2 = OrderBookPair(symbol='BTC/USD', asks=[[4000,0.5], [5000,0.5]], bids=[[3000,0.5], [2000,0.5]],rateBTCxBase=1,rateBTCxQuote=4500)

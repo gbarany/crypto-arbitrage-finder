@@ -11,7 +11,7 @@ import time
 arbTradeTriggerEvent = Condition()
 arbTradeQueue = []
 #vol_BTC=[1,0.1,0.01]
-vol_BTC = [1]
+vol_BTC = [0.01]
 
 
 @pytest.fixture(scope="class")
@@ -44,8 +44,8 @@ class TestClass(object):
     def test_one(self):
 
         orderbookAnalyser = getOrderbookAnalyser()
-        orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
         cmc = getCMCSampleFetch()
+        orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
 
         def feedSamples():
             time.sleep(0.2)
@@ -76,7 +76,7 @@ class TestClass(object):
 
         for i in range(len(vol_BTC)):
             arbTradeTriggerEvent.acquire()
-            TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait(1)
+            TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait(3)
             #TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait()
             arbTradeTriggerEvent.release()
             assert (i, TRADE_EVENT_TRIGGERED) == (i, True)

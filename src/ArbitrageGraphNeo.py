@@ -5,8 +5,8 @@ from InitLogger import logger
 
 class ArbitrageGraphNeo:
     def __init__(self,
+                 volumeBTCs,
                  edgeTTL=5,
-                 volumeBTCs=[1],
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled,resetDBData=False):
 
         self.edgeTTL = edgeTTL

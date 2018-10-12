@@ -65,7 +65,7 @@ class OrderBook:
                 meanPrice=vol_price / volumeBase,
                 limitPrice=entry_price,
                 volumeBase=volumeBase,
-                volumeBTC=volumeBase/self.rateBTCxBase if self.rateBTCxBase is not None else None)
+                volumeBTC=volumeBase/self.rateBTCxBase)
         else:
             return OrderBookPrice()
 
