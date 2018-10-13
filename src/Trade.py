@@ -22,10 +22,10 @@ class Trade:
     BUY_ORDER = "BUY_ORDER"
     SELL_ORDER = "SELL_ORDER"
 
-    def __init__(self, exchange_name, market, amount, price,
+    def __init__(self, exchange, market, amount, price,
                  trade_type: TradeType):
-        self.exchangeName = exchange_name
-        self.exchangeNameStd = exchange_name.lower().replace(" ", "")
+        self.exchangeName = exchange
+        self.exchangeNameStd = exchange.lower().replace(" ", "")
         self.market = market
         self.amount = amount
         self.price = price

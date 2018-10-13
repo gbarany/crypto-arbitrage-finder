@@ -10,7 +10,7 @@ class TestClass(object):
         price = 1000
         trade_type = TradeType.BUY
         trade = Trade(
-            exchangeName=exchange_name,
+            exchange=exchange_name,
             market=symbol,
             amount=amount,
             price=price,

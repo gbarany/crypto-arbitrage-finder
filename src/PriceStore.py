@@ -105,6 +105,5 @@ class PriceStore:
         if cntr != 0:
             return acc / cntr
         else:
-            logger.info(
-                'Price information not available %s/%s timestamp %f' %
-                (symbol_base_ref, symbol_quote_ref, timestamp))
+            logger.warning('Price information not available for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
+            raise ValueError('Price information not available for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
