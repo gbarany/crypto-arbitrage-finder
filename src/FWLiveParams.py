@@ -3,6 +3,18 @@ class FWLiveParams:
     neo4j_mode_localhost = 2
     neo4j_mode_aws_cloud = 3
 
+    neo4j_mode_localhost_details = {
+        'uri' : 'bolt://localhost:7687',
+        'user' : 'neo4j',
+        'password' : 'neo' 
+        }
+
+    neo4j_mode_aws_cloud_details = {
+        'uri' : 'bolt://3.120.197.59:7687',
+        'user' : 'neo4j',
+        'password' : 'i-0b4b0106c20014f75' 
+        }
+
     def __init__(self,
                  enable_plotting=True,
                  is_sandbox_mode=True,
@@ -14,3 +26,6 @@ class FWLiveParams:
         self.is_forex_enabled = is_forex_enabled
         self.results_dir = results_dir
         self.neo4j_mode = neo4j_mode
+        
+
+        

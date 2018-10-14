@@ -111,12 +111,17 @@ class OrderbookAnalyser:
             if rateBTCxBase is None or rateBTCxQuote is None :
                 return
 
-            orderBookPair = OrderBookPair(symbol=symbol, asks=asks, bids=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
+            orderBookPair = OrderBookPair(
+                symbol=symbol,
+                asks=asks,
+                bids=bids,
+                rateBTCxBase=rateBTCxBase,
+                rateBTCxQuote=rateBTCxQuote,
+                feeRate=self.feeStore.getTakerFee(exchangename, symbol))
 
             self.arbitrageGraphNeo.updatePoint(
                 symbol=symbol,
                 exchange=exchangename,
-                feeRate=self.feeStore.getTakerFee(exchangename, symbol),
                 orderBookPair=orderBookPair,
                 now = timestamp
             )
@@ -127,18 +132,12 @@ class OrderbookAnalyser:
                 volumeBTCs=self.vol_BTC)
 
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-                vol_BASE = self.vol_BTC[idx] * rateBTCxBase
-
-                askPrice = orderBookPair.asks.getPrice(volumeBase=vol_BASE)
-                bidPrice = orderBookPair.bids.getPrice(volumeBase=vol_BASE)
-
                 path = arbitrageGraph.updatePoint(
                     symbol=symbol,
                     exchangename=exchangename,
-                    feeRate=self.feeStore.getTakerFee(exchangename, symbol),
-                    askPrice=askPrice,
-                    bidPrice=bidPrice,
-                    timestamp=timestamp)
+                    orderBookPair=orderBookPair,
+                    timestamp=timestamp,
+                    volumeBTC = self.vol_BTC[idx])
 
                 if path.isNegativeCycle is True:
                     logger.info("Found arbitrage deal")

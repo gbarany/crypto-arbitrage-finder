@@ -77,7 +77,6 @@ class TestClass(object):
         for i in range(len(vol_BTC)):
             arbTradeTriggerEvent.acquire()
             TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait(10)
-            #TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait()
             arbTradeTriggerEvent.release()
             assert (i, TRADE_EVENT_TRIGGERED) == (i, True)
 

@@ -21,11 +21,10 @@ class AssetState:
 
 
 class TradingRelationship:
-    def __init__(self, baseAsset, quotationAsset, orderbook, feeRate, timeToLiveSec):
+    def __init__(self, baseAsset, quotationAsset, orderbook, timeToLiveSec):
         self.baseAsset = baseAsset
         self.quotationAsset = quotationAsset
         self.orderbook = orderbook
-        self.feeRate = feeRate
         self.timeToLiveSec = timeToLiveSec
 
     def getPriceByBTCVolume(self,volumeBTC):
@@ -272,11 +271,11 @@ class GraphDB(object):
                 quotationExchange=tradingRelationship.getQuotationAsset().getExchange(),
                 quotationSymbol=tradingRelationship.getQuotationAsset().getSymbol(),
                 meanPrice=orderBookPrice.meanPrice,
-                meanPriceNet = orderBookPrice.meanPrice*(1-tradingRelationship.feeRate),
+                meanPriceNet = orderBookPrice.meanPriceNet,
                 limitPrice=orderBookPrice.limitPrice,
-                feeRate=tradingRelationship.feeRate,
-                feeAmountBase=orderBookPrice.volumeBase*tradingRelationship.feeRate,
-                feeAmountBTC=orderBookPrice.volumeBTC*tradingRelationship.feeRate,
+                feeRate=orderBookPrice.feeRate,
+                feeAmountBase=orderBookPrice.feeAmountBase,
+                feeAmountBTC=orderBookPrice.feeAmountBTC,
                 volumeBase=orderBookPrice.volumeBase,
                 volumeBTC=orderBookPrice.volumeBTC,
                 timeTo=now + tradingRelationship.timeToLiveSec,
@@ -294,7 +293,7 @@ class GraphDB(object):
             orderbook=tradingRelationship.orderbook.getOrderbookStr(),
             rateBTCxBase=tradingRelationship.orderbook.rateBTCxBase,
             rateBTCxQuote=tradingRelationship.orderbook.rateBTCxQuote,
-            feeRate=tradingRelationship.feeRate,
+            feeRate=orderBookPrice.feeRate,
             timeTo=now + tradingRelationship.timeToLiveSec,
             timeFrom=now)
 

@@ -167,16 +167,14 @@ class TestClass(object):
             TradingRelationship(
                 baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                 quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                orderbook=OrderBook(symbol='BTC/ETH',orderbook=[[2,1]],rateBTCxBase=1,rateBTCxQuote=2),
-                feeRate=0,
+                orderbook=OrderBook(symbol='BTC/ETH',orderbook=[[2,1]],rateBTCxBase=1,rateBTCxQuote=2,feeRate=0),
                 timeToLiveSec=5),now=0.3,volumeBTCs=volumeBTCs)
 
         graphDB.addTradingRelationship(
             TradingRelationship(
                 baseAsset=Asset(exchange='Kraken', symbol='ETH'),
                 quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
-                orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[0.6,1000]]',rateBTCxBase=1/0.6,rateBTCxQuote=1),
-                feeRate=0,
+                orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[0.6,1000]]',rateBTCxBase=1/0.6,rateBTCxQuote=1,feeRate=0),
                 timeToLiveSec=5),now=0.4,volumeBTCs=volumeBTCs)
 
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=0.5,volumeBTCs=volumeBTCs )
@@ -205,32 +203,28 @@ class TestClass(object):
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[1,1]]',rateBTCxBase=1,rateBTCxQuote=1),
-                    feeRate=0.002,
+                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[1,1]]',rateBTCxBase=1,rateBTCxQuote=1,feeRate=0.002),
                     timeToLiveSec=4),now=1)
 
             graphDB.addTradingRelationship(
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[2,1]]',rateBTCxBase=1,rateBTCxQuote=2),
-                    feeRate=0.002,
+                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[2,1]]',rateBTCxBase=1,rateBTCxQuote=2,feeRate=0.002),
                     timeToLiveSec=2),now=2)
             
             graphDB.addTradingRelationship(
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Kraken', symbol='ETH'),
-                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[3,1]]',rateBTCxBase=1,rateBTCxQuote=3),
-                    feeRate=0.002,
+                    orderbook=OrderBook(symbol='BTC/ETH',orderbook='[[3,1]]',rateBTCxBase=1,rateBTCxQuote=3,feeRate=0.002),
                     timeToLiveSec=5),now=3)
 
             graphDB.addTradingRelationship(
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='ETH'),
                     quotationAsset=Asset(exchange='Kraken', symbol='BTC'),
-                    orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[4,1]]',rateBTCxBase=1/4,rateBTCxQuote=1),
-                    feeRate=0.002,
+                    orderbook=OrderBook(symbol='ETH/BTC',orderbook='[[4,1]]',rateBTCxBase=1/4,rateBTCxQuote=1,feeRate=0.002),
                     timeToLiveSec=3),now=3)
 
             ###################################################################
@@ -240,8 +234,7 @@ class TestClass(object):
                 TradingRelationship(
                     baseAsset=Asset(exchange='Kraken', symbol='BTC'),
                     quotationAsset=Asset(exchange='Poloniex', symbol='BTC'),
-                    orderbook=OrderBook(symbol='BTC/BTC',orderbook='[[1,1]]',rateBTCxBase=1,rateBTCxQuote=1),
-                    feeRate=0.002,
+                    orderbook=OrderBook(symbol='BTC/BTC',orderbook='[[1,1]]',rateBTCxBase=1,rateBTCxQuote=1,feeRate=0.002),
                     timeToLiveSec=3),now=3)
 
             ###################################################################

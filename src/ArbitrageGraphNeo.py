@@ -14,20 +14,20 @@ class ArbitrageGraphNeo:
 
         if neo4j_mode == FWLiveParams.neo4j_mode_aws_cloud:
             self.graphDB = GraphDB(
-                uri='bolt://3.120.197.59:7687',
-                user='neo4j',
-                password='i-0b4b0106c20014f75',
+                uri=FWLiveParams.neo4j_mode_aws_cloud_details['uri'],
+                user=FWLiveParams.neo4j_mode_aws_cloud_details['user'],
+                password=FWLiveParams.neo4j_mode_aws_cloud_details['password'],
                 resetDBData=resetDBData)
         elif neo4j_mode == FWLiveParams.neo4j_mode_localhost:
             self.graphDB = GraphDB(
-                uri='bolt://localhost:7687',
-                user='neo4j',
-                password='neo',
+                uri=FWLiveParams.neo4j_mode_localhost_details['uri'],
+                user=FWLiveParams.neo4j_mode_localhost_details['user'],
+                password=FWLiveParams.neo4j_mode_localhost_details['password'],
                 resetDBData=resetDBData)
         else:
             self.graphDB = None
 
-    def updatePoint(self,symbol, exchange, feeRate, orderBookPair,now):
+    def updatePoint(self,symbol, exchange, orderBookPair,now):
         if self.graphDB is None:
             logger.warn('GraphDB is not initialized')
             return
@@ -45,7 +45,6 @@ class ArbitrageGraphNeo:
                 baseAsset=Asset(exchange=exchange, symbol=symbol_quote),
                 quotationAsset=Asset(exchange=exchange, symbol=symbol_base),
                 orderbook = orderBookPair.getRebasedAsksOrderbook(),
-                feeRate=feeRate,
                 timeToLiveSec=self.edgeTTL),now=now,
                 volumeBTCs=self.volumeBTCs)
 
@@ -54,7 +53,6 @@ class ArbitrageGraphNeo:
                 baseAsset=Asset(exchange=exchange, symbol=symbol_base),
                 quotationAsset=Asset(exchange=exchange, symbol=symbol_quote),
                 orderbook=orderBookPair.getBidsOrderbook(),
-                feeRate=feeRate,
                 timeToLiveSec=self.edgeTTL),now=now,
                 volumeBTCs=self.volumeBTCs)
 

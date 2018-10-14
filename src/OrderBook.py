@@ -2,19 +2,38 @@ import ast
 import copy
 
 class OrderBookPrice:
-    def __init__(self, meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None):
+    def __init__(self, meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None,feeRate=None):        
         self.meanPrice = meanPrice
+
+        if meanPrice is not None and feeRate is not None:
+            self.meanPriceNet = meanPrice*(1-feeRate)
+        else:
+            self.meanPriceNet = None
+
         self.limitPrice = limitPrice
+        self.feeRate = feeRate
+
+        if volumeBase is not None and feeRate is not None:
+            self.feeAmountBase=volumeBase*feeRate
+        else:
+            self.feeAmountBase = None
+
+
+        if volumeBTC is not None and feeRate is not None:
+            self.feeAmountBTC=volumeBTC*feeRate
+        else:
+            self.feeAmountBTC = None
         self.volumeBase = volumeBase
         self.volumeBTC = volumeBTC
+
     def __str__(self):
         return "mean price:" + str(
             self.meanPrice) + ", " + "limit price:" + str(self.limitPrice)
 
 class OrderBookPair:
-    def __init__(self,symbol,asks,bids,rateBTCxBase,rateBTCxQuote):
-            self.bids = OrderBook(symbol=symbol,orderbook=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
-            self.asks = OrderBook(symbol=symbol,orderbook=asks,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote)
+    def __init__(self,symbol,asks,bids,rateBTCxBase,rateBTCxQuote,feeRate):
+            self.bids = OrderBook(symbol=symbol,orderbook=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate)
+            self.asks = OrderBook(symbol=symbol,orderbook=asks,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate)
 
     def getBidsOrderbook(self):
         return self.bids
@@ -26,7 +45,7 @@ class OrderBookPair:
         return self.asks.getRebasedOrderbook()
 
 class OrderBook:
-    def __init__(self, symbol, orderbook, rateBTCxBase, rateBTCxQuote):
+    def __init__(self, symbol, orderbook, rateBTCxBase, rateBTCxQuote,feeRate):
         self.symbol = symbol
         if isinstance(orderbook, str):
             self.orderbook = list(ast.literal_eval(orderbook))
@@ -35,7 +54,7 @@ class OrderBook:
 
         self.rateBTCxBase = rateBTCxBase
         self.rateBTCxQuote = rateBTCxQuote
-
+        self.feeRate = feeRate
     def __eq__(self, other):
         return isinstance(
             other, self.__class__
@@ -65,7 +84,8 @@ class OrderBook:
                 meanPrice=vol_price / volumeBase,
                 limitPrice=entry_price,
                 volumeBase=volumeBase,
-                volumeBTC=volumeBase/self.rateBTCxBase)
+                volumeBTC=volumeBase/self.rateBTCxBase,
+                feeRate=self.feeRate)
         else:
             return OrderBookPrice()
 

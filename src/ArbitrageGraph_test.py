@@ -2,30 +2,41 @@ import pytest
 import numpy as np
 from ArbitrageGraph import ArbitrageGraph
 from ArbitrageGraphPath import ArbitrageGraphPath
-from OrderBook import OrderBookPrice
+from OrderBook import OrderBookPair
 from Trade import Trade, TradeStatus, TradeType
 
 
 class TestClass(object):
     def test_intraExchange(self):
         arbitrageGraph = ArbitrageGraph()
+
         p1 = arbitrageGraph.updatePoint(
             symbol="BTC/USD",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(
-                meanPrice=10000, limitPrice=10000, volumeBase=1),
-            bidPrice=OrderBookPrice(
-                meanPrice=9000, limitPrice=9000, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="BTC/USD",
+                asks=[[10000, 10]],
+                bids=[[9000, 10]],
+                rateBTCxBase=1,
+                rateBTCxQuote=9500,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=0)
         assert p1.isNegativeCycle == False
 
         p2 = arbitrageGraph.updatePoint(
             symbol="ETH/USD",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=200, limitPrice=200, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=100, limitPrice=100, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="ETH/USD",
+                asks=[[200, 1000]],
+                bids=[[100, 1000]],
+                rateBTCxBase=4.5,
+                rateBTCxQuote=9500,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=1)
 
         assert p2.isNegativeCycle == False
@@ -33,9 +44,15 @@ class TestClass(object):
         p3 = arbitrageGraph.updatePoint(
             symbol="BTC/ETH",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=5, limitPrice=5, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=4, limitPrice=4, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="BTC/ETH",
+                asks=[[5, 100]],
+                bids=[[4, 100]],
+                rateBTCxBase=1,
+                rateBTCxQuote=4.5,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=2)
 
         assert p3.isNegativeCycle == True
@@ -57,16 +74,16 @@ class TestClass(object):
         assert path.exchanges_involved == ['kraken']
         assert path.nof_exchanges_involved == 1
 
-        #segmentedTradeList = path.toSegmentedTradeList()
-        #assert (segmentedTradeList[0][0].exchangeName,
+        # segmentedTradeList = path.toSegmentedTradeList()
+        # assert (segmentedTradeList[0][0].exchangeName,
         #        segmentedTradeList[0][0].symbol,
         #        segmentedTradeList[0][0].tradetype) == ('kraken', 'BTC/USD',
         #                                                TradeType.SELL)
-        #assert (segmentedTradeList[0][1].exchangeName,
+        # assert (segmentedTradeList[0][1].exchangeName,
         #        segmentedTradeList[0][1].symbol,
         #        segmentedTradeList[0][1].tradetype) == ('kraken', 'ETH/USD',
         #                                                TradeType.BUY)
-        #assert (segmentedTradeList[0][2].exchangeName,
+        # assert (segmentedTradeList[0][2].exchangeName,
         #        segmentedTradeList[0][2].symbol,
         #        segmentedTradeList[0][2].tradetype) == ('kraken', 'ETH/BTC',
         #                                                TradeType.SELL)
@@ -77,27 +94,43 @@ class TestClass(object):
         arbitrageGraph.updatePoint(
             symbol="BTC/USD",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(
-                meanPrice=10000, limitPrice=10000, volumeBase=1),
-            bidPrice=OrderBookPrice(
-                meanPrice=9000, limitPrice=9000, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="BTC/USD",
+                asks=[[10000, 10]],
+                bids=[[9000, 10]],
+                rateBTCxBase=1,
+                rateBTCxQuote=9500,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=0)
 
         arbitrageGraph.updatePoint(
             symbol="ETH/USD",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=200, limitPrice=200, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=100, limitPrice=100, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="ETH/USD",
+                asks=[[200, 1000]],
+                bids=[[100, 1000]],
+                rateBTCxBase=4.5,
+                rateBTCxQuote=9500,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=1)
 
         arbitrageGraph.updatePoint(
             symbol="BTC/ETH",
             exchangename="poloniex",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=5, limitPrice=5, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=4, limitPrice=4, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="BTC/ETH",
+                asks=[[5, 100]],
+                bids=[[4, 100]],
+                rateBTCxBase=1,
+                rateBTCxQuote=4.5,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=2)
 
         arbitrageGraphPath = ArbitrageGraphPath(
@@ -110,7 +143,7 @@ class TestClass(object):
             edgeTTL_s=10,
             isNegativeCycle=None,
             length=None)
-        #segmentedTradeList = arbitrageGraphPath.toSegmentedTradeList()
+        # segmentedTradeList = arbitrageGraphPath.toSegmentedTradeList()
         print('done')
 
     def test_TTLTest_one(self):
@@ -119,27 +152,43 @@ class TestClass(object):
         arbitrageGraph.updatePoint(
             symbol="BTC/USD",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(
-                meanPrice=10000, limitPrice=10000, volumeBase=1),
-            bidPrice=OrderBookPrice(
-                meanPrice=9000, limitPrice=9000, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="BTC/USD",
+                asks=[[10000, 10]],
+                bids=[[9000, 10]],
+                rateBTCxBase=1,
+                rateBTCxQuote=9500,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=0)
 
         arbitrageGraph.updatePoint(
             symbol="ETH/USD",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=200, limitPrice=200, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=100, limitPrice=100, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="ETH/USD",
+                asks=[[200, 1000]],
+                bids=[[100, 1000]],
+                rateBTCxBase=4.5,
+                rateBTCxQuote=9500,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=1)
 
         arbitrageGraph.updatePoint(
             symbol="BTC/ETH",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=5, limitPrice=5, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=4, limitPrice=4, volumeBase=1),
+            orderBookPair=OrderBookPair(
+                symbol="BTC/ETH",
+                asks=[[5, 100]],
+                bids=[[4, 100]],
+                rateBTCxBase=1,
+                rateBTCxQuote=4.5,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=2)
 
         with pytest.raises(ValueError):
@@ -149,27 +198,48 @@ class TestClass(object):
 
     def test_TTLTest_two(self):
         arbitrageGraph = ArbitrageGraph(edgeTTL=5)
+
+
         arbitrageGraph.updatePoint(
+        symbol="BTC/USD",
+        exchangename="kraken",
+        orderBookPair=OrderBookPair(
             symbol="BTC/USD",
-            exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(
-                meanPrice=10000, limitPrice=10000, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=9000, limitPrice=9000),
-            timestamp=0)
+            asks=[[10000, 10]],
+            bids=[[9000, 10]],
+            rateBTCxBase=1,
+            rateBTCxQuote=9500,
+            feeRate=0
+        ),
+        volumeBTC=1,
+        timestamp=0)
+
         arbitrageGraph.updatePoint(
             symbol="ETH/USD",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=200, limitPrice=200, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=100, limitPrice=100),
+            orderBookPair=OrderBookPair(
+                symbol="ETH/USD",
+                asks=[[200, 1000]],
+                bids=[[100, 1000]],
+                rateBTCxBase=4.5,
+                rateBTCxQuote=9500,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=3)
+
         arbitrageGraph.updatePoint(
             symbol="BTC/ETH",
             exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(meanPrice=5, limitPrice=5, volumeBase=1),
-            bidPrice=OrderBookPrice(meanPrice=4, limitPrice=4),
+            orderBookPair=OrderBookPair(
+                symbol="BTC/ETH",
+                asks=[[5, 100]],
+                bids=[[4, 100]],
+                rateBTCxBase=1,
+                rateBTCxQuote=4.5,
+                feeRate=0
+            ),
+            volumeBTC=1,
             timestamp=4)
 
         with pytest.raises(ValueError):
@@ -178,14 +248,18 @@ class TestClass(object):
                 timestamp=6)
 
         arbitrageGraph.updatePoint(
-            symbol="BTC/USD",
-            exchangename="kraken",
-            feeRate=0.0,
-            askPrice=OrderBookPrice(
-                meanPrice=12000, limitPrice=12000, volumeBase=1),
-            bidPrice=OrderBookPrice(
-                meanPrice=5000, limitPrice=5000, volumeBase=1),
-            timestamp=5)
+                symbol="BTC/USD",
+                exchangename="kraken",
+                orderBookPair=OrderBookPair(
+                    symbol="BTC/USD",
+                    asks=[[12000, 10]],
+                    bids=[[5000, 10]],
+                    rateBTCxBase=1,
+                    rateBTCxQuote=7500,
+                    feeRate=0
+                ),
+                volumeBTC=1,
+                timestamp=5)
 
         path = arbitrageGraph.getPath(
             nodes=["kraken-BTC", "kraken-USD", "kraken-ETH", "kraken-BTC"],
@@ -196,7 +270,3 @@ class TestClass(object):
         assert path.exchanges_involved == ['kraken']
         assert path.nof_exchanges_involved == 1
 
-
-if __name__ == "__main__":
-    tc = TestClass()
-    tc.test_multipleExchanges()

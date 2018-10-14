@@ -16,9 +16,9 @@ class TestClass(object):
         neo4j_mode = FWLiveParams.neo4j_mode_localhost
         arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,resetDBData=True,volumeBTCs=[1])
         
-        orderBookPair = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5000)
+        orderBookPair = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5000,feeRate= 0.002)
         
-        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', feeRate= 0.002, orderBookPair=orderBookPair,now=1)
+        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', orderBookPair=orderBookPair,now=1)
         
         nodesHash = arbitrage_graph_neo.graphDB.getNodesPropertyHash()
         relsHash = arbitrage_graph_neo.graphDB.getRelsPropertyHash()
@@ -32,9 +32,9 @@ class TestClass(object):
         neo4j_mode = FWLiveParams.neo4j_mode_localhost
         arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,resetDBData=True,volumeBTCs=[1,1.5,2])
         
-        orderBookPair = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5000)
+        orderBookPair = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5000,feeRate= 0.002)
         
-        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', feeRate= 0.002, orderBookPair=orderBookPair,now=1)
+        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', orderBookPair=orderBookPair,now=1)
         
         nodesHash = arbitrage_graph_neo.graphDB.getNodesPropertyHash()
         relsHash = arbitrage_graph_neo.graphDB.getRelsPropertyHash()
@@ -48,11 +48,11 @@ class TestClass(object):
         neo4j_mode = FWLiveParams.neo4j_mode_localhost
         arbitrage_graph_neo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,resetDBData=True,volumeBTCs=[1])
         
-        orderBookPair1 = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5500)
-        orderBookPair2 = OrderBookPair(symbol='BTC/USD', asks=[[4000,0.5], [5000,0.5]], bids=[[3000,0.5], [2000,0.5]],rateBTCxBase=1,rateBTCxQuote=4500)
+        orderBookPair1 = OrderBookPair(symbol='BTC/USD', asks=[[5000,1], [6000,2]], bids=[[4000,1], [3000,2]],rateBTCxBase=1,rateBTCxQuote=5500,feeRate= 0.002)
+        orderBookPair2 = OrderBookPair(symbol='BTC/USD', asks=[[4000,0.5], [5000,0.5]], bids=[[3000,0.5], [2000,0.5]],rateBTCxBase=1,rateBTCxQuote=4500,feeRate= 0.002)
         
-        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', feeRate= 0.002, orderBookPair=orderBookPair1,now=1)
-        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', feeRate= 0.002, orderBookPair=orderBookPair2,now=2)
+        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', orderBookPair=orderBookPair1,now=1)
+        arbitrage_graph_neo.updatePoint(symbol='BTC/USD', exchange='kraken', orderBookPair=orderBookPair2,now=2)
         
         nodesHash = arbitrage_graph_neo.graphDB.getNodesPropertyHash()
         relsHash = arbitrage_graph_neo.graphDB.getRelsPropertyHash()

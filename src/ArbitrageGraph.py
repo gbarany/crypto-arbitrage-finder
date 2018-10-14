@@ -8,20 +8,16 @@ from InitLogger import logger
 from FWLiveParams import FWLiveParams
 
 class ArbitrageGraphEdge:
-    def __init__(self,
-                 timestamp=None,
-                 meanPrice=0.0,
-                 limitPrice=0.0,
-                 feeRate=0,
-                 volumeBase=0):
+    def __init__(self,timestamp,meanPrice,limitPrice,feeRate,volumeBase,meanPriceNet):
         self.timestamp = timestamp
         self.meanPrice = meanPrice
+        self.meanPriceNet = meanPriceNet
         self.limitPrice = limitPrice
         self.feeRate = feeRate
         self.volumeBase = volumeBase
 
     def getLogWeight(self):
-        return -1.0 * np.log((1 - self.feeRate) * self.meanPrice)
+        return -1.0 * np.log(self.meanPriceNet)
 
 
 class ArbitrageGraph:
@@ -34,8 +30,11 @@ class ArbitrageGraph:
         self.negativepath = []
         self.edgeTTL = edgeTTL
 
-    def updatePoint(self, symbol, exchangename, feeRate, askPrice, bidPrice,
-                    timestamp):
+    def updatePoint(self, symbol, exchangename, orderBookPair, volumeBTC,timestamp):
+        askOrderbookPrice = orderBookPair.asks.getPriceByBTCVolume(volumeBTC=volumeBTC)
+        askOrderbookPriceRebased = orderBookPair.asks.getRebasedOrderbook().getPriceByBTCVolume(volumeBTC=volumeBTC)
+        bidOrderbookPrice = orderBookPair.bids.getPriceByBTCVolume(volumeBTC=volumeBTC)
+
         symbolsplit = symbol.split('/')
         if len(symbolsplit) != 2:
             return 0, [], None
@@ -50,28 +49,42 @@ class ArbitrageGraph:
             if node not in uniqueNodes:
                 for nodeIterator in uniqueNodes:
                     if nodeIterator[1] == node[1]:
-                        self.gdict[(node, nodeIterator)] = ArbitrageGraphEdge()
-                        self.gdict[(nodeIterator, node)] = ArbitrageGraphEdge()
+                        self.gdict[(node, nodeIterator)] = ArbitrageGraphEdge(
+                            timestamp=None,
+                            meanPrice=1,
+                            limitPrice=1,
+                            feeRate=0,
+                            volumeBase=None,
+                            meanPriceNet=1)
+                        self.gdict[(nodeIterator, node)] = ArbitrageGraphEdge(
+                            timestamp=None,
+                            meanPrice=1,
+                            limitPrice=1,
+                            feeRate=0,
+                            volumeBase=None,
+                            meanPriceNet=1)
 
         uniqueNodes = list(
             set(itertools.chain(*[[s[0], s[1]] for s in self.gdict.keys()])))
         connectSameCurrenciesOnDifferentExchanges(symbol_base, uniqueNodes)
         connectSameCurrenciesOnDifferentExchanges(symbol_quote, uniqueNodes)
 
-        if askPrice.meanPrice is not None:
+        if askOrderbookPrice.meanPrice is not None:
             self.gdict[key1] = ArbitrageGraphEdge(
                 timestamp=timestamp,
-                meanPrice=1 / askPrice.meanPrice,
-                limitPrice=1 / askPrice.limitPrice,
-                feeRate=feeRate,
-                volumeBase=askPrice.volumeBase * askPrice.meanPrice)
-        if bidPrice.meanPrice is not None:
+                meanPrice= askOrderbookPriceRebased.meanPrice,
+                limitPrice= askOrderbookPriceRebased.limitPrice,
+                feeRate=askOrderbookPriceRebased.feeRate,
+                volumeBase=askOrderbookPriceRebased.volumeBase,
+                meanPriceNet=askOrderbookPriceRebased.meanPriceNet)
+        if bidOrderbookPrice.meanPrice is not None:
             self.gdict[key2] = ArbitrageGraphEdge(
                 timestamp=timestamp,
-                meanPrice=bidPrice.meanPrice,
-                limitPrice=bidPrice.limitPrice,
-                feeRate=feeRate,
-                volumeBase=bidPrice.volumeBase)
+                meanPrice=bidOrderbookPrice.meanPrice,
+                limitPrice=bidOrderbookPrice.limitPrice,
+                feeRate=bidOrderbookPrice.feeRate,
+                volumeBase=bidOrderbookPrice.volumeBase,
+                meanPriceNet=bidOrderbookPrice.meanPriceNet)
 
         return self.updateGraph(timestamp=timestamp)
 
