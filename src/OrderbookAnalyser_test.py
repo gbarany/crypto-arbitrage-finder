@@ -1,5 +1,5 @@
 from typing import List
-
+from mock import patch, Mock
 import pytest
 from OrderbookAnalyser import OrderbookAnalyser
 from Trade import Trade, TradeStatus, TradeType
@@ -7,6 +7,7 @@ from Trade import Trade, TradeStatus, TradeType
 from threading import Condition, Thread
 from FWLiveParams import FWLiveParams
 import time
+from FeeStore import FeeStore
 
 arbTradeTriggerEvent = Condition()
 arbTradeQueue = []
@@ -41,8 +42,12 @@ def getCMCSampleFetch():
 
 
 class TestClass(object):
-    def test_one(self):
 
+    def test_one(self,monkeypatch):
+        def getTakerFeeMock(self,exchangename, symbol):
+                return 0.02
+        monkeypatch.setattr(FeeStore, 'getTakerFee', getTakerFeeMock)
+        
         orderbookAnalyser = getOrderbookAnalyser()
         cmc = getCMCSampleFetch()
         orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
