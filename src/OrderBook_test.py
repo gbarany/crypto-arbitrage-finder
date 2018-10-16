@@ -5,6 +5,9 @@ from OrderBook import OrderBook, OrderBookPair
 def orderbookPairStrInit():
     
     return OrderBookPair(
+        timestamp=123,
+        exchange="Kraken",
+        timeToLiveSec=5,
         symbol="BTC/USD",
         asks="[[7500, 1],[8000, 1]]",
         bids="[[7000, 1],[6500, 1]]",
@@ -16,6 +19,9 @@ def orderbookPairStrInit():
 @pytest.fixture
 def orderbookPairListInit():
     return OrderBookPair(
+        timestamp=123,
+        exchange="Kraken",
+        timeToLiveSec=5,
         symbol="BTC/USD",
         asks=[[7500, 1], [8000, 1]],
         bids=[[7000, 1], [6500, 1]],

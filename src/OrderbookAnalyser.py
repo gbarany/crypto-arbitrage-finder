@@ -2,7 +2,7 @@ import numpy as np
 from ArbitrageGraph import ArbitrageGraph
 from ArbitrageGraphNeo import ArbitrageGraphNeo
 from FeeStore import FeeStore
-from OrderBook import OrderBook, OrderBookPair
+from OrderBook import OrderBook, OrderBookPair, Asset
 from PriceStore import PriceStore
 import pandas as pd
 import os
@@ -11,7 +11,7 @@ import datetime
 import logging
 from Trader import Trader
 from FWLiveParams import FWLiveParams
-from GraphDB import Asset
+
 logger = logging.getLogger('CryptoArbitrageApp')
 
 class OrderbookAnalyser:
@@ -30,9 +30,9 @@ class OrderbookAnalyser:
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled):
 
         # create Arbitrage Graph objects
-        self.arbitrageGraphs = [ArbitrageGraph(edgeTTL=edgeTTL) for count in range(len(vol_BTC))]
-        self.arbitrageGraphNeo = ArbitrageGraphNeo(edgeTTL=edgeTTL,neo4j_mode=neo4j_mode,volumeBTCs=vol_BTC)
-        
+        self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
+        self.arbitrageGraphNeo = ArbitrageGraphNeo(neo4j_mode=neo4j_mode,volumeBTCs=vol_BTC)
+        self.edgeTTL=edgeTTL
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
         self.vol_BTC = vol_BTC
@@ -112,19 +112,18 @@ class OrderbookAnalyser:
                 return
 
             orderBookPair = OrderBookPair(
+                timestamp=timestamp,
                 symbol=symbol,
+                exchange=exchangename,
                 asks=asks,
                 bids=bids,
                 rateBTCxBase=rateBTCxBase,
                 rateBTCxQuote=rateBTCxQuote,
-                feeRate=self.feeStore.getTakerFee(exchangename, symbol))
+                feeRate=self.feeStore.getTakerFee(exchangename, symbol),
+                timeToLiveSec=self.edgeTTL)
 
-            self.arbitrageGraphNeo.updatePoint(
-                symbol=symbol,
-                exchange=exchangename,
-                orderBookPair=orderBookPair,
-                now = timestamp
-            )
+            self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair)
+
             arbitrage_cycles = self.arbitrageGraphNeo.graphDB.getArbitrageCycle(
                 Asset(exchange='kraken', symbol='BTC'),
                 match_lookback_sec=500,
@@ -132,12 +131,7 @@ class OrderbookAnalyser:
                 volumeBTCs=self.vol_BTC)
 
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-                path = arbitrageGraph.updatePoint(
-                    symbol=symbol,
-                    exchangename=exchangename,
-                    orderBookPair=orderBookPair,
-                    timestamp=timestamp,
-                    volumeBTC = self.vol_BTC[idx])
+                path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
 
                 if path.isNegativeCycle is True:
                     logger.info("Found arbitrage deal")

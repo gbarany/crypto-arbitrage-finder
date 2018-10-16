@@ -5,42 +5,27 @@ import numpy as np
 import itertools
 from ArbitrageGraphPath import ArbitrageGraphPath
 from InitLogger import logger
+from OrderBook import OrderBookPrice
 from FWLiveParams import FWLiveParams
-
-class ArbitrageGraphEdge:
-    def __init__(self,timestamp,meanPrice,limitPrice,feeRate,volumeBase,meanPriceNet):
-        self.timestamp = timestamp
-        self.meanPrice = meanPrice
-        self.meanPriceNet = meanPriceNet
-        self.limitPrice = limitPrice
-        self.feeRate = feeRate
-        self.volumeBase = volumeBase
-
-    def getLogWeight(self):
-        return -1.0 * np.log(self.meanPriceNet)
 
 
 class ArbitrageGraph:
-    def __init__(self, edgeTTL=5):
+    def __init__(self):
 
         self.gdict = {}
         self.glist = []
         self.G = nx.DiGraph()
         self.plt_ax = None
         self.negativepath = []
-        self.edgeTTL = edgeTTL
 
-    def updatePoint(self, symbol, exchangename, orderBookPair, volumeBTC,timestamp):
+    def updatePoint(self, orderBookPair, volumeBTC):
         askOrderbookPrice = orderBookPair.asks.getPriceByBTCVolume(volumeBTC=volumeBTC)
         askOrderbookPriceRebased = orderBookPair.asks.getRebasedOrderbook().getPriceByBTCVolume(volumeBTC=volumeBTC)
         bidOrderbookPrice = orderBookPair.bids.getPriceByBTCVolume(volumeBTC=volumeBTC)
 
-        symbolsplit = symbol.split('/')
-        if len(symbolsplit) != 2:
-            return 0, [], None
 
-        symbol_base = (exchangename, symbolsplit[0])
-        symbol_quote = (exchangename, symbolsplit[1])
+        symbol_base = (orderBookPair.getExchange(), orderBookPair.getSymbolBase())
+        symbol_quote = (orderBookPair.getExchange(), orderBookPair.getSymbolQuote())
 
         key1 = (symbol_quote, symbol_base)
         key2 = (symbol_base, symbol_quote)
@@ -49,20 +34,8 @@ class ArbitrageGraph:
             if node not in uniqueNodes:
                 for nodeIterator in uniqueNodes:
                     if nodeIterator[1] == node[1]:
-                        self.gdict[(node, nodeIterator)] = ArbitrageGraphEdge(
-                            timestamp=None,
-                            meanPrice=1,
-                            limitPrice=1,
-                            feeRate=0,
-                            volumeBase=None,
-                            meanPriceNet=1)
-                        self.gdict[(nodeIterator, node)] = ArbitrageGraphEdge(
-                            timestamp=None,
-                            meanPrice=1,
-                            limitPrice=1,
-                            feeRate=0,
-                            volumeBase=None,
-                            meanPriceNet=1)
+                        self.gdict[(node, nodeIterator)] = OrderBookPrice(timestamp=None,meanPrice=1, limitPrice=1, volumeBase=None,volumeBTC=None,feeRate=0)
+                        self.gdict[(nodeIterator, node)] = OrderBookPrice(timestamp=None,meanPrice=1, limitPrice=1, volumeBase=None,volumeBTC=None,feeRate=0)
 
         uniqueNodes = list(
             set(itertools.chain(*[[s[0], s[1]] for s in self.gdict.keys()])))
@@ -70,34 +43,22 @@ class ArbitrageGraph:
         connectSameCurrenciesOnDifferentExchanges(symbol_quote, uniqueNodes)
 
         if askOrderbookPrice.meanPrice is not None:
-            self.gdict[key1] = ArbitrageGraphEdge(
-                timestamp=timestamp,
-                meanPrice= askOrderbookPriceRebased.meanPrice,
-                limitPrice= askOrderbookPriceRebased.limitPrice,
-                feeRate=askOrderbookPriceRebased.feeRate,
-                volumeBase=askOrderbookPriceRebased.volumeBase,
-                meanPriceNet=askOrderbookPriceRebased.meanPriceNet)
+            self.gdict[key1] = askOrderbookPriceRebased
         if bidOrderbookPrice.meanPrice is not None:
-            self.gdict[key2] = ArbitrageGraphEdge(
-                timestamp=timestamp,
-                meanPrice=bidOrderbookPrice.meanPrice,
-                limitPrice=bidOrderbookPrice.limitPrice,
-                feeRate=bidOrderbookPrice.feeRate,
-                volumeBase=bidOrderbookPrice.volumeBase,
-                meanPriceNet=bidOrderbookPrice.meanPriceNet)
+            self.gdict[key2] = bidOrderbookPrice
 
-        return self.updateGraph(timestamp=timestamp)
+        return self.updateGraph(timestamp=orderBookPair.getTimestamp(),edgeTTL=orderBookPair.timeToLiveSec)
 
-    def updateGraph(self, timestamp):
+    def updateGraph(self, timestamp,edgeTTL):
         self.glist = []
         now = timestamp
         for k, v in self.gdict.items():
             symbol_base = '-'.join(k[0])
             symbol_quote = '-'.join(k[1])
             ts = v.timestamp
-            edge = v.getLogWeight()
+            edge = v.getLogPrice()
             if ts is not None:
-                if (now - ts) < self.edgeTTL:
+                if (now - ts) < edgeTTL:
                     self.glist.extend([[symbol_base, symbol_quote, edge]])
             else:
                 self.glist.extend([[symbol_base, symbol_quote, edge]])
@@ -114,7 +75,6 @@ class ArbitrageGraph:
             gdict=self.gdict,
             nodes=nodes,
             timestamp=timestamp,
-            edgeTTL_s=self.edgeTTL,
             isNegativeCycle=isNegativeCycle,
             length=length)
 
@@ -122,8 +82,7 @@ class ArbitrageGraph:
         return ArbitrageGraphPath(
             gdict=self.gdict,
             nodes=nodes,
-            timestamp=timestamp,
-            edgeTTL_s=self.edgeTTL)
+            timestamp=timestamp)
 
     def plotGraph(self, figid=1, vol_BTC=None):
         plt.figure(figid)

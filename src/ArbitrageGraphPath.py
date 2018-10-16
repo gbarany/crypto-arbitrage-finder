@@ -9,7 +9,6 @@ class ArbitrageGraphPath:
                  gdict,
                  nodes,
                  timestamp,
-                 edgeTTL_s,
                  isNegativeCycle=None,
                  length=None):
         edges_weight = []
@@ -38,13 +37,13 @@ class ArbitrageGraphPath:
 
                 v = gdict[((source[0], source[1]), (target[0], target[1]))]
                 if v.timestamp is not None:
-                    if timestamp - v.timestamp > edgeTTL_s:
+                    if timestamp - v.timestamp > v.timeToLive:
                         raise ValueError("Path used to exist but TTL expired")
                     edges_age_s.append(timestamp - v.timestamp)
                 else:
                     edges_age_s.append(0)
-                edges_weight_log.append(v.getLogWeight())
-                edges_weight.append(v.meanPrice)
+                edges_weight_log.append(v.getLogPrice())
+                edges_weight.append(v.getPrice())
                 edges_weight_limit.append(v.limitPrice)
                 edges_volumeBase.append(v.volumeBase)
             exchanges_involved = sorted(set(exchanges_involved), key=str.lower)

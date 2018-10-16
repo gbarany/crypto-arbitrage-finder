@@ -1,10 +1,24 @@
 import ast
 import copy
+import numpy as np
+from InitLogger import logger
+
+class Asset:
+    def __init__(self, exchange, symbol):
+        self.exchange = exchange
+        self.symbol = symbol
+
+    def getExchange(self):
+        return self.exchange
+
+    def getSymbol(self):
+        return self.symbol
 
 class OrderBookPrice:
-    def __init__(self, meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None,feeRate=None):        
+    def __init__(self, timestamp=None,meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None,feeRate=None,timeToLive=None): 
+        self.timestamp = timestamp
         self.meanPrice = meanPrice
-
+        self.timeToLive = timeToLive
         if meanPrice is not None and feeRate is not None:
             self.meanPriceNet = meanPrice*(1-feeRate)
         else:
@@ -27,14 +41,21 @@ class OrderBookPrice:
         self.volumeBTC = volumeBTC
 
     def __str__(self):
-        return "mean price:" + str(
-            self.meanPrice) + ", " + "limit price:" + str(self.limitPrice)
+        return "mean price:" + str(self.meanPrice) + ", " + "limit price:" + str(self.limitPrice)
+
+    def getLogPrice(self):
+        return -1.0 * np.log(self.meanPriceNet)
+    def getPrice(self):
+        return self.meanPriceNet
 
 class OrderBookPair:
-    def __init__(self,symbol,asks,bids,rateBTCxBase,rateBTCxQuote,feeRate):
-            self.bids = OrderBook(symbol=symbol,orderbook=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate)
-            self.asks = OrderBook(symbol=symbol,orderbook=asks,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate)
-
+    def __init__(self,timestamp,symbol,exchange,asks,bids,rateBTCxBase,rateBTCxQuote,feeRate,timeToLiveSec):
+            self.bids = OrderBook(timestamp=timestamp,symbol=symbol,exchange=exchange,orderbook=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate,timeToLiveSec=timeToLiveSec)
+            self.asks = OrderBook(timestamp=timestamp,symbol=symbol,exchange=exchange,orderbook=asks,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate,timeToLiveSec=timeToLiveSec)
+            self.exchange = exchange
+            self.symbol = symbol
+            self.timestamp = timestamp
+            self.timeToLiveSec = timeToLiveSec
     def getBidsOrderbook(self):
         return self.bids
 
@@ -44,9 +65,23 @@ class OrderBookPair:
     def getRebasedAsksOrderbook(self):
         return self.asks.getRebasedOrderbook()
 
+    def getSymbolBase(self):
+        return self.symbol.split('/')[0]
+        
+    def getSymbolQuote(self):
+        return self.symbol.split('/')[1]
+
+    def getExchange(self):
+        return self.exchange
+    
+    def getTimestamp(self):
+        return self.timestamp
+
 class OrderBook:
-    def __init__(self, symbol, orderbook, rateBTCxBase, rateBTCxQuote,feeRate):
+    def __init__(self, timestamp, symbol, exchange,orderbook, rateBTCxBase, rateBTCxQuote,feeRate,timeToLiveSec):
+        self.timestamp = timestamp
         self.symbol = symbol
+        self.exchange = exchange
         if isinstance(orderbook, str):
             self.orderbook = list(ast.literal_eval(orderbook))
         else:
@@ -55,10 +90,28 @@ class OrderBook:
         self.rateBTCxBase = rateBTCxBase
         self.rateBTCxQuote = rateBTCxQuote
         self.feeRate = feeRate
+        self.timeToLiveSec = timeToLiveSec
+
+        self.baseAsset = Asset(exchange=exchange, symbol=symbol.split('/')[0])
+        self.quoteAsset = Asset(exchange=exchange, symbol=symbol.split('/')[1])
+
     def __eq__(self, other):
-        return isinstance(
-            other, self.__class__
-        ) and self.symbol == other.symbol and self.orderbook == other.orderbook
+        return isinstance(other, self.__class__) and self.symbol == other.symbol and self.orderbook == other.orderbook
+
+    def getBaseAsset(self):
+        return self.baseAsset
+
+    def getTimestamp(self):
+        return self.timestamp
+
+    def getQuoteAsset(self):
+        return self.quoteAsset
+
+    def getSymbolBase(self):
+        return self.baseAsset.symbol
+        
+    def getSymbolQuote(self):
+        return self.quoteAsset.symbol
 
     def getPrice(self, volumeBase):
         vol_price = 0
@@ -81,11 +134,13 @@ class OrderBook:
                 break
         if vol == 0:
             return OrderBookPrice(
+                timestamp=self.timestamp,
                 meanPrice=vol_price / volumeBase,
                 limitPrice=entry_price,
                 volumeBase=volumeBase,
                 volumeBTC=volumeBase/self.rateBTCxBase,
-                feeRate=self.feeRate)
+                feeRate=self.feeRate,
+                timeToLive=self.timeToLiveSec)
         else:
             return OrderBookPrice()
 
@@ -106,9 +161,14 @@ class OrderBook:
         # flip symbols
         symbols = newobj.symbol.split('/')
         newobj.symbol = symbols[1]+'/'+symbols[0]
+        # flip assets
+        newobj.baseAsset = Asset(exchange=self.exchange, symbol=symbols[1])
+        newobj.quoteAsset = Asset(exchange=self.exchange, symbol=symbols[0])
+
         # flip orderbook
         newobj.orderbook = [[1/lst[0], lst[0]*lst[1]] for lst in self.orderbook]
-        
+
+
         # adjust base conversion
         newobj.rateBTCxBase = self.rateBTCxQuote
         newobj.rateBTCxQuote = self.rateBTCxBase
