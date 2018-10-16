@@ -16,6 +16,7 @@ class ArbitrageGraphPath:
         edges_weight_log = []
         edges_weight_limit = []
         edges_age_s = []
+        edges_volumeQuote = []
         exchanges_involved = []
         hops = 0
         nof_exchanges_involved = 0
@@ -46,6 +47,7 @@ class ArbitrageGraphPath:
                 edges_weight.append(v.getPrice())
                 edges_weight_limit.append(v.limitPrice)
                 edges_volumeBase.append(v.volumeBase)
+                edges_volumeQuote.append(v.volumeQuote)
             exchanges_involved = sorted(set(exchanges_involved), key=str.lower)
             nof_exchanges_involved = len(exchanges_involved)
             hops = len(nodes) - 1
@@ -55,6 +57,8 @@ class ArbitrageGraphPath:
         self.edges_age_s = edges_age_s
         self.edges_weight_limit = edges_weight_limit
         self.edges_volumeBase = edges_volumeBase
+        self.edges_volumeQuote = edges_volumeQuote
+
         self.hops = hops
         self.exchanges_involved = exchanges_involved
         self.nof_exchanges_involved = nof_exchanges_involved
@@ -91,20 +95,17 @@ class ArbitrageGraphPath:
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.edges_weight_limit[idx_node]
                     tradetype = TradeType.BUY
-                    volume = self.edges_volumeBase[idx_node] * self.edges_weight[
-                        idx_node]
+                    volume = self.edges_volumeQuote[idx_node]
                 elif A == 'BTC' and B != 'EUR' and B != 'USD' and B != 'GBP':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.edges_weight_limit[idx_node]
-                    tradetype = TradeType.BUY
-                    volume = self.edges_volumeBase[idx_node] * self.edges_weight[
-                        idx_node]
+                    tradetype = TadeType.BUY
+                    volume = self.edges_volumeQuote[idx_node]
                 elif A == 'ETH' and B != 'EUR' and B != 'USD' and B != 'GBP' and B != 'BTC':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.edges_weight_limit[idx_node]
                     tradetype = TradeType.BUY
-                    volume = self.edges_volumeBase[idx_node] * self.edges_weight[
-                        idx_node]
+                    volume = self.edges_volumeQuote[idx_node]
                 else:
                     tradesymbols = A + "/" + B
                     limitPrice = self.edges_weight_limit[idx_node]

@@ -15,7 +15,7 @@ class Asset:
         return self.symbol
 
 class OrderBookPrice:
-    def __init__(self, timestamp=None,meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None,feeRate=None,timeToLive=None): 
+    def __init__(self, timestamp=None,meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None,volumeQuote=None,feeRate=None,timeToLive=None): 
         self.timestamp = timestamp
         self.meanPrice = meanPrice
         self.timeToLive = timeToLive
@@ -38,6 +38,7 @@ class OrderBookPrice:
         else:
             self.feeAmountBTC = None
         self.volumeBase = volumeBase
+        self.volumeQuote = volumeQuote
         self.volumeBTC = volumeBTC
 
     def __str__(self):
@@ -139,6 +140,7 @@ class OrderBook:
                 limitPrice=entry_price,
                 volumeBase=volumeBase,
                 volumeBTC=volumeBase/self.rateBTCxBase,
+                volumeQuote=volumeBase/self.rateBTCxBase*self.rateBTCxQuote,
                 feeRate=self.feeRate,
                 timeToLive=self.timeToLiveSec)
         else:

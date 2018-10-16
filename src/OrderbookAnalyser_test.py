@@ -45,7 +45,7 @@ class TestClass(object):
 
     def test_one(self,monkeypatch):
         def getTakerFeeMock(self,exchangename, symbol):
-                return 0.02
+                return 0
         monkeypatch.setattr(FeeStore, 'getTakerFee', getTakerFeeMock)
         
         orderbookAnalyser = getOrderbookAnalyser()
