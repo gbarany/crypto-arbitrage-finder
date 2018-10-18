@@ -36,7 +36,7 @@ class PriceStore:
                 symbol_base = ('coinmarketcap', symbolsplit[0])
                 symbol_quote = ('coinmarketcap', symbolsplit[1])
                 price = tickeritem['last']
-                timestamp = tickeritem['timestamp']
+                timestamp = tickeritem['timestamp']/1000
                 if price is not None:
                     if price > 0:
                         key1 = (symbol_quote, symbol_base)
@@ -54,13 +54,9 @@ class PriceStore:
 
         if isinstance(asks, str):
             asks = list(ast.literal_eval(asks))
-        else:
-            asks = asks
 
         if isinstance(bids, str):
             bids = list(ast.literal_eval(bids))
-        else:
-            bids = bids
 
         if self.isOrderbookEmpty(asks) or self.isOrderbookEmpty(bids):
             return
@@ -103,7 +99,8 @@ class PriceStore:
                 acc += rate
                 cntr += 1
         if cntr != 0:
+            logger.info('Price information found for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
             return acc / cntr
         else:
             logger.warning('Price information not available for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
-            raise ValueError('Price information not available for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
+            return None

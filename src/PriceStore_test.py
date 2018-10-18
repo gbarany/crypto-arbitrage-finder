@@ -60,9 +60,8 @@ class TestClass(object):
         assert price_store.getMeanPrice(
             symbol_base_ref='BTC', symbol_quote_ref='USD',
             timestamp=30) == 9500
-        with pytest.raises(ValueError):
-            price_store.getMeanPrice(
-                symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
+
+        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0) == None
 
     def test_twopricefromorderbookonewithinoneoutofttl(self):
         price_store = PriceStore()
@@ -93,13 +92,11 @@ class TestClass(object):
         ticker = get_cmc_sample_fetch()
         price_store.updatePriceFromCoinmarketcap(ticker)
 
-        with pytest.raises(ValueError):
-            price_store.getMeanPrice(
-                symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
+        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0) == None
         assert price_store.getMeanPrice(
             symbol_base_ref='BTC',
             symbol_quote_ref='USD',
-            timestamp=1536357080000 + 1) == 6500
+            timestamp=1536357080000/1000 + 1) == 6500
 
     def test_ob_cmc_combo(self):
         price_store = PriceStore()
@@ -115,10 +112,8 @@ class TestClass(object):
             timestamp=30) == 9500
 
         price_store.updatePriceFromCoinmarketcap(ticker)
-        with pytest.raises(ValueError):
-            price_store.getMeanPrice(
-                symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0)
+        assert price_store.getMeanPrice(symbol_base_ref='BTC', symbol_quote_ref='USD', timestamp=0) == None
         assert price_store.getMeanPrice(
             symbol_base_ref='BTC',
             symbol_quote_ref='USD',
-            timestamp=1536357080000 + 1) == 6500
+            timestamp=1536357080000/1000 + 1) == 6500

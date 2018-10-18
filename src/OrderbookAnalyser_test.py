@@ -31,11 +31,11 @@ def getOrderbookAnalyser():
 def getCMCSampleFetch():
     ticker = {}
 
-    ticker['BTC/USD'] = {'symbol': 'BTC/USD', 'timestamp': 100, 'last': 9000}
+    ticker['BTC/USD'] = {'symbol': 'BTC/USD', 'timestamp': 100*1000, 'last': 9000}
 
-    ticker['ETH/USD'] = {'symbol': 'ETH/USD', 'timestamp': 100, 'last': 100}
+    ticker['ETH/USD'] = {'symbol': 'ETH/USD', 'timestamp': 100*1000, 'last': 100}
 
-    ticker['ETH/BTC'] = {'symbol': 'ETH/BTC', 'timestamp': 100, 'last': 0.03}
+    ticker['ETH/BTC'] = {'symbol': 'ETH/BTC', 'timestamp': 100*1000, 'last': 0.03}
 
     return ticker
 
