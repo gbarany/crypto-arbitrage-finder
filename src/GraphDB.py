@@ -306,7 +306,7 @@ class GraphDB(object):
                 "WITH path AS x, nodes(path)[0] as c, relationships(path) as r, $startVal as startVal "
                 "WITH x, REDUCE(s = startVal, e IN r | s * e.meanPriceNet) AS endVal, startVal, COLLECT(nodes(x)) as elems "
                 "WHERE endVal > startVal "
-                "RETURN {volumeBTC:$volumeBTC,path:EXTRACT(r IN relationships(x) | {meanPrice:r.meanPrice,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
+                "RETURN {volumeBTC:$volumeBTC,path:EXTRACT(r IN relationships(x) | {meanPrice:r.meanPrice,meanPriceNet:r.meanPriceNet,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
                 "ORDER BY Profit DESC "
                 "LIMIT 5",
                 startVal=100,
@@ -341,6 +341,7 @@ class GraphDB(object):
                     cypher_create_set.append("r"+str(idx)+".uuid=uuid")
                     cypher_create_set.append("r"+str(idx)+".volumeBTC=$volumeBTC")
                     cypher_create_set.append("r"+str(idx)+".meanPrice=%f"%(arbitrage_deal['path'][idx]['meanPrice']))
+                    cypher_create_set.append("r"+str(idx)+".meanPriceNet=%f"%(arbitrage_deal['path'][idx]['meanPriceNet']))
                     
             cypher_cmd  = ' MATCH path = '+''.join(cypher_match)
             cypher_cmd += " WHERE ALL (a in rels(path) WHERE ($now-a._to)<=$match_lookback_sec ) AND ALL (a in rels(path) WHERE (a.volumeBTC)=$volumeBTC) "
