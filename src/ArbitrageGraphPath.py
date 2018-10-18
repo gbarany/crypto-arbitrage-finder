@@ -3,6 +3,11 @@ import numpy as np
 
 from Trade import Trade, TradeStatus, TradeType
 
+class TradeList(list):
+    def __init__(self, iterable):
+        super().__init__(iterable)
+        self.profit = None
+        
 
 class ArbitrageGraphPath:
     def __init__(self,
@@ -63,25 +68,26 @@ class ArbitrageGraphPath:
         self.exchanges_involved = exchanges_involved
         self.nof_exchanges_involved = nof_exchanges_involved
         self.isNegativeCycle = isNegativeCycle
-        self.length = length
+        self.length = length        
+        self.profit = np.exp(-1.0 * self.length) * 1 - 1 if self.length is not None else None
         self.nodes = nodes
 
     def toDataFrameLog(self, id, timestamp, vol_BTC, df_columns):
         df_new = pd.DataFrame([[
             int(id), timestamp,
             float(vol_BTC), self.length,
-            np.exp(-1.0 * self.length) * 100 - 100, ",".join(
-                str(x) for x in self.nodes), ",".join(
-                    str(x) for x in self.edges_weight),
-            ",".join(str(x) for x in self.edges_age_s), self.hops, ",".join(
-                str(x)
-                for x in self.exchanges_involved), self.nof_exchanges_involved
-        ]],
-                              columns=df_columns)
+            np.exp(-1.0 * self.length) * 100 - 100,
+            ",".join(str(x) for x in self.nodes),
+            ",".join(str(x) for x in self.edges_weight),
+            ",".join(str(x) for x in self.edges_age_s), 
+            self.hops, ",".join(str(x) for x in self.exchanges_involved), 
+            self.nof_exchanges_involved
+        ]],columns=df_columns)
         return df_new
 
     def toTradeList(self):
-        tradelist = []
+        tradelist = TradeList([])
+        tradelist.profit = self.profit
         for idx_node, node in enumerate(self.nodes[:-1]):
             base_exchange = node.split('-')[0]
             base_symbol = node.split('-')[1]
@@ -99,7 +105,7 @@ class ArbitrageGraphPath:
                 elif A == 'BTC' and B != 'EUR' and B != 'USD' and B != 'GBP':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.edges_weight_limit[idx_node]
-                    tradetype = TadeType.BUY
+                    tradetype = TradeType.BUY
                     volume = self.edges_volumeQuote[idx_node]
                 elif A == 'ETH' and B != 'EUR' and B != 'USD' and B != 'GBP' and B != 'BTC':
                     tradesymbols = B + "/" + A
