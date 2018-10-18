@@ -31,9 +31,7 @@ class FeeStore:
                 self.getExchange(
                     exchangename.lower()).markets[symbols]['taker'])
         except Exception as e:
-            logger.warn("Couldn't fetch taker fee from " + exchangename +
-                        ", defaulting to " + str(FeeStore.DEFAULT_TAKER_FEE) +
-                        " " + str(e.args))
+            logger.warn("Couldn't fetch taker fee from " + exchangename + " "+ symbols +" , defaulting to " + str(FeeStore.DEFAULT_TAKER_FEE) + " " + str(e.args))
             return FeeStore.DEFAULT_TAKER_FEE
 
     def getMakerFee(self, exchangename, symbols):
@@ -42,13 +40,5 @@ class FeeStore:
                 self.getExchange(
                     exchangename.lower()).markets[symbols]['maker'])
         except Exception as e:
-            logger.warn("Couldn't fetch maker fee from " + exchangename +
-                        ", defaulting to " + str(FeeStore.DEFAULT_MAKER_FEE) +
-                        " " + str(e.args))
+            logger.warn("Couldn't fetch maker fee from " + exchangename + " "+ symbols +" , defaulting to " + str(FeeStore.DEFAULT_MAKER_FEE) + " " + str(e.args))
             return FeeStore.DEFAULT_MAKER_FEE
-
-
-if __name__ == "__main__":
-    feeStore = FeeStore()
-    print("Taker", feeStore.getTakerFee('poloniex', 'BTC/USDT'))
-    print("Maker", feeStore.getMakerFee('kraken', 'BTC/USD'))
