@@ -95,7 +95,7 @@ RETURN mostrecent
 
 MATCH (base:CryptoCurrency)-[r:EXCHANGE]->(quotation:CryptoCurrency)
 WHERE base.exchange = "Kraken" AND base.symbol = "BTC" AND quotation.exchange = "Kraken" AND quotation.symbol = "ETH" AND r.
-SET r.to = 1
+SET r._to = 1
 
 MATCH (base:CryptoCurrency),(quotation:CryptoCurrency)
 WHERE base.exchange = "Kraken" AND base.symbol = "BTC" AND quotation.exchange = "Kraken" AND quotation.symbol = "ETH"
@@ -117,7 +117,7 @@ WITH SIZE(COLLECT(DISTINCT xx)) AS testLength
 UNWIND testLength as t
 RETURN t
 
-WHERE testLength = LENGTH(x) AND c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a.to<$now) 
+WHERE testLength = LENGTH(x) AND c.symbol = $symbol AND  c.exchange = $exchange AND NONE (a in r WHERE a._to<$now) 
 
 
 //
@@ -133,35 +133,35 @@ RETURN path, nodes(path)[0], relationships(path)
 
 //
 
-MATCH (n:Asset)-[s:STATE]-(h:AssetState)
-WHERE s.to>=timestamp()/1000
-MATCH (n:Asset)-[r:EXCHANGE|ORDERBOOK|ARBITRAGE]-(k:Asset)
-WHERE r.to>=timestamp()/1000
+MATCH (n:AssetStock)-[s:STATE]-(h:StockState)
+WHERE s._to>=timestamp()/1000
+MATCH (n:AssetStock)-[r:EXCHANGE|ORDERBOOK|ARBITRAGE]-(k:AssetStock)
+WHERE r._to>=timestamp()/1000
 RETURN n,r,k,s,h
 
 
-MATCH (n:Asset)-[s:STATE]-(h:AssetState)
-WHERE s.to>1538264086.152025
-MATCH (n:Asset)-[r:EXCHANGE]-(k:Asset)
-WHERE r.to>1538264086.152025
+MATCH (n:AssetStock)-[s:STATE]-(h:StockState)
+WHERE s._to>1538264086.152025
+MATCH (n:AssetStock)-[r:EXCHANGE]-(k:AssetStock)
+WHERE r._to>1538264086.152025
 RETURN n,r,k,s,h
 
-MATCH (n:Asset)-[r:ARBITRAGE]-(k:Asset)
-WHERE r.from>=1538936162
+MATCH (n:AssetStock)-[r:ARBITRAGE]-(k:AssetStock)
+WHERE r._from>=1538936162
 RETURN n,r,k
 
 MATCH (n)-[r:ARBITRAGE]->(k)
 
 // GET LATEST ARBITRAGE DEAL
 MATCH ()-[r:ARBITRAGE]->() 
-WITH max(r.to) AS latest
+WITH max(r._to) AS latest
 MATCH (n)-[r:ARBITRAGE]->(k) 
-WHERE r.to = latest
+WHERE r._to = latest
 RETURN n,k,r
 
 // GET LATEST ORDERBOOK ENTRY
 MATCH ()-[r:ORDERBOOK]->() 
-WITH max(r.to) AS latest
+WITH max(r._to) AS latest
 MATCH (n)-[r:ORDERBOOK]->(k) 
-WHERE r.to = latest
+WHERE r._to = latest
 RETURN n,k,r
