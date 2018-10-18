@@ -15,7 +15,6 @@ arbTradeQueue = []
 vol_BTC = [0.01]
 
 
-@pytest.fixture(scope="class")
 def getOrderbookAnalyser():
     return OrderbookAnalyser(
         vol_BTC=vol_BTC,
@@ -43,65 +42,66 @@ def getCMCSampleFetch():
 
 class TestClass(object):
 
-    def test_one(self,monkeypatch):
-        def getTakerFeeMock(self,exchangename, symbol):
-                return 0
-        monkeypatch.setattr(FeeStore, 'getTakerFee', getTakerFeeMock)
-        
-        orderbookAnalyser = getOrderbookAnalyser()
-        cmc = getCMCSampleFetch()
-        orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
+    def test_threeNodesVariousFees(self,monkeypatch):
+        feeRates = [0]#[0.02]
+        for feeRate in feeRates:
+            def getTakerFeeMock(self,exchangename, symbol):
+                    return feeRate
+            monkeypatch.setattr(FeeStore, 'getTakerFee', getTakerFeeMock)
+            
+            orderbookAnalyser = getOrderbookAnalyser()
+            cmc = getCMCSampleFetch()
+            orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
 
-        def feedSamples():
-            time.sleep(0.2)
-            orderbookAnalyser.updateCoinmarketcapPrice(cmc)
-            orderbookAnalyser.update(
-                'kraken',
-                'BTC/USD',
-                bids=[[9000, 1]],
-                asks=[[10000, 1]],
-                id=1,
-                timestamp=100)
-            orderbookAnalyser.update(
-                'kraken',
-                'ETH/USD',
-                bids=[[100, 1000]],
-                asks=[[200, 1000]],
-                id=2,
-                timestamp=101)
-            orderbookAnalyser.update(
-                'kraken',
-                'ETH/BTC',
-                bids=[[0.03, 1000]],
-                asks=[[0.04, 1000]],
-                id=3,
-                timestamp=102)
+            def feedSamples():
+                orderbookAnalyser.updateCoinmarketcapPrice(cmc)
+                orderbookAnalyser.update(
+                    'kraken',
+                    'BTC/USD',
+                    bids=[[9000, 1]],
+                    asks=[[10000, 1]],
+                    id=1,
+                    timestamp=100)
+                orderbookAnalyser.update(
+                    'kraken',
+                    'ETH/USD',
+                    bids=[[100, 1000]],
+                    asks=[[200, 1000]],
+                    id=2,
+                    timestamp=101)
+                orderbookAnalyser.update(
+                    'kraken',
+                    'ETH/BTC',
+                    bids=[[0.03, 1000]],
+                    asks=[[0.04, 1000]],
+                    id=3,
+                    timestamp=102)
 
-        Thread(target=feedSamples).start()
+            Thread(target=feedSamples).start()
 
-        for i in range(len(vol_BTC)):
-            arbTradeTriggerEvent.acquire()
-            TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait(10)
-            arbTradeTriggerEvent.release()
-            assert (i, TRADE_EVENT_TRIGGERED) == (i, True)
+            for i in range(len(vol_BTC)):
+                arbTradeTriggerEvent.acquire()
+                TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait(10)
+                arbTradeTriggerEvent.release()
+                assert (i, TRADE_EVENT_TRIGGERED) == (i, True)
 
-        assert len(arbTradeQueue) == len(vol_BTC)
+            assert len(arbTradeQueue) == len(vol_BTC)
 
-        path = arbTradeQueue[0]
-        tradeList: List[Trade] = path.toTradeList()
-        trade = tradeList[0]
-        assert (trade.market, trade.amount, trade.price, trade.trade_type,
-                trade.status) == ('BTC/USD', vol_BTC[0], 9000, TradeType.SELL,
-                                  TradeStatus.INITIAL)
+            path = arbTradeQueue[0]
+            tradeList: List[Trade] = path.toTradeList()
+            trade = tradeList[0]
+            assert (trade.market, trade.amount, trade.price, trade.trade_type,
+                    trade.status) == ('BTC/USD', vol_BTC[0], 9000, TradeType.SELL,
+                                    TradeStatus.INITIAL)
 
-        trade = tradeList[1]
-        assert (trade.market, trade.amount, trade.price, trade.trade_type,
-                trade.status) == ('ETH/USD',
-                                  vol_BTC[0] / cmc['ETH/BTC']['last'], 200,
-                                  TradeType.BUY, TradeStatus.INITIAL)
+            trade = tradeList[1]
+            assert (trade.market, trade.amount, trade.price, trade.trade_type,
+                    trade.status) == ('ETH/USD',
+                                    vol_BTC[0] / cmc['ETH/BTC']['last'], 200,
+                                    TradeType.BUY, TradeStatus.INITIAL)
 
-        trade = tradeList[2]
-        assert (trade.market, trade.amount, trade.price, trade.trade_type,
-                trade.status) == ('ETH/BTC',
-                                  vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,
-                                  TradeType.SELL, TradeStatus.INITIAL)
+            trade = tradeList[2]
+            assert (trade.market, trade.amount, trade.price, trade.trade_type,
+                    trade.status) == ('ETH/BTC',
+                                    vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,
+                                    TradeType.SELL, TradeStatus.INITIAL)
