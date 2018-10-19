@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Attach (Remote Debug Docker)",
+            "type": "python",
+            "request": "attach",
+            "port": 3000,
+            "host": "localhost"
+        },
+        {
             "name": "FrameworkLive Sandbox Neo4j-local",
             "type": "python",
             "request": "launch",

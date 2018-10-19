@@ -16,7 +16,7 @@ import datetime
 from InitLogger import logger
 import json
 from FWLiveParams import FWLiveParams
-
+import ptvsd
 
 class FrameworkLive:
     def __init__(self, frameworklive_parameters):
@@ -259,4 +259,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    address = ('0.0.0.0', 3000)
+    ptvsd.enable_attach(address)
+    ptvsd.wait_for_attach()
     main(sys.argv[1:])

@@ -11,5 +11,6 @@ pytest==3.8.2
 pytest-cov==2.6.0
 pytest-mock==1.10.0
 neo4j-driver==1.6.2
+ptvsd==4.1.4
 asyncio
 pytest-asyncio
