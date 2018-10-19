@@ -88,8 +88,7 @@ class OrderbookAnalyser:
                 timestamp=timestamp)
         elif self.priceSource == OrderbookAnalyser.PRICE_SOURCE_CMC:
             if self.cmcTicker is not None:
-                self.priceStore.updatePriceFromCoinmarketcap(
-                    ticker=self.cmcTicker)
+                self.priceStore.updatePriceFromCoinmarketcap(ticker=self.cmcTicker)
             else:
                 # logger.info('No CMC ticker received yet, reverting to orderbook pricing')
                 # self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)

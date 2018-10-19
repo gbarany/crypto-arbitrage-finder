@@ -45,8 +45,7 @@ class PriceStore:
                         self.price[key2] = (timestamp, price)
 
             except Exception as e:
-                logger.error("Error occured parsing CMC ticker " + symbol +
-                             " " + str(e.args))
+                logger.error("Error occured parsing CMC ticker " + symbol + " " + str(e.args))
 
     def updatePriceFromOrderBook(self, symbol, exchangename, asks, bids,
                                  timestamp):
@@ -99,7 +98,7 @@ class PriceStore:
                 acc += rate
                 cntr += 1
         if cntr != 0:
-            logger.info('Price information found for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
+            logger.info('Price information found for %s/%s timestamp %f (age: %3.1fs)' %(symbol_base_ref, symbol_quote_ref, timestamp,timestamp-ts))
             return acc / cntr
         else:
             logger.warning('Price information not available for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
