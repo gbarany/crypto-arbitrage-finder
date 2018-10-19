@@ -68,7 +68,7 @@ class FrameworkLive:
         self.orderbookAnalyser = OrderbookAnalyser(
             vol_BTC=[1],  # [1,0.1,0.01],
             edgeTTL=20,
-            priceTTL=180,
+            priceTTL=600,
             resultsdir=self.parameters.results_dir,
             tradeLogFilename='tradelog_live.csv',
             priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
@@ -127,8 +127,7 @@ class FrameworkLive:
                         "sort": "rank"
                     }))
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
-                logger.error("Fetch tickers from coinmarketcap: " +
-                             type(error).__name__ + " " + str(error.args))
+                logger.error("Fetch tickers from coinmarketcap: " + type(error).__name__ + " " + str(error.args))
             i += 1
             await asyncio.sleep(cmc.rateLimit / 1000)
 
