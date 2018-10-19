@@ -165,3 +165,16 @@ WITH max(r._to) AS latest
 MATCH (n)-[r:ORDERBOOK]->(k) 
 WHERE r._to = latest
 RETURN n,k,r
+
+// Arbitrage deal finder
+MATCH path = (c:AssetStock)-[r:EXCHANGE*1..4 {volumeBTC:1}]->(c)
+WHERE c.symbol = 'BTC' AND  c.exchange = 'Kraken' AND ALL (a in r WHERE a._to>1539981955.396482)
+UNWIND NODES(path) AS n
+WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r
+WHERE testLength = LENGTH(path)
+WITH path AS x, nodes(path)[0] as c, relationships(path) as r, 100 as startVal
+WITH x, REDUCE(s = startVal, e IN r | s * e.meanPriceNet) AS endVal, startVal, COLLECT(nodes(x)) as elems
+WHERE endVal > startVal
+RETURN {volumeBTC:1,path:EXTRACT(r IN relationships(x) | {meanPrice:r.meanPrice,meanPriceNet:r.meanPriceNet,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit
+ORDER BY Profit DESC
+LIMIT 5
