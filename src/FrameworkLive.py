@@ -212,13 +212,13 @@ class FrameworkLive:
 def main(argv):
     frameworklive_parameters = FWLiveParams()
     try:
-        opts, _ = getopt.getopt(argv, "nrl",
+        opts, _ = getopt.getopt(argv, "nrolfe",
                                 ["noplot",
-                                 "resultsdir=",
                                  "resultsdir=",
                                  "neo4jmode=",
                                  "live",
-                                 "noforex"])
+                                 "noforex",
+                                 "remotedebug"])
     except getopt.GetoptError:
         logger.error(
             'Invalid parameter(s) entered. List of valid parameters:\n'
@@ -228,6 +228,7 @@ def main(argv):
             ' --noforex: disable forex\n'
             ' --neo4jmode=local: connect to neo4j running on localhost\n'
             ' --neo4jmode=aws: connect to neo4j running in AWS\n'
+            ' --remotedebug: enable remote debugging\n'
         )
         sys.exit(2)
     for opt, arg in opts:
@@ -235,7 +236,7 @@ def main(argv):
             frameworklive_parameters.enable_plotting = False
         if opt in ("-r", "--resultsdir"):
             frameworklive_parameters.results_dir = arg
-        if opt in ("-r", "--neo4jmode"):
+        if opt in ("-o", "--neo4jmode"):
             if arg == 'local':
                 frameworklive_parameters.neo4j_mode = FWLiveParams.neo4j_mode_localhost
             if arg == 'aws':
@@ -246,20 +247,26 @@ def main(argv):
 
         if opt in ("-l", "--live"):
             frameworklive_parameters.is_sandbox_mode = False
-        if opt in ("-l", "--noforex"):
+        if opt in ("-f", "--noforex"):
             frameworklive_parameters.is_forex_enabled = False
+
+        if opt in ("-e", "--noforex"):
+            frameworklive_parameters.remoteDebuggingEnabled = False
 
     if frameworklive_parameters.is_sandbox_mode is True:
         logger.info("Running in sandbox mode, TRADES WILL NOT BE EXECUTED")
     else:
         logger.info("Running in live mode, TRADES WILL BE EXECUTED")
 
+    if frameworklive_parameters.remoteDebuggingEnabled is True:
+        logger.info('Waiting for remote python debugger to connect')
+        address = ('0.0.0.0', 3000)
+        ptvsd.enable_attach(address)
+        ptvsd.wait_for_attach()
+
     frameworkLive = FrameworkLive(frameworklive_parameters)
     frameworkLive.run()
 
 
 if __name__ == "__main__":
-    address = ('0.0.0.0', 3000)
-    ptvsd.enable_attach(address)
-    ptvsd.wait_for_attach()
     main(sys.argv[1:])

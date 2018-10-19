@@ -17,6 +17,7 @@ class FWLiveParams:
 
     def __init__(self,
                  enable_plotting=True,
+                 remoteDebuggingEnabled=False,
                  is_sandbox_mode=True,
                  is_forex_enabled=True,
                  results_dir='./',
@@ -26,6 +27,7 @@ class FWLiveParams:
         self.is_forex_enabled = is_forex_enabled
         self.results_dir = results_dir
         self.neo4j_mode = neo4j_mode
+        self.remoteDebuggingEnabled=remoteDebuggingEnabled
         
 
         
