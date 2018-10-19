@@ -20,6 +20,7 @@ def getOrderbookAnalyser():
         vol_BTC=vol_BTC,
         edgeTTL=30,
         priceTTL=60,
+        resultsdir='./results/',
         tradeLogFilename='tradelog_live_test.csv',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         arbTradeTriggerEvent=arbTradeTriggerEvent,
