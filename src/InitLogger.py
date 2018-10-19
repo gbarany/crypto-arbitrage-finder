@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger('CryptoArbitrageApp')
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('CryptoArbitrageApp.log')
+fh = logging.FileHandler('./results/CryptoArbitrageApp.log')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
