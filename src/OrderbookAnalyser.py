@@ -170,9 +170,6 @@ class OrderbookAnalyser:
         fname = self.resultsdir + self.timestamp_start.strftime(
             '%Y%m%d-%H%M%S') + "_" + self.exportFilename
         self.df_results.to_csv(fname + ".csv", index=False)
-        with open(fname + ".pkl", 'wb') as f:
-            dill.dump(self, f)
-        logger.info("Orderbook analyser results saved at " + fname)
 
     def plotGraphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
