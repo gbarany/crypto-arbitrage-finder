@@ -197,10 +197,12 @@ class FrameworkLive:
 
         loop = asyncio.get_event_loop()
         Thread(target=stop_loop).start()
-        Thread(
-            target=self.consumeArbTradeTriggerEvent,
-            args=(self.arbTradeTriggerEvent, self.arbTradeQueue,
-                  self.parameters.is_sandbox_mode)).start()
+        
+        # TODO : rework OrderbookAnalyser - Trader communication
+        #Thread(
+        #    target=self.consumeArbTradeTriggerEvent,
+        #    args=(self.arbTradeTriggerEvent, self.arbTradeQueue,
+        #          self.parameters.is_sandbox_mode)).start()
         loop.run_forever()
 
         self.orderbookAnalyser.generateExportFilename(
