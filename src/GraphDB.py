@@ -35,6 +35,10 @@ class GraphDB(object):
         if self._driver is not None:
             self._driver.close()
 
+    @staticmethod
+    def getRuntime(result):
+        return 'Neo4J query runtime:%dms'%result.summary().result_available_after
+
     def resetDBData(self):
         with self._driver.session() as session:
             session.write_transaction(self._resetDBData)
@@ -83,8 +87,11 @@ class GraphDB(object):
             meanPrice=1,
             limitPrice=1,
             forever=sys.maxsize)
-        nodeids =  [record["node"] for record in result]
+        
+        logger.info(GraphDB.getRuntime(result))
 
+        nodeids =  [record["node"] for record in result]
+        
         result = tx.run(
                     "MATCH (node:AssetStock) "
                     "WHERE id(node) = $nodeid "
@@ -109,6 +116,8 @@ class GraphDB(object):
                     nodeid=nodeids[0],
                     volumeBTCs=volumeBTCs,
                     forever=sys.maxsize)
+        logger.info(GraphDB.getRuntime(result))
+
         return nodeids
 
     def getNodesPropertyHash(self):
@@ -161,7 +170,8 @@ class GraphDB(object):
             to=sys.maxsize,
             marketPrice=marketPrice,
             now=now)
-        
+        logger.info(GraphDB.getRuntime(result))
+
         result = tx.run(
             "MERGE (assetBaseNew:Asset {symbol:$assetBaseSymbol}) "
             "MERGE (assetQuotationNew:Asset {symbol:$assetQuotationSymbol})  "
@@ -173,7 +183,8 @@ class GraphDB(object):
             marketPrice=marketPrice,
             marketPriceRebased=1/marketPrice,
             now=now)
-        
+        logger.info(GraphDB.getRuntime(result))
+
         return result
 
     def setAssetState(self, asset, assetState,now):
@@ -193,7 +204,7 @@ class GraphDB(object):
             assetExchange=asset.getExchange(),
             assetSymbol=asset.getSymbol(),
             now=now)
-
+        logger.info(GraphDB.getRuntime(result))
         # create new relationship
         result = tx.run(
             "MATCH (asset:AssetStock) "
@@ -205,6 +216,8 @@ class GraphDB(object):
             timeTo=sys.maxsize,
             timeFrom=now,
             amount=assetState.amount)
+
+        logger.info(GraphDB.getRuntime(result))
         return result
 
     def addTradingRelationship(self, orderBook,volumeBTCs=[1]):
@@ -228,7 +241,7 @@ class GraphDB(object):
             quotationExchange=orderBook.getQuoteAsset().getExchange(),
             quotationSymbol=orderBook.getQuoteAsset().getSymbol(),
             now=now)
-
+        logger.info(GraphDB.getRuntime(result))
         # create new trading relationship
         for volumeBTC in volumeBTCs:
             orderBookPrice = orderBook.getPriceByBTCVolume(volumeBTC=volumeBTC)
@@ -251,7 +264,7 @@ class GraphDB(object):
                 volumeBTC=orderBookPrice.volumeBTC,
                 timeTo=now + orderBook.timeToLiveSec,
                 timeFrom=now)
-
+            logger.info(GraphDB.getRuntime(result))
         # create new orderbook relationship
         result = tx.run(
             "MATCH (base:AssetStock),(quotation:AssetStock) "
@@ -267,7 +280,7 @@ class GraphDB(object):
             feeRate=orderBookPrice.feeRate,
             timeTo=now + orderBook.timeToLiveSec,
             timeFrom=now)
-
+        logger.info(GraphDB.getRuntime(result))
         return result
 
 
@@ -289,6 +302,7 @@ class GraphDB(object):
             baseSymbol=baseAsset.getSymbol(),
             quotationExchange=quotationAsset.getExchange(),
             quotationSymbol=quotationAsset.getSymbol())
+        logger.info(GraphDB.getRuntime(result))
         try:
             return [{'meanPriceNet': record["meanPriceNet"],'meanPrice': record["meanPrice"],'limitPrice':record["limitPrice"]} for record in result]
         except Exception:
@@ -319,7 +333,7 @@ class GraphDB(object):
                 exchange=asset.getExchange(),
                 volumeBTC=volumeBTC,
                 now=now)
-
+            logger.info(GraphDB.getRuntime(result))
             arbitrage_deals.extend([record["ArbitrageDeal"] for record in result])
 
         for arbitrage_deal in arbitrage_deals:            
@@ -362,6 +376,6 @@ class GraphDB(object):
                 cypher_cmd += " SET " + ','.join(cypher_create_set)
                 #cypher_cmd += " CREATE (arb:ArbitrageDeal {uuid:uuid,volumeBTC:$volumeBTC})"
                 result = tx.run(cypher_cmd,now=now,volumeBTC=arbitrage_deal['volumeBTC'])
-                
+                logger.info(GraphDB.getRuntime(result))
             print(cypher_cmd)
         return arbitrage_deals
