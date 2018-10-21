@@ -246,7 +246,7 @@ class GraphDB(object):
         # create nodes if not existing yet and archive old relationship
         result = tx.run(
             "MATCH (base:AssetStock)-[r:EXCHANGE]->(quotation:AssetStock) "
-            "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol AND r._to >= $now "
+            "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
             "CREATE (base)-[rOld:EXCHANGE_ARCHIVED]->(quotation) "
             "SET rOld=r, rOld._to = $now  "
             "DELETE r ",
