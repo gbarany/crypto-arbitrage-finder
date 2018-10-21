@@ -66,7 +66,7 @@ class FrameworkLive:
 
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
         self.orderbookAnalyser = OrderbookAnalyser(
-            vol_BTC=[0.1,1.0],  # [1,0.1,0.01],
+            vol_BTC=[0.1,1.0,10],  # [1,0.1,0.01],
             edgeTTL=20,
             priceTTL=600,
             resultsdir=self.parameters.results_dir,
