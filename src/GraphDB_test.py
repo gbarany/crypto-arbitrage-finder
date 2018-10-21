@@ -10,7 +10,8 @@ class TestClass(object):
 
     def test_setAssetState(self):
         graphDB = GraphDB(resetDBData=True)
-        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=time.time())
+        volumeBTCs=[1]
+        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),volumeBTCs=volumeBTCs,now=time.time())
 
         result_validation = [
             record["node"] for record in graphDB.runCypher(
@@ -91,7 +92,8 @@ class TestClass(object):
 
     def test_create_single_asset_node(self):
         graphDB = GraphDB(resetDBData=True)
-        nodeid =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=time.time())
+        volumeBTCs=[1]
+        nodeid =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),volumeBTCs=volumeBTCs,now=time.time())
 
         result_validation = [
             record["node"] for record in graphDB.runCypher(
@@ -117,8 +119,9 @@ class TestClass(object):
 
     def test_create_two_asset_nodes_on_two_exchanges(self):
         graphDB = GraphDB(resetDBData=True)
-        nodeid1 =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=time.time())
-        nodeid2 =  graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'),now=time.time())
+        volumeBTCs = [1]
+        nodeid1 =  graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),volumeBTCs=volumeBTCs,now=time.time())
+        nodeid2 =  graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'),volumeBTCs=volumeBTCs,now=time.time())
 
         result_validation1 = [
             record["node"] for record in graphDB.runCypher(
@@ -156,12 +159,12 @@ class TestClass(object):
         assert result_validation4[0]['meanPrice']==1
         assert result_validation4[0]['to']==sys.maxsize
     
-    def test_arbitrage_test_with_three_nodes(self):
+    def test_arbitrage_test_with_three_nodes_intraexchange_deal(self):
         volumeBTCs = [0.1,1]
         graphDB = GraphDB(resetDBData=True)
-        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=0)
-        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'),now=0.1)
-        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='ETH'),now=0.2)
+        graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),volumeBTCs=volumeBTCs,now=0)
+        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='BTC'),volumeBTCs=volumeBTCs,now=0.1)
+        graphDB.createAssetNode(Asset(exchange='Kraken', symbol='ETH'),volumeBTCs=volumeBTCs,now=0.2)
 
         graphDB.addTradingRelationship(OrderBook(exchange='Kraken',symbol='BTC/ETH',orderbook=[[2,1]],rateBTCxBase=1,rateBTCxQuote=2,feeRate=0,timeToLiveSec=5,timestamp=0.3),volumeBTCs=volumeBTCs)
 
@@ -182,9 +185,43 @@ class TestClass(object):
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.1,now=1.5,volumeBTCs=volumeBTCs)
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=0.5,now=2.1,volumeBTCs=volumeBTCs)
 
-    def test_arbitrage_test_with_four_nodes(self):
+
+    def test_arbitrage_test_with_four_nodes_extraexchange_deal(self):
+        volumeBTCs = [0.1,1]
+        graphDB = GraphDB(resetDBData=True)
+
+        graphDB.addTradingRelationship(OrderBook(exchange='Kraken',symbol='BTC/ETH',orderbook=[[1/0.06,1]],rateBTCxBase=1,rateBTCxQuote=1/0.06,feeRate=0,timeToLiveSec=5,timestamp=0.3),volumeBTCs=volumeBTCs)
+        graphDB.addTradingRelationship(OrderBook(exchange='Kraken',symbol='ETH/BTC',orderbook=[[0.05,1/0.06]],rateBTCxBase=1/0.06,rateBTCxQuote=1,feeRate=0,timeToLiveSec=5,timestamp=0.3),volumeBTCs=volumeBTCs)
+
+        graphDB.addTradingRelationship(OrderBook(exchange='Binance',symbol='BTC/ETH',orderbook=[[1/0.04,1]],rateBTCxBase=1,rateBTCxQuote=1/0.06,feeRate=0,timeToLiveSec=5,timestamp=0.3),volumeBTCs=volumeBTCs)
+        graphDB.addTradingRelationship(OrderBook(exchange='Binance',symbol='ETH/BTC',orderbook=[[0.03,1/0.06]],rateBTCxBase=1/0.06,rateBTCxQuote=1,feeRate=0,timeToLiveSec=5,timestamp=0.3),volumeBTCs=volumeBTCs)
+
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=0.5,volumeBTCs=volumeBTCs )
+        assert len(arbitrage_cycles) == 2   
+        for i in range(2):
+            assert (arbitrage_cycles[i]['volumeBTC']) == volumeBTCs[i]
+            assert (arbitrage_cycles[i]['assets'][0]['amount'],arbitrage_cycles[i]['assets'][0]['exchange'],arbitrage_cycles[i]['assets'][0]['symbol']) == (0,'Kraken','BTC')
+            assert (arbitrage_cycles[i]['assets'][1]['amount'],arbitrage_cycles[i]['assets'][1]['exchange'],arbitrage_cycles[i]['assets'][1]['symbol']) == (0,'Binance','BTC')
+            assert (arbitrage_cycles[i]['assets'][2]['amount'],arbitrage_cycles[i]['assets'][2]['exchange'],arbitrage_cycles[i]['assets'][2]['symbol']) == (0,'Binance','ETH')
+            assert (arbitrage_cycles[i]['assets'][3]['amount'],arbitrage_cycles[i]['assets'][3]['exchange'],arbitrage_cycles[i]['assets'][3]['symbol']) == (0,'Kraken','ETH')
+            assert (arbitrage_cycles[i]['profit']) == ((1/0.04*0.05)-1)*100
+            assert (arbitrage_cycles[i]['path'][0]['meanPrice']) == 1
+            assert (arbitrage_cycles[i]['path'][1]['meanPrice']) == 1/0.04
+            assert (arbitrage_cycles[i]['path'][2]['meanPrice']) == 1
+            assert (arbitrage_cycles[i]['path'][3]['meanPrice']) == 0.05
+            assert (arbitrage_cycles[i]['path'][0]['meanPriceNet']) == 1
+            assert (arbitrage_cycles[i]['path'][1]['meanPriceNet']) == 1/0.04
+            assert (arbitrage_cycles[i]['path'][2]['meanPriceNet']) == 1
+            assert (arbitrage_cycles[i]['path'][3]['meanPriceNet']) == 0.05
+
+
+        arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.3,now=1.5,volumeBTCs=volumeBTCs)
+        #arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=0.5,now=2.1,volumeBTCs=volumeBTCs)
+
+    def test_arbitrage_test_with_three_nodes_relationship_updates(self):
         with GraphDB(resetDBData=True) as graphDB:        
-            graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),now=0)
+            volumeBTCs=[1]
+            graphDB.createAssetNode(Asset(exchange='Bitfinex', symbol='BTC'),volumeBTCs=volumeBTCs,now=0)
 
             ###################################################################
             # Update trade relationship multiple (3x) times to verify that
@@ -218,7 +255,6 @@ class TestClass(object):
             nodesHash = graphDB.getNodesPropertyHash()
             # RUN this to recalculate reference hashes: pprint.pformat(result_validation_hash).replace('\n','').replace(' ','')
             nodesHash_ref = ['ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','9887c14ada99b8c72b7996a460afda1e','905ed9c758ce981d7ea0fb1bef55873c','89586e3b288ac93f329280eb9f025d18','7b54e3841e6574caaf429917c88e2bac','17032c1a5da060b45d736930551267b7','0f67e27fbf10b058924b76dce3774945']
-
             pairs = zip(nodesHash, nodesHash_ref)
             assert any(x != y for x, y in pairs) == False
 
@@ -227,7 +263,8 @@ class TestClass(object):
             #
             relsHash = graphDB.getRelsPropertyHash()
 
-            relsHash_ref=['ed7127753c7561aff65aa934c3ec0b08','d10dd681cd3c15d953fd5ddf4e35730e','b7ce49bb20b4d32d31a1861e48b7c6c2','ab575c242a6e2111badc21dee2409fc3','9189f2f8081734c378a924a7fc818f63','909c239aa4101a8394cf96f8b7bd216f','9062679b13a5bf1e9a3896aae1a3fe48','8ebdbdd4fbd496a13f02113c97bad76c','7a519a3f90b4f903841bca9690f6c189','6d4c16b4fe29860e9d59307e5813ecf9','49d649d18bf759c8e60ad09dd134d974','49d649d18bf759c8e60ad09dd134d974','3ab3d46ae90b2899ca7e48b8d454e6e8','11a2fb79dcb1a216a3a062aa90e44e95','1130f54c147f2e6b8f0fab0620c150ca','0d27de7eb5fd078e734a027283db52f8']
+            relsHash_ref=['ed7127753c7561aff65aa934c3ec0b08','d10dd681cd3c15d953fd5ddf4e35730e','bb5180eb769eb26f6725cc83911012da','bb5180eb769eb26f6725cc83911012da','b7ce49bb20b4d32d31a1861e48b7c6c2','ab575c242a6e2111badc21dee2409fc3','9189f2f8081734c378a924a7fc818f63','909c239aa4101a8394cf96f8b7bd216f','9062679b13a5bf1e9a3896aae1a3fe48','8ebdbdd4fbd496a13f02113c97bad76c','7a519a3f90b4f903841bca9690f6c189','6d4c16b4fe29860e9d59307e5813ecf9','3ab3d46ae90b2899ca7e48b8d454e6e8','11a2fb79dcb1a216a3a062aa90e44e95','1130f54c147f2e6b8f0fab0620c150ca','0d27de7eb5fd078e734a027283db52f8']
+
             pairs = zip(relsHash, relsHash_ref)
             assert any(x != y for x, y in pairs) == False
 

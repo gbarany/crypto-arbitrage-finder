@@ -63,12 +63,12 @@ class GraphDB(object):
         #result = tx.run("CREATE CONSTRAINT ON (asset:AssetStock) ASSERT (asset.exchange, asset.symbol) IS NODE KEY")
         return result
 
-    def createAssetNode(self, asset,now):
+    def createAssetNode(self, asset,volumeBTCs,now):
         with self._driver.session() as session:
-            return session.write_transaction(self._createAssetNode, asset,now)
+            return session.write_transaction(self._createAssetNode, asset,volumeBTCs,now)
 
     @staticmethod
-    def _createAssetNode(tx, asset,now):
+    def _createAssetNode(tx, asset,volumeBTCs,now):
         result = tx.run(
             "MERGE (node:AssetStock:%s {name:$symbol,symbol:$symbol,exchange:$exchange}) "
             "ON CREATE SET node.currentAmount=$amount "
@@ -90,12 +90,16 @@ class GraphDB(object):
                     "WHERE id(node) = $nodeid "
                     "MATCH (b:AssetStock) "
                     "WHERE b.symbol=$symbol AND NOT node=b "
-                    "WITH node,b "
-                    "MERGE (node)-[r:EXCHANGE]->(b) "
+                    "WITH node,b, $volumeBTCs as volumes "
+                    "FOREACH (volume in volumes | "
+                    "MERGE (node)-[r:EXCHANGE {volumeBTC:volume}]->(b) "
                     "ON CREATE SET r._from=$now, r._to=$forever, r.meanPrice=$meanPrice, r.meanPriceNet=$meanPriceNet, r.limitPrice=$limitPrice "
-                    "WITH node,b "
-                    "MERGE (b)-[r:EXCHANGE]->(node) "
-                    "ON CREATE SET r._from=$now, r._to=$forever, r.meanPrice=$meanPrice, r.meanPriceNet=$meanPriceNet, r.limitPrice=$limitPrice "
+                    ") "
+                    "WITH node,b, volumes "
+                    "FOREACH (volume in volumes | "
+                    "MERGE (b)-[r:EXCHANGE {volumeBTC:volume}]->(node) "
+                    "ON CREATE SET  r._from=$now, r._to=$forever, r.meanPrice=$meanPrice, r.meanPriceNet=$meanPriceNet, r.limitPrice=$limitPrice "
+                    ") "
                     "RETURN id(node) as node",
                     symbol=asset.symbol,                    
                     now=now,
@@ -103,6 +107,7 @@ class GraphDB(object):
                     meanPriceNet=1,
                     limitPrice=1,
                     nodeid=nodeids[0],
+                    volumeBTCs=volumeBTCs,
                     forever=sys.maxsize)
         return nodeids
 
@@ -210,8 +215,8 @@ class GraphDB(object):
     def _addTradingRel(tx, orderBook,volumeBTCs):
         
         now = orderBook.getTimestamp()
-        GraphDB._createAssetNode(tx, orderBook.getBaseAsset(),now)
-        GraphDB._createAssetNode(tx, orderBook.getQuoteAsset(),now)
+        GraphDB._createAssetNode(tx, orderBook.getBaseAsset(),volumeBTCs,now)
+        GraphDB._createAssetNode(tx, orderBook.getQuoteAsset(),volumeBTCs,now)
 
         # create nodes if not existing yet and archive old relationship
         result = tx.run(
