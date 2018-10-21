@@ -121,13 +121,8 @@ class OrderbookAnalyser:
                 feeRate=self.feeStore.getTakerFee(exchangename, symbol),
                 timeToLiveSec=self.edgeTTL)
 
-            self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair)
+            path_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
 
-            arbitrage_cycles = self.arbitrageGraphNeo.graphDB.getArbitrageCycle(
-                Asset(exchange='kraken', symbol='BTC'),
-                match_lookback_sec=500,
-                now=timestamp,
-                volumeBTCs=self.vol_BTC)
 
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
                 path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
