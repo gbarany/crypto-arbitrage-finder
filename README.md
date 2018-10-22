@@ -61,7 +61,7 @@ FrameworkLive orchestrates the components and threads of the live arbitrage trad
 
 Unit tests are implemented in pytest with test py-cov extension for test coverage measurement. Run `runtests.sh` to get coverage metrics.
 
-A local Neo4j local instance is required for some of the unit tests:
+A local Neo4j instance is required for some of the unit tests:
 ```
 docker run \
     --publish=7474:7474 --publish=7687:7687 \
