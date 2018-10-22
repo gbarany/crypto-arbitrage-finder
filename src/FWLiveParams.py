@@ -12,7 +12,7 @@ class FWLiveParams:
     neo4j_mode_aws_cloud_details = {
         'uri' : 'bolt://3.120.197.59:7687',
         'user' : 'neo4j',
-        'password' : 'i-0b4b0106c20014f75' 
+        'password' : 'i-0eb8e05bdc700631a' 
         }
 
     def __init__(self,
