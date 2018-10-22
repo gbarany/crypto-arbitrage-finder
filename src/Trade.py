@@ -14,13 +14,6 @@ class TradeType(Enum):
 
 
 class Trade:
-    STATUS_INITIAL = "STATUS_INITIAL"
-    STATUS_CREATED = "STATUS_CREATED"
-    STATUS_EXECUTED = "STATUS_EXECUTED "
-    STATUS_FAILED = "STATUS_FAILED"
-
-    BUY_ORDER = "BUY_ORDER"
-    SELL_ORDER = "SELL_ORDER"
 
     def __init__(self, exchange, market, amount, price,
                  trade_type: TradeType):
