@@ -6,7 +6,9 @@ cred
 results
 src/__pycache__
 *.csv
+env
 cov.xml
+.idea
 .vscode/.ropeproject
 .scannerwork
 .idea

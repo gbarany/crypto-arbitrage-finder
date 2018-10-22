@@ -2,17 +2,16 @@ from typing import List
 from mock import patch, Mock
 import pytest
 from OrderbookAnalyser import OrderbookAnalyser
-from Trade import Trade, TradeStatus, TradeType
+from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType
 
 from threading import Condition, Thread
-from FWLiveParams import FWLiveParams
 import time
 from FeeStore import FeeStore
 
 arbTradeTriggerEvent = Condition()
 arbTradeQueue = []
 #vol_BTC=[1,0.1,0.01]
-vol_BTC = [0.01]
+vol_BTC = [1]
 
 
 def getOrderbookAnalyser():
@@ -24,8 +23,7 @@ def getOrderbookAnalyser():
         tradeLogFilename='tradelog_live_test.csv',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         arbTradeTriggerEvent=arbTradeTriggerEvent,
-        arbTradeQueue=arbTradeQueue,
-        neo4j_mode=FWLiveParams.neo4j_mode_localhost)
+        arbTradeQueue=arbTradeQueue)
 
 
 @pytest.fixture(scope="class")

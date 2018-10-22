@@ -14,3 +14,5 @@ neo4j-driver==1.6.2
 ptvsd==4.1.4
 asyncio
 pytest-asyncio
+neo4j-driver
+asynctest
