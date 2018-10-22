@@ -9,3 +9,5 @@ src/__pycache__
 cov.xml
 .vscode/.ropeproject
 .scannerwork
+.idea
+env
