@@ -73,4 +73,5 @@ docker run \
 ```
 
 Copy the following Neo4j plugin to the `$HOME/neo4j/plugins` folder:
-https://github.com/neo4j-contrib/neo4j-graph-algorithms/releases/download/3.4.7.0/graph-algorithms-algo-3.4.7.0.jar
+* https://github.com/neo4j-contrib/neo4j-graph-algorithms/releases/download/3.4.7.0/graph-algorithms-algo-3.4.7.0.jar
+* https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/3.4.0.3/apoc-3.4.0.3-all.jar
