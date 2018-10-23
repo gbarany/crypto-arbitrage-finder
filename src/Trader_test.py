@@ -294,7 +294,7 @@ class TestClass(TestCase):
         assert exchangeMockPloniex.createLimitSellOrder.await_count == 1
         assert exchangeMockPloniex.createLimitBuyOrder.await_count == 1
         assert exchangeMockPloniex.fetchOrder.await_count == 0
-        assert exchangeMockPloniex.cancelOrder.await_count == Trader.NOF_CCTX_RETRY * 2
+        assert exchangeMockPloniex.cancelOrder.await_count == Trader.NOF_CCTX_RETRY * 3
 
 
     async def test_canceled_more_exchanges_middle_canceled(self):
