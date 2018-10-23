@@ -2,7 +2,8 @@
 .coverage
 CryptoArbitrageApp.log
 .mypy_cache
-cred
+cred/*
+!cred/api_test.json
 results
 src/__pycache__
 *.csv
