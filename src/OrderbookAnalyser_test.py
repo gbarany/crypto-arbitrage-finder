@@ -1,6 +1,8 @@
 from typing import List
 from mock import patch, Mock
 import pytest
+
+from FWLiveParams import FWLiveParams
 from OrderbookAnalyser import OrderbookAnalyser
 from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType
 
@@ -23,7 +25,8 @@ def getOrderbookAnalyser():
         tradeLogFilename='tradelog_live_test.csv',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         arbTradeTriggerEvent=arbTradeTriggerEvent,
-        arbTradeQueue=arbTradeQueue)
+        arbTradeQueue=arbTradeQueue,
+        neo4j_mode=FWLiveParams.neo4j_mode_localhost)
 
 
 @pytest.fixture(scope="class")
