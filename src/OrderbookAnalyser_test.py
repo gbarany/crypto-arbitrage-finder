@@ -9,6 +9,7 @@ from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType
 from threading import Condition, Thread
 import time
 from FeeStore import FeeStore
+from Trader import Trader
 
 arbTradeTriggerEvent = Condition()
 arbTradeQueue = []
@@ -24,8 +25,7 @@ def getOrderbookAnalyser():
         resultsdir='./results/',
         tradeLogFilename='tradelog_live_test.csv',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
-        arbTradeTriggerEvent=arbTradeTriggerEvent,
-        arbTradeQueue=arbTradeQueue,
+        trader=Trader(credfile='./cred/api_balance.json', is_sandbox_mode=True),
         neo4j_mode=FWLiveParams.neo4j_mode_localhost)
 
 

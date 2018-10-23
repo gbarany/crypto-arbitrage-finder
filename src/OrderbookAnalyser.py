@@ -9,7 +9,7 @@ import os
 import dill
 import datetime
 import logging
-from Trader import Trader
+from Trader import Trader, SegmentedOrderRequestList, OrderRequestList
 from FWLiveParams import FWLiveParams
 
 logger = logging.getLogger('CryptoArbitrageApp')
@@ -25,8 +25,7 @@ class OrderbookAnalyser:
                  resultsdir='./',
                  tradeLogFilename="tradelog.csv",
                  priceSource=PRICE_SOURCE_ORDERBOOK,
-                 arbTradeTriggerEvent=None,
-                 arbTradeQueue=None,
+                 trader=None,
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled):
 
         # create Arbitrage Graph objects
@@ -40,8 +39,6 @@ class OrderbookAnalyser:
         self.timestamp_start = datetime.datetime.now()
         self.cmcTicker = None
         self.neo4j_mode = neo4j_mode
-        self.arbTradeTriggerEvent = arbTradeTriggerEvent
-        self.arbTradeQueue = arbTradeQueue
         self.priceSource = priceSource
         self.df_results = pd.DataFrame(columns=[
             'id', 'timestamp', 'vol_BTC', 'length', 'profit_perc', 'nodes',
@@ -59,6 +56,8 @@ class OrderbookAnalyser:
 
         self.generateExportFilename()
         self.isRunning = True
+        assert trader is not None
+        self.trader = trader
 
     def updateCoinmarketcapPrice(self, cmcTicker):
         self.cmcTicker = cmcTicker
@@ -135,15 +134,11 @@ class OrderbookAnalyser:
                         vol_BTC=self.vol_BTC[idx],
                         path=path)
 
-                    if self.arbTradeTriggerEvent is not None and self.arbTradeQueue is not None:
-                        self.arbTradeTriggerEvent.acquire()
-                        self.arbTradeQueue.append(path)
-                        self.arbTradeTriggerEvent.notify()
-                        self.arbTradeTriggerEvent.release()
-                        logger.info("Arbitrage trade event created succesfully")
+                    orl = OrderRequestList([])
+                    sorl = SegmentedOrderRequestList([orl])
+                    self.trader.execute(sorl)
+                    logger.info("Arbitrage trade event created succesfully")
 
-                    else:
-                        logger.info("Creating arbitrage trade event failed, invalid event or queue")
 
         except Exception as e:
             logger.error("Exception on exchangename:" + exchangename +

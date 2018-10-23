@@ -33,6 +33,8 @@ class Trader:
             exchangeCreds = json.load(file)
             for exchangeName in exchangeCreds:
                 await self.__init_exchange(exchangeName, exchangeCreds[exchangeName])
+        await self.fetch_balances()
+
 
     async def __init_exchange(self, exchangeName: str, exchangeCreds):
         exchange = getattr(ccxt, exchangeName)(exchangeCreds)
@@ -326,8 +328,6 @@ class Trader:
     async def execute(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         t1 = time.time()
         try:
-            await self.fetch_balances()
-
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
             logger.info(
@@ -343,3 +343,5 @@ class Trader:
                 f"execute failed in {d_ms} ms")
             logger.error(f"Trade stopped: {e}")
             await self.abortSegmentedOrderRequestList(segmentedOrderRequestList)
+        finally:
+            self.fetch_balances()

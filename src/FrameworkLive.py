@@ -65,6 +65,7 @@ class FrameworkLive:
         self.arbTradeQueue = []
 
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
+        self.trader = Trader(credfile='./cred/api_trading.json', is_sandbox_mode=frameworklive_parameters.is_sandbox_mode)
         self.orderbookAnalyser = OrderbookAnalyser(
             vol_BTC=[0.1,1.0,10],  # [1,0.1,0.01],
             edgeTTL=20,
@@ -72,8 +73,7 @@ class FrameworkLive:
             resultsdir=self.parameters.results_dir,
             tradeLogFilename='tradelog_live.csv',
             priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
-            arbTradeTriggerEvent=self.arbTradeTriggerEvent,
-            arbTradeQueue=self.arbTradeQueue,
+            trader=self.trader,
             neo4j_mode=self.parameters.neo4j_mode)
 
     async def pollOrderbook(self, exchange, symbols):
@@ -154,22 +154,6 @@ class FrameworkLive:
             if enablePlotting:
                 orderbookAnalyser.plotGraphs()
 
-    def consumeArbTradeTriggerEvent(self, arbTradeTriggerEvent, arbTradeQueue,
-                                    isSandboxMode):
-        while True:
-            arbTradeTriggerEvent.acquire()
-            arbTradeTriggerEvent.wait(
-            )  # Blocks until an item is available for consumption.
-            # do stuff with the trading queue
-            with Trader(
-                    exchangeNames=["kraken"],
-                    credfile='./cred/api_trading.json',
-                    isSandboxMode=isSandboxMode) as trader:
-                trader.execute_trades(arbTradeQueue.pop())
-
-            arbTradeTriggerEvent.release()
-            logger.info("Arbitrage trade trigger event consumed")
-
     def run(self):
         for exchange in self.exchanges.keys():
             asyncio.ensure_future(
@@ -198,11 +182,6 @@ class FrameworkLive:
         loop = asyncio.get_event_loop()
         Thread(target=stop_loop).start()
         
-        # TODO : rework OrderbookAnalyser - Trader communication
-        #Thread(
-        #    target=self.consumeArbTradeTriggerEvent,
-        #    args=(self.arbTradeTriggerEvent, self.arbTradeQueue,
-        #          self.parameters.is_sandbox_mode)).start()
         loop.run_forever()
 
         self.orderbookAnalyser.generateExportFilename(
