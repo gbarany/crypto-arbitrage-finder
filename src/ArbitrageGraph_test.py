@@ -270,3 +270,21 @@ class TestClass(object):
         assert path.exchanges_involved == ['kraken']
         assert path.nof_exchanges_involved == 1
 
+        segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
+        assert len(segmentedOrderRequestLists)==1
+        assert len(segmentedOrderRequestLists[0])==3
+        
+        assert segmentedOrderRequestLists[0][0].exchange_name == 'kraken'
+        assert segmentedOrderRequestLists[0][0].market == 'BTC/USD'
+        assert segmentedOrderRequestLists[0][0].price == 5000
+        assert segmentedOrderRequestLists[0][0].amount == 1
+
+        assert segmentedOrderRequestLists[0][1].exchange_name == 'kraken'
+        assert segmentedOrderRequestLists[0][1].market == 'ETH/USD'
+        assert segmentedOrderRequestLists[0][1].price == 200
+        assert segmentedOrderRequestLists[0][1].amount == 4.5
+
+        assert segmentedOrderRequestLists[0][2].exchange_name == 'kraken'
+        assert segmentedOrderRequestLists[0][2].market == 'ETH/BTC'
+        assert segmentedOrderRequestLists[0][2].price == 1/5
+        assert segmentedOrderRequestLists[0][2].amount == 4.5

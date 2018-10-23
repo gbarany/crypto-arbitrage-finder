@@ -1,8 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from Trade import Trade, TradeStatus, TradeType
-
+from OrderRequest import OrderRequest, OrderRequestList, OrderRequestType, SegmentedOrderRequestList
 class TradeList(list):
     def __init__(self, iterable):
         super().__init__(iterable)
@@ -85,9 +84,10 @@ class ArbitrageGraphPath:
         ]],columns=df_columns)
         return df_new
 
-    def toTradeList(self):
-        tradelist = TradeList([])
-        tradelist.profit = self.profit
+    def toOrderList(self):
+        orl = []
+        
+        #orl.profit = self.profit
         for idx_node, node in enumerate(self.nodes[:-1]):
             base_exchange = node.split('-')[0]
             base_symbol = node.split('-')[1]
@@ -100,51 +100,53 @@ class ArbitrageGraphPath:
                 if A == 'EUR' or A == 'USD' or A == 'GBP':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.edges_weight_limit[idx_node]
-                    tradetype = TradeType.BUY
+                    tradetype = OrderRequestType.BUY
                     volume = self.edges_volumeQuote[idx_node]
                 elif A == 'BTC' and B != 'EUR' and B != 'USD' and B != 'GBP':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.edges_weight_limit[idx_node]
-                    tradetype = TradeType.BUY
+                    tradetype = OrderRequestType.BUY
                     volume = self.edges_volumeQuote[idx_node]
                 elif A == 'ETH' and B != 'EUR' and B != 'USD' and B != 'GBP' and B != 'BTC':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.edges_weight_limit[idx_node]
-                    tradetype = TradeType.BUY
+                    tradetype = OrderRequestType.BUY
                     volume = self.edges_volumeQuote[idx_node]
                 else:
                     tradesymbols = A + "/" + B
                     limitPrice = self.edges_weight_limit[idx_node]
-                    tradetype = TradeType.SELL
+                    tradetype = OrderRequestType.SELL
                     volume = self.edges_volumeBase[idx_node]
 
-                tradelist.append(
-                    Trade(base_exchange, tradesymbols, volume, limitPrice,
-                          tradetype))
-        return tradelist
+                orl.append(OrderRequest(
+                        exchange_name=base_exchange,
+                        market=tradesymbols,
+                        amount=volume,
+                        price=limitPrice,
+                        requestType=tradetype))
+        return OrderRequestList(orl)
 
     @staticmethod
-    def isTradeListSingleExchange(tradeList):
-        exchangeName = tradeList[0].exchangeName
-        for trade in tradeList:
-            if trade.exchangeName != exchangeName:
+    def isOrderListSingleExchange(orderRequestList):
+        exchange_name = orderRequestList[0].exchange_name
+        for orderRequest in orderRequestList:
+            if orderRequest.exchange_name != exchange_name:
                 return False
         return True
 
-    def toSegmentedTradeList(self):
-        tradeList = self.toTradeList()
-        if len(tradeList) == 0:
-            raise ValueError(
-                "Trade list is empty, there are no trades to execute")
+    def toSegmentedOrderList(self):
+        orderList = self.toOrderList().getOrderRequests()
+        if len(orderList) == 0:
+            raise ValueError("Trade list is empty, there are no trades to execute")
 
-        if ArbitrageGraphPath.isTradeListSingleExchange(tradeList) == True:
-            return [tradeList]
+        if ArbitrageGraphPath.isOrderListSingleExchange(orderList) == True:
+            return SegmentedOrderRequestList([orderList])
 
         segmentedTradeList = []
         tradeListCurrentSegment = []
 
-        for idx, trade in enumerate(tradeList):
-            prevTrade = tradeList[(idx - 1) % len(tradeList)]
+        for idx, trade in enumerate(orderList):
+            prevTrade = orderList[(idx - 1) % len(orderList)]
 
             if prevTrade.exchangeName == trade.exchangeName:
                 tradeListCurrentSegment.append(trade)
