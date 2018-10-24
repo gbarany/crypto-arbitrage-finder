@@ -142,17 +142,29 @@ class ArbitrageGraphPath:
         if ArbitrageGraphPath.isOrderListSingleExchange(orderList) == True:
             return SegmentedOrderRequestList([orderList])
 
-        segmentedTradeList = []
-        tradeListCurrentSegment = []
+        segmentedOrderList = []
+        orderListCurrentSegment = []
 
-        for idx, trade in enumerate(orderList):
-            prevTrade = orderList[(idx - 1) % len(orderList)]
-
-            if prevTrade.exchangeName == trade.exchangeName:
-                tradeListCurrentSegment.append(trade)
+        for idx, order in enumerate(orderList[:-1]):
+            nextOrder = orderList[idx + 1]            
+            if order.exchange_name == nextOrder.exchange_name:
+                orderListCurrentSegment.append(order)
             else:
-                if len(tradeListCurrentSegment) != 0:
-                    segmentedTradeList.append(tradeListCurrentSegment)
-                tradeListCurrentSegment = []
-                tradeListCurrentSegment.append(trade)
-        return segmentedTradeList
+                orderListCurrentSegment.append(order)
+                segmentedOrderList.append(OrderRequestList(orderListCurrentSegment))
+                orderListCurrentSegment = []
+
+        order = orderList[-1]
+        orderListCurrentSegment.append(order)
+        segmentedOrderList.append(OrderRequestList(orderListCurrentSegment))
+        
+        # Merge last segment and the first segment?
+        if segmentedOrderList[0].getOrderRequests()[0].exchange_name == segmentedOrderList[-1].getOrderRequests()[-1].exchange_name: 
+            mergedOrderList = segmentedOrderList[-1].getOrderRequests()
+            mergedOrderList.extend(segmentedOrderList[0].getOrderRequests())
+            del segmentedOrderList[0]
+            del segmentedOrderList[-1]
+            segmentedOrderList = [OrderRequestList(mergedOrderList)] + segmentedOrderList
+
+        return SegmentedOrderRequestList(segmentedOrderList)
+

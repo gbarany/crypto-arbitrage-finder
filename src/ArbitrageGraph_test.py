@@ -92,59 +92,91 @@ class TestClass(object):
         arbitrageGraph = ArbitrageGraph()
         edgeTTL=5
         arbitrageGraph.updatePoint(
-            orderBookPair=OrderBookPair(
-                exchange="kraken",
-                symbol="BTC/USD",
-                asks=[[10000, 10]],
-                bids=[[9000, 10]],
-                rateBTCxBase=1,
-                rateBTCxQuote=9500,
-                feeRate=0,
-                timestamp=0,
-                timeToLiveSec=edgeTTL
-            ),
+            orderBookPair=OrderBookPair(exchange="kraken",symbol="BTC/USD",asks=[[10000, 10]],bids=[[9000, 10]],rateBTCxBase=1,rateBTCxQuote=9500,feeRate=0,timestamp=0,timeToLiveSec=edgeTTL),
             volumeBTC=1)
 
         arbitrageGraph.updatePoint(
             orderBookPair=OrderBookPair(
-                exchange="kraken",
-                symbol="ETH/USD",
-                asks=[[200, 1000]],
-                bids=[[100, 1000]],
-                rateBTCxBase=4.5,
-                rateBTCxQuote=9500,
-                feeRate=0,
-                timestamp=1,
-                timeToLiveSec=edgeTTL
-            ),
+                exchange="kraken",symbol="ETH/USD",asks=[[200, 1000]],bids=[[100, 1000]],rateBTCxBase=4.5,rateBTCxQuote=9500,feeRate=0,timestamp=1,timeToLiveSec=edgeTTL),
             volumeBTC=1)
 
         arbitrageGraph.updatePoint(
             orderBookPair=OrderBookPair(
-                symbol="BTC/ETH",
-                asks=[[5, 100]],
-                bids=[[4, 100]],
-                rateBTCxBase=1,
-                rateBTCxQuote=4.5,
-                feeRate=0,
-                timestamp=2,
-                exchange="poloniex",
-                timeToLiveSec=edgeTTL
-            ),
+                exchange="poloniex",symbol="BTC/ETH",asks=[[5, 100]],bids=[[4, 100]],rateBTCxBase=1,rateBTCxQuote=4.5,feeRate=0,timestamp=2,timeToLiveSec=edgeTTL),
             volumeBTC=1)
 
-        arbitrageGraphPath = ArbitrageGraphPath(
+        path = ArbitrageGraphPath(
             gdict=arbitrageGraph.gdict,
-            nodes=[
-                'kraken-BTC', 'kraken-USD', 'kraken-ETH', 'poloniex-ETH',
-                'poloniex-BTC', 'kraken-BTC'
-            ],
+            nodes=['kraken-BTC', 'kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC'],
             timestamp=3,
             isNegativeCycle=None,
             length=None)
-        # segmentedTradeList = arbitrageGraphPath.toSegmentedTradeList()
-        print('done')
+        
+        segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
+        assert len(segmentedOrderRequestLists) == 2
+        assert len(segmentedOrderRequestLists[0].getOrderRequests()) == 2
+        assert len(segmentedOrderRequestLists[1].getOrderRequests()) == 1
 
+        segmentedOrderRequestLists[0].getOrderRequests()[0].exchange_name == 'kraken'
+        segmentedOrderRequestLists[0].getOrderRequests()[0].market == 'BTC/USD'
+        segmentedOrderRequestLists[0].getOrderRequests()[0].price == 9000
+        segmentedOrderRequestLists[0].getOrderRequests()[0].amount == 1
+
+        segmentedOrderRequestLists[0].getOrderRequests()[1].exchange_name == 'kraken'
+        segmentedOrderRequestLists[0].getOrderRequests()[1].market == 'ETH/USD'
+        segmentedOrderRequestLists[0].getOrderRequests()[1].price == 200
+        segmentedOrderRequestLists[0].getOrderRequests()[1].amount == 4.5
+
+        segmentedOrderRequestLists[1].getOrderRequests()[0].exchange_name == 'poloniex'
+        segmentedOrderRequestLists[1].getOrderRequests()[0].market == 'ETH/BTC'
+        segmentedOrderRequestLists[1].getOrderRequests()[0].price == 0.2
+        segmentedOrderRequestLists[1].getOrderRequests()[0].amount == 4.5
+
+
+    def test_multipleExchanges_merge_segments(self):
+        arbitrageGraph = ArbitrageGraph()
+        edgeTTL=5
+        arbitrageGraph.updatePoint(
+            orderBookPair=OrderBookPair(exchange="kraken",symbol="BTC/USD",asks=[[10000, 10]],bids=[[9000, 10]],rateBTCxBase=1,rateBTCxQuote=9500,feeRate=0,timestamp=0,timeToLiveSec=edgeTTL),
+            volumeBTC=1)
+
+        arbitrageGraph.updatePoint(
+            orderBookPair=OrderBookPair(
+                exchange="kraken",symbol="ETH/USD",asks=[[200, 1000]],bids=[[100, 1000]],rateBTCxBase=4.5,rateBTCxQuote=9500,feeRate=0,timestamp=1,timeToLiveSec=edgeTTL),
+            volumeBTC=1)
+
+        arbitrageGraph.updatePoint(
+            orderBookPair=OrderBookPair(
+                exchange="poloniex",symbol="BTC/ETH",asks=[[5, 100]],bids=[[4, 100]],rateBTCxBase=1,rateBTCxQuote=4.5,feeRate=0,timestamp=2,timeToLiveSec=edgeTTL),
+            volumeBTC=1)
+
+        path = ArbitrageGraphPath(
+            gdict=arbitrageGraph.gdict,
+            nodes=['kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC','kraken-USD'],
+            timestamp=3,
+            isNegativeCycle=None,
+            length=None)
+        
+        segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
+        assert len(segmentedOrderRequestLists) == 2
+        assert len(segmentedOrderRequestLists[0].getOrderRequests()) == 2
+        assert len(segmentedOrderRequestLists[1].getOrderRequests()) == 1
+
+        segmentedOrderRequestLists[0].getOrderRequests()[0].exchange_name == 'kraken'
+        segmentedOrderRequestLists[0].getOrderRequests()[0].market == 'BTC/USD'
+        segmentedOrderRequestLists[0].getOrderRequests()[0].price == 9000
+        segmentedOrderRequestLists[0].getOrderRequests()[0].amount == 1
+
+        segmentedOrderRequestLists[0].getOrderRequests()[1].exchange_name == 'kraken'
+        segmentedOrderRequestLists[0].getOrderRequests()[1].market == 'ETH/USD'
+        segmentedOrderRequestLists[0].getOrderRequests()[1].price == 200
+        segmentedOrderRequestLists[0].getOrderRequests()[1].amount == 4.5
+
+        segmentedOrderRequestLists[1].getOrderRequests()[0].exchange_name == 'poloniex'
+        segmentedOrderRequestLists[1].getOrderRequests()[0].market == 'ETH/BTC'
+        segmentedOrderRequestLists[1].getOrderRequests()[0].price == 0.2
+        segmentedOrderRequestLists[1].getOrderRequests()[0].amount == 4.5
+        
     def test_TTLTest_one(self):
         arbitrageGraph = ArbitrageGraph()
         edgeTTL=5
