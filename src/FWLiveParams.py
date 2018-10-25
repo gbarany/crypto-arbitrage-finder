@@ -33,7 +33,8 @@ class FWLiveParams:
             cred = json.load(file)
             ssm = boto3.client('ssm',
                 aws_access_key_id=cred['aws_access_key_id'],
-                aws_secret_access_key=cred['aws_secret_access_key'])
+                aws_secret_access_key=cred['aws_secret_access_key'],
+                region_name=cred['region_name'])
             def getSSMParam(paramName):
               return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']  
 
