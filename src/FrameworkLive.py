@@ -67,8 +67,8 @@ class FrameworkLive:
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
         self.trader = Trader(credfile='./cred/api_trading.json', is_sandbox_mode=frameworklive_parameters.is_sandbox_mode)
         self.orderbookAnalyser = OrderbookAnalyser(
-            vol_BTC=[0.1,1.0,10],  # [1,0.1,0.01],
-            edgeTTL=20,
+            vol_BTC=[0.1],  # [1,0.1,0.01],
+            edgeTTL=15,
             priceTTL=600,
             resultsdir=self.parameters.results_dir,
             tradeLogFilename='tradelog_live.csv',
