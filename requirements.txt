@@ -12,7 +12,8 @@ pytest-cov==2.6.0
 pytest-mock==1.10.0
 neo4j-driver==1.6.2
 ptvsd==4.1.4
+jsonpickle
+boto3
 asyncio
 pytest-asyncio
-neo4j-driver
 asynctest

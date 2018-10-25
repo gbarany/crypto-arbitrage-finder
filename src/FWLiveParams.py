@@ -1,3 +1,6 @@
+import boto3
+import json
+
 class FWLiveParams:
     neo4j_mode_disabled = 1
     neo4j_mode_localhost = 2
@@ -7,12 +10,6 @@ class FWLiveParams:
         'uri' : 'bolt://localhost:7687',
         'user' : 'neo4j',
         'password' : 'neo' 
-        }
-
-    neo4j_mode_aws_cloud_details = {
-        'uri' : 'bolt://3.120.197.59:7687',
-        'user' : 'neo4j',
-        'password' : 'i-0eb8e05bdc700631a' 
         }
 
     def __init__(self,
@@ -28,6 +25,22 @@ class FWLiveParams:
         self.results_dir = results_dir
         self.neo4j_mode = neo4j_mode
         self.remoteDebuggingEnabled=remoteDebuggingEnabled
-        
+    
+    @staticmethod
+    def getNeo4jCredentials():
+        # Read parameters from AWS SSM         
+        with open('./cred/aws-keys.json') as file:
+            cred = json.load(file)
+            ssm = boto3.client('ssm',
+                aws_access_key_id=cred['aws_access_key_id'],
+                aws_secret_access_key=cred['aws_secret_access_key'])
+            def getSSMParam(paramName):
+              return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']  
+
+        return {
+                'uri' : getSSMParam('/Prod/neo4j/uri'),
+                'user' : getSSMParam('/Prod/neo4j/user'),
+                'password' : getSSMParam('/Prod/neo4j/password')
+                }
 
         

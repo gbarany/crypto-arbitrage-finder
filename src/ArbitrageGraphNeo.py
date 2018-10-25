@@ -10,10 +10,11 @@ class ArbitrageGraphNeo:
         self.volumeBTCs=volumeBTCs
 
         if neo4j_mode == FWLiveParams.neo4j_mode_aws_cloud:
+            cred=FWLiveParams.getNeo4jCredentials()
             self.graphDB = GraphDB(
-                uri=FWLiveParams.neo4j_mode_aws_cloud_details['uri'],
-                user=FWLiveParams.neo4j_mode_aws_cloud_details['user'],
-                password=FWLiveParams.neo4j_mode_aws_cloud_details['password'],
+                uri=cred['uri'],
+                user=cred['user'],
+                password=cred['password'],
                 resetDBData=resetDBData)
         elif neo4j_mode == FWLiveParams.neo4j_mode_localhost:
             self.graphDB = GraphDB(
