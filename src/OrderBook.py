@@ -46,8 +46,18 @@ class OrderBookPrice:
 
     def getLogPrice(self):
         return -1.0 * np.log(self.meanPriceNet)
+    
     def getPrice(self):
         return self.meanPriceNet
+    
+    def getLimitPrice(self):
+        return self.limitPrice
+    
+    def getVolumeQuote(self):
+        return self.volumeQuote
+    
+    def getVolumeBase(self):
+        return self.volumeBase
 
 class OrderBookPair:
     def __init__(self,timestamp,symbol,exchange,asks,bids,rateBTCxBase,rateBTCxQuote,feeRate,timeToLiveSec):

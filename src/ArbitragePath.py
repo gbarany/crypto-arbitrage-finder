@@ -2,86 +2,47 @@ import pandas as pd
 import numpy as np
 
 from OrderRequest import OrderRequest, OrderRequestList, OrderRequestType, SegmentedOrderRequestList
-class TradeList(list):
-    def __init__(self, iterable):
-        super().__init__(iterable)
-        self.profit = None
-        
 
-class ArbitrageGraphPath:
-    def __init__(self,
-                 gdict,
-                 nodes,
-                 timestamp,
-                 isNegativeCycle=None,
-                 length=None):
-        edges_weight = []
-        edges_volumeBase = []
-        edges_weight_log = []
-        edges_weight_limit = []
-        edges_age_s = []
-        edges_volumeQuote = []
-        exchanges_involved = []
-        hops = 0
-        nof_exchanges_involved = 0
+class ArbitragePath:
+    def __init__(self,nodes,timestamp,orderBookPriceList,isNegativeCycle):
 
-        if nodes != None:
-            for i, node in enumerate(nodes[:-1]):
-                source = node.split('-')
-                target = nodes[(i + 1) % len(nodes)].split('-')
-
-                if len(source) != 2 or len(target) != 2:
-                    raise ValueError("Nodes list format error.")
-
-                exchanges_involved.append(source[0])
-                exchanges_involved.append(target[0])
-
-                if not ((source[0], source[1]),
-                        (target[0], target[1])) in gdict.keys():
-                    raise ValueError("Path non-existent in graph")
-
-                v = gdict[((source[0], source[1]), (target[0], target[1]))]
-                if v.timestamp is not None:
-                    if timestamp - v.timestamp > v.timeToLive:
-                        raise ValueError("Path used to exist but TTL expired")
-                    edges_age_s.append(timestamp - v.timestamp)
-                else:
-                    edges_age_s.append(0)
-                edges_weight_log.append(v.getLogPrice())
-                edges_weight.append(v.getPrice())
-                edges_weight_limit.append(v.limitPrice)
-                edges_volumeBase.append(v.volumeBase)
-                edges_volumeQuote.append(v.volumeQuote)
-            exchanges_involved = sorted(set(exchanges_involved), key=str.lower)
-            nof_exchanges_involved = len(exchanges_involved)
-            hops = len(nodes) - 1
-
-        self.edges_weight_log = edges_weight_log
-        self.edges_weight = edges_weight
-        self.edges_age_s = edges_age_s
-        self.edges_weight_limit = edges_weight_limit
-        self.edges_volumeBase = edges_volumeBase
-        self.edges_volumeQuote = edges_volumeQuote
-
-        self.hops = hops
-        self.exchanges_involved = exchanges_involved
-        self.nof_exchanges_involved = nof_exchanges_involved
-        self.isNegativeCycle = isNegativeCycle
-        self.length = length        
-        self.profit = np.exp(-1.0 * self.length) * 1 - 1 if self.length is not None else None
         self.nodes = nodes
+        self.timestamp = timestamp
+        self.orderBookPriceList = orderBookPriceList
+        self.isNegativeCycle = isNegativeCycle
+
+    def getAge(self):
+        return list(map(lambda orderBookPrice:self.timestamp-orderBookPrice.timestamp,self.orderBookPriceList))
+
+    def getPrice(self):
+        return list(map(lambda orderBookPrice:orderBookPrice.getPrice(),self.orderBookPriceList))
+    
+    def getNofHops(self):
+        return len(self.nodes) - 1
+    
+    def getExchangesInvolved(self):
+        exchangesList = list(map(lambda node:node.split('-')[0],self.nodes))
+        exchangesInvolved = sorted(set(exchangesList), key=str.lower)
+        return exchangesInvolved
+
+    def getNofExchangesInvolved(self):
+        return len(self.getExchangesInvolved())
+
 
     def toDataFrameLog(self, id, timestamp, vol_BTC, df_columns):
+        # TODO: fix this
+        df_new = pd.DataFrame([])
+        '''
         df_new = pd.DataFrame([[
             int(id), timestamp,
-            float(vol_BTC), self.length,
+            float(vol_BTC),
             np.exp(-1.0 * self.length) * 100 - 100,
             ",".join(str(x) for x in self.nodes),
             ",".join(str(x) for x in self.edges_weight),
             ",".join(str(x) for x in self.edges_age_s), 
             self.hops, ",".join(str(x) for x in self.exchanges_involved), 
             self.nof_exchanges_involved
-        ]],columns=df_columns)
+        ]],columns=df_columns)'''
         return df_new
 
     def toOrderList(self):
@@ -99,24 +60,24 @@ class ArbitrageGraphPath:
 
                 if A == 'EUR' or A == 'USD' or A == 'GBP':
                     tradesymbols = B + "/" + A
-                    limitPrice = 1 / self.edges_weight_limit[idx_node]
+                    limitPrice = 1 / self.orderBookPriceList[idx_node].getLimitPrice()
                     tradetype = OrderRequestType.BUY
-                    volume = self.edges_volumeQuote[idx_node]
+                    volume = self.orderBookPriceList[idx_node].getVolumeQuote()
                 elif A == 'BTC' and B != 'EUR' and B != 'USD' and B != 'GBP':
                     tradesymbols = B + "/" + A
-                    limitPrice = 1 / self.edges_weight_limit[idx_node]
+                    limitPrice = 1 / self.orderBookPriceList[idx_node].getLimitPrice()
                     tradetype = OrderRequestType.BUY
-                    volume = self.edges_volumeQuote[idx_node]
+                    volume = self.orderBookPriceList[idx_node].getVolumeQuote()
                 elif A == 'ETH' and B != 'EUR' and B != 'USD' and B != 'GBP' and B != 'BTC':
                     tradesymbols = B + "/" + A
-                    limitPrice = 1 / self.edges_weight_limit[idx_node]
+                    limitPrice = 1 / self.orderBookPriceList[idx_node].getLimitPrice()
                     tradetype = OrderRequestType.BUY
-                    volume = self.edges_volumeQuote[idx_node]
+                    volume = self.orderBookPriceList[idx_node].getVolumeQuote()
                 else:
                     tradesymbols = A + "/" + B
-                    limitPrice = self.edges_weight_limit[idx_node]
+                    limitPrice = self.orderBookPriceList[idx_node].getLimitPrice()
                     tradetype = OrderRequestType.SELL
-                    volume = self.edges_volumeBase[idx_node]
+                    volume = self.orderBookPriceList[idx_node].getVolumeBase()
 
                 orl.append(OrderRequest(
                         exchange_name=base_exchange,
@@ -139,7 +100,7 @@ class ArbitrageGraphPath:
         if len(orderList) == 0:
             raise ValueError("Trade list is empty, there are no trades to execute")
 
-        if ArbitrageGraphPath.isOrderListSingleExchange(orderList) == True:
+        if ArbitragePath.isOrderListSingleExchange(orderList) == True:
             return SegmentedOrderRequestList([orderList])
 
         segmentedOrderList = []

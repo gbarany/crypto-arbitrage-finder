@@ -1,9 +1,8 @@
 import pytest
 import numpy as np
 from ArbitrageGraph import ArbitrageGraph
-from ArbitrageGraphPath import ArbitrageGraphPath
 from OrderBook import OrderBookPair
-from Trade import Trade, TradeStatus, TradeType
+from OrderRequest import OrderRequestType
 
 
 class TestClass(object):
@@ -68,25 +67,22 @@ class TestClass(object):
         path = arbitrageGraph.getPath(
             nodes=["kraken-BTC", "kraken-USD", "kraken-ETH", "kraken-BTC"],
             timestamp=4)
-        assert path.edges_age_s == [4, 3, 2]
-        assert path.edges_weight == [9000, 1 / 200, 1 / 5]
-        assert path.hops == 3
-        assert path.exchanges_involved == ['kraken']
-        assert path.nof_exchanges_involved == 1
+        assert path.getAge() == [4, 3, 2]
+        assert path.getPrice() == [9000, 1 / 200, 1 / 5]
+        assert path.getNofHops() == 3
+        assert path.getExchangesInvolved() == ['kraken']
+        assert path.getNofExchangesInvolved() == 1
 
-        # segmentedTradeList = path.toSegmentedTradeList()
-        # assert (segmentedTradeList[0][0].exchangeName,
-        #        segmentedTradeList[0][0].symbol,
-        #        segmentedTradeList[0][0].tradetype) == ('kraken', 'BTC/USD',
-        #                                                TradeType.SELL)
-        # assert (segmentedTradeList[0][1].exchangeName,
-        #        segmentedTradeList[0][1].symbol,
-        #        segmentedTradeList[0][1].tradetype) == ('kraken', 'ETH/USD',
-        #                                                TradeType.BUY)
-        # assert (segmentedTradeList[0][2].exchangeName,
-        #        segmentedTradeList[0][2].symbol,
-        #        segmentedTradeList[0][2].tradetype) == ('kraken', 'ETH/BTC',
-        #                                                TradeType.SELL)
+        segmentedOrderList = path.toSegmentedOrderList().getOrderRequestLists()
+        assert (segmentedOrderList[0][0].exchange_name,
+                segmentedOrderList[0][0].market,
+                segmentedOrderList[0][0].type) == ('kraken', 'BTC/USD',OrderRequestType.SELL)
+        assert (segmentedOrderList[0][1].exchange_name,
+                segmentedOrderList[0][1].market,
+                segmentedOrderList[0][1].type) == ('kraken', 'ETH/USD',OrderRequestType.BUY)
+        assert (segmentedOrderList[0][2].exchange_name,
+                segmentedOrderList[0][2].market,
+                segmentedOrderList[0][2].type) == ('kraken', 'ETH/BTC',OrderRequestType.SELL)
 
     def test_multipleExchanges(self):
         arbitrageGraph = ArbitrageGraph()
@@ -105,12 +101,10 @@ class TestClass(object):
                 exchange="poloniex",symbol="BTC/ETH",asks=[[5, 100]],bids=[[4, 100]],rateBTCxBase=1,rateBTCxQuote=4.5,feeRate=0,timestamp=2,timeToLiveSec=edgeTTL),
             volumeBTC=1)
 
-        path = ArbitrageGraphPath(
-            gdict=arbitrageGraph.gdict,
+        path = arbitrageGraph.getPath(
             nodes=['kraken-BTC', 'kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC'],
             timestamp=3,
-            isNegativeCycle=None,
-            length=None)
+            isNegativeCycle=None)
         
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists) == 2
@@ -150,12 +144,10 @@ class TestClass(object):
                 exchange="poloniex",symbol="BTC/ETH",asks=[[5, 100]],bids=[[4, 100]],rateBTCxBase=1,rateBTCxQuote=4.5,feeRate=0,timestamp=2,timeToLiveSec=edgeTTL),
             volumeBTC=1)
 
-        path = ArbitrageGraphPath(
-            gdict=arbitrageGraph.gdict,
+        path = arbitrageGraph.getPath(
             nodes=['kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC','kraken-USD'],
             timestamp=3,
-            isNegativeCycle=None,
-            length=None)
+            isNegativeCycle=None)
         
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists) == 2
@@ -296,11 +288,11 @@ class TestClass(object):
         path = arbitrageGraph.getPath(
             nodes=["kraken-BTC", "kraken-USD", "kraken-ETH", "kraken-BTC"],
             timestamp=6)
-        assert path.edges_age_s == [1, 3, 2]
-        assert path.edges_weight == [5000, 1 / 200, 1 / 5]
-        assert path.hops == 3
-        assert path.exchanges_involved == ['kraken']
-        assert path.nof_exchanges_involved == 1
+        assert path.getAge() == [1, 3, 2]
+        assert path.getPrice() == [5000, 1 / 200, 1 / 5]
+        assert path.getNofHops() == 3
+        assert path.getExchangesInvolved() == ['kraken']
+        assert path.getNofExchangesInvolved() == 1
 
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists)==1
