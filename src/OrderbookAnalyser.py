@@ -134,8 +134,8 @@ class OrderbookAnalyser:
                         vol_BTC=self.vol_BTC[idx],
                         path=path)
 
-                    orl = OrderRequestList([])
-                    sorl = SegmentedOrderRequestList([orl])
+                    
+                    sorl = path.toSegmentedOrderList()
                     self.trader.execute(sorl)
                     logger.info("Arbitrage trade event created succesfully")
 
