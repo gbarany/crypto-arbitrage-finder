@@ -11,8 +11,6 @@ import time
 from FeeStore import FeeStore
 from Trader import Trader
 
-arbTradeTriggerEvent = Condition()
-arbTradeQueue = []
 #vol_BTC=[1,0.1,0.01]
 vol_BTC = [1]
 
@@ -44,7 +42,7 @@ def getCMCSampleFetch():
 
 class TestClass(object):
 
-    def test_threeNodesVariousFees(self,monkeypatch):
+    def test_threeNodesVariousFees(self,monkeypatch, mocker):
         feeRates = [0]#[0.02]
         for feeRate in feeRates:
             def getTakerFeeMock(self,exchangename, symbol):
@@ -54,56 +52,48 @@ class TestClass(object):
             orderbookAnalyser = getOrderbookAnalyser()
             cmc = getCMCSampleFetch()
             orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
+            
+            '''def traderExecute(self,sorl):
+                return True
 
-            def feedSamples():
-                orderbookAnalyser.updateCoinmarketcapPrice(cmc)
-                orderbookAnalyser.update(
-                    'kraken',
-                    'BTC/USD',
-                    bids=[[9000, 1]],
-                    asks=[[10000, 1]],
-                    id=1,
-                    timestamp=100)
-                orderbookAnalyser.update(
-                    'kraken',
-                    'ETH/USD',
-                    bids=[[100, 1000]],
-                    asks=[[200, 1000]],
-                    id=2,
-                    timestamp=101)
-                orderbookAnalyser.update(
-                    'kraken',
-                    'ETH/BTC',
-                    bids=[[0.03, 1000]],
-                    asks=[[0.04, 1000]],
-                    id=3,
-                    timestamp=102)
+            monkeypatch.setattr(Trader, 'execute', traderExecute)'''
+            mocker.spy(orderbookAnalyser.trader, 'execute')
 
-            Thread(target=feedSamples).start()
+            orderbookAnalyser.updateCoinmarketcapPrice(cmc)
+            orderbookAnalyser.update(
+                'kraken',
+                'BTC/USD',
+                bids=[[9000, 1]],
+                asks=[[10000, 1]],
+                id=1,
+                timestamp=100)
+            orderbookAnalyser.update(
+                'kraken',
+                'ETH/USD',
+                bids=[[100, 1000]],
+                asks=[[200, 1000]],
+                id=2,
+                timestamp=101)
+            orderbookAnalyser.update(
+                'kraken',
+                'ETH/BTC',
+                bids=[[0.03, 1000]],
+                asks=[[0.04, 1000]],
+                id=3,
+                timestamp=102)
 
-            for i in range(len(vol_BTC)):
-                arbTradeTriggerEvent.acquire()
-                TRADE_EVENT_TRIGGERED = arbTradeTriggerEvent.wait(10)
-                arbTradeTriggerEvent.release()
-                assert (i, TRADE_EVENT_TRIGGERED) == (i, True)
 
-            assert len(arbTradeQueue) == len(vol_BTC)
+            assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
+            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
+            
+            orderRequestList = orderRequestLists[0][0]
+            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+                    ('BTC/USD', vol_BTC[0], 9000, OrderRequestType.SELL,OrderRequestStatus.INITIAL)
 
-            path = arbTradeQueue[0]
-            orderList = path.toOrderList() # TODO: add unit test check
-            '''trade = tradeList[0]
-            assert (trade.market, trade.amount, trade.price, trade.trade_type,
-                    trade.status) == ('BTC/USD', vol_BTC[0], 9000, TradeType.SELL,
-                                    TradeStatus.INITIAL)
+            orderRequestList = orderRequestLists[0][1]
+            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+                    ('ETH/USD',vol_BTC[0] / cmc['ETH/BTC']['last'], 200,OrderRequestType.BUY, OrderRequestStatus.INITIAL)
 
-            trade = tradeList[1]
-            assert (trade.market, trade.amount, trade.price, trade.trade_type,
-                    trade.status) == ('ETH/USD',
-                                    vol_BTC[0] / cmc['ETH/BTC']['last'], 200,
-                                    TradeType.BUY, TradeStatus.INITIAL)
-
-            trade = tradeList[2]
-            assert (trade.market, trade.amount, trade.price, trade.trade_type,
-                    trade.status) == ('ETH/BTC',
-                                    vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,
-                                    TradeType.SELL, TradeStatus.INITIAL)'''
+            orderRequestList = orderRequestLists[0][2]
+            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+                    ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
