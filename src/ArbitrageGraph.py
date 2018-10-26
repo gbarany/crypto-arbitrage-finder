@@ -71,40 +71,6 @@ class ArbitrageGraph:
         length, nodes, isNegativeCycle = bf.negative_edge_cycle(self.G)
         self.negativepath = nodes
 
-        '''
-        edges_weight = []
-        edges_volumeBase = []
-        edges_weight_log = []
-        edges_weight_limit = []
-        edges_age_s = []
-        edges_volumeQuote = []
-        exchanges_involved = []
-        hops = 0
-        nof_exchanges_involved = 0
-
-        if nodes != None:
-            for i, node in enumerate(nodes[:-1]):
-                source = node.split('-')
-                target = nodes[(i + 1) % len(nodes)].split('-')
-
-                exchanges_involved.append(source[0])
-                exchanges_involved.append(target[0])
-
-                v = self.gdict[((source[0], source[1]), (target[0], target[1]))]
-                if v.timestamp is not None:
-                    edges_age_s.append(timestamp - v.timestamp)
-                else:
-                    edges_age_s.append(0)
-
-                edges_weight_log.append(v.getLogPrice())
-                edges_weight.append(v.getPrice())
-                edges_weight_limit.append(v.limitPrice)
-                edges_volumeBase.append(v.volumeBase)
-                edges_volumeQuote.append(v.volumeQuote)
-            exchanges_involved = sorted(set(exchanges_involved), key=str.lower)
-            nof_exchanges_involved = len(exchanges_involved)
-            hops = len(nodes) - 1
-        '''
         return self.getPath(nodes=nodes,timestamp=timestamp,isNegativeCycle=isNegativeCycle)
 
     def getPath(self, nodes, timestamp,isNegativeCycle=None):
