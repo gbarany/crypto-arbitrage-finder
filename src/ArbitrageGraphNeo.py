@@ -35,8 +35,12 @@ class ArbitrageGraphNeo:
         self.graphDB.addTradingRelationship(orderBook=orderBookPair.getRebasedAsksOrderbook(),volumeBTCs=self.volumeBTCs)
 
         self.graphDB.addTradingRelationship(orderBook=orderBookPair.bids,volumeBTCs=self.volumeBTCs)
-
-        path = self.graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=now,volumeBTCs=volumeBTCs)
+        
+        path = self.graphDB.getArbitrageCycle(
+            asset=Asset(exchange=orderBookPair.exchange, symbol=orderBookPair.getSymbolBase()),
+            match_lookback_sec=5,
+            now=now,
+            volumeBTCs=volumeBTCs)
 
         logger.info('Neo4j arb cycle: ' + str(path))
         return path
