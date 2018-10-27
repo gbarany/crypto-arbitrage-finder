@@ -40,9 +40,9 @@ class ArbitragePath:
             return ",".join(str(x) for x in itemsList)
 
         logJSON = {
-            'timestamp':self.timestamp,
-            'vol_BTC': self.getVolumeBTCs(),
-            'profit_perc': 0, # Todo: add arbitrageprofithere
+            'timestamp':str(self.timestamp),
+            'vol_BTC': toCSVStr(self.getVolumeBTCs()),
+            'profit_perc': str(0), # Todo: add arbitrageprofithere
             'nodes': toCSVStr(self.nodes),
             'price':toCSVStr(self.getPrice()),
             'age': toCSVStr(self.getAge()),
@@ -50,8 +50,12 @@ class ArbitragePath:
             'exchangesInvolved':toCSVStr(self.getExchangesInvolved()),
             'nofExchangesInvolved':str(self.getNofExchangesInvolved()),
         }
-        dealLogger.info(json.dumps(logJSON))
-        #return logJSON
+
+        logStr = ""
+        for row in logJSON.values():
+            logStr+="\""+row+"\","
+        logStr = logStr[:-1]
+        dealLogger.info(logStr)
 
     def toOrderList(self):
         orl = []

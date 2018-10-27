@@ -25,17 +25,16 @@ logger.addHandler(ch)
 dealLogger = logging.getLogger('CryptoArbitrageDeals')
 dealLogger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('./results/CryptoArbitrageDeals.log')
+fh = logging.FileHandler('./results/CryptoArbitrageDeals.csv',mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
-formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s - [%(filename)s:%(funcName)s:%(lineno)s]'
-)
+formatter = logging.Formatter('%(asctime)s,%(message)s', datefmt='%m/%d/%Y %I:%M:%S')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
 dealLogger.addHandler(fh)
 dealLogger.addHandler(ch)
+dealLogger.info('timestamp,vol_BTC,profit_perc,nodes,price,age,nofHops,exchangesInvolved,nofExchangesInvolved')
