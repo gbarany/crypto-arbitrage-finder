@@ -1,6 +1,9 @@
 import numpy as np
-
+import json
 from OrderRequest import OrderRequest, OrderRequestList, OrderRequestType, SegmentedOrderRequestList
+import logging
+
+dealLogger = logging.getLogger('CryptoArbitrageDeals')
 
 class ArbitragePath:
     def __init__(self,nodes,timestamp,orderBookPriceList,isNegativeCycle):
@@ -47,7 +50,8 @@ class ArbitragePath:
             'exchangesInvolved':toCSVStr(self.getExchangesInvolved()),
             'nofExchangesInvolved':str(self.getNofExchangesInvolved()),
         }
-        return logJSON
+        dealLogger.info(json.dumps(logJSON))
+        #return logJSON
 
     def toOrderList(self):
         orl = []

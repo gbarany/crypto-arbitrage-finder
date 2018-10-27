@@ -10,6 +10,7 @@ from threading import Condition, Thread
 import time
 from FeeStore import FeeStore
 from Trader import Trader
+from InitLogger import logger
 
 #vol_BTC=[1,0.1,0.01]
 vol_BTC = [1]
