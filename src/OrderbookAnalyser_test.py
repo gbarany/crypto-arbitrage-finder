@@ -53,10 +53,6 @@ class TestClass(object):
             cmc = getCMCSampleFetch()
             orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
             
-            '''def traderExecute(self,sorl):
-                return True
-
-            monkeypatch.setattr(Trader, 'execute', traderExecute)'''
             mocker.spy(orderbookAnalyser.trader, 'execute')
 
             orderbookAnalyser.updateCoinmarketcapPrice(cmc)

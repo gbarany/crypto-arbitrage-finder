@@ -20,7 +20,7 @@ class ArbitragePath:
         return len(self.nodes) - 1
 
     def getVolumeBTCs(self):
-        return  list(map(lambda orderBookPrice:orderBookPrice.,self.orderBookPriceList))
+        return  list(map(lambda orderBookPrice:orderBookPrice.getVolumeBTC(),self.orderBookPriceList))
     
     def getExchangesInvolved(self):
         exchangesList = list(map(lambda node:node.split('-')[0],self.nodes))
@@ -31,21 +31,21 @@ class ArbitragePath:
         return len(self.getExchangesInvolved())
 
 
-    def log(self, vol_BTC, df_columns):
+    def log(self):
         
         def toCSVStr(itemsList):
             return ",".join(str(x) for x in itemsList)
 
         logJSON = {
             'timestamp':self.timestamp,
-            'vol_BTC': float(vol_BTC),
+            'vol_BTC': self.getVolumeBTCs(),
             'profit_perc': 0, # Todo: add arbitrageprofithere
             'nodes': toCSVStr(self.nodes),
             'price':toCSVStr(self.getPrice()),
             'age': toCSVStr(self.getAge()),
-            'nofHops': toCSVStr(self.getNofHops()),
+            'nofHops': str(self.getNofHops()),
             'exchangesInvolved':toCSVStr(self.getExchangesInvolved()),
-            'nofExchangesInvolved':toCSVStr(self.getNofExchangesInvolved()),
+            'nofExchangesInvolved':str(self.getNofExchangesInvolved()),
         }
         return logJSON
 

@@ -57,6 +57,8 @@ class OrderBookPrice:
     
     def getVolumeBase(self):
         return self.volumeBase
+    def getVolumeBTC(self):
+        return self.volumeBTC
 
 class OrderBookPair:
     def __init__(self,timestamp,symbol,exchange,asks,bids,rateBTCxBase,rateBTCxQuote,feeRate,timeToLiveSec):
