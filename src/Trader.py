@@ -8,10 +8,11 @@ from ccxt import InvalidOrder, OrderNotFound
 from ccxt.async_support.base.exchange import Exchange
 
 from Exceptions import OrderCreationError, TradesShowstopper, OrderErrorByExchange
-from InitLogger import logger
 from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType, OrderRequestList, \
     SegmentedOrderRequestList, CCXT_ORDER_STATUS_OPEN, CCXT_ORDER_STATUS_CANCELED
 import time
+import logging
+logger = logging.getLogger('CryptoArbitrageApp')
 
 
 class Trader:

@@ -1,7 +1,6 @@
 import ast
 import copy
 import numpy as np
-from InitLogger import logger
 
 class Asset:
     def __init__(self, exchange, symbol):

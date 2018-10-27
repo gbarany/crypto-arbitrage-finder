@@ -148,7 +148,6 @@ class FrameworkLive:
                 symbol=symbol,
                 bids=order_book['bids'],
                 asks=order_book['asks'],
-                id=id,
                 timestamp=time.time())
             id += 1
             if enablePlotting:
@@ -183,10 +182,6 @@ class FrameworkLive:
         Thread(target=stop_loop).start()
         
         loop.run_forever()
-
-        self.orderbookAnalyser.generateExportFilename(
-            list(self.exchanges.keys()))
-        self.orderbookAnalyser.save()
         logger.info("FrameworkLive exited normally. Bye.")
 
 

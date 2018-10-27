@@ -1,6 +1,8 @@
 from neo4j.v1 import GraphDatabase
 import sys
-from InitLogger import logger
+import logging
+
+logger = logging.getLogger('CryptoArbitrageApp')
 
 class AssetState:
     def __init__(self, amount):

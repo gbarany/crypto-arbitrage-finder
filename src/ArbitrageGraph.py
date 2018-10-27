@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 from ArbitragePath import ArbitragePath
-from InitLogger import logger
 from OrderBook import OrderBookPrice
 from FWLiveParams import FWLiveParams
 

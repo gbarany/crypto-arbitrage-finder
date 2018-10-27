@@ -1,7 +1,8 @@
 import ccxt
 import numbers
-from InitLogger import logger
+import logging
 
+logger = logging.getLogger('CryptoArbitrageApp')
 
 class FeeStore:
 

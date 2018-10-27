@@ -1,7 +1,9 @@
 from FWLiveParams import FWLiveParams
 from GraphDB import GraphDB
 from OrderBook import Asset
-from InitLogger import logger
+import logging
+
+logger = logging.getLogger('CryptoArbitrageApp')
 
 
 class ArbitrageGraphNeo:

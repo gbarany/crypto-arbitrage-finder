@@ -1,7 +1,8 @@
 import ast
-from InitLogger import logger
 import dateutil.parser as dp
+import logging
 
+logger = logging.getLogger('CryptoArbitrageApp')
 
 class PriceStore:
     def __init__(self, priceTTL=60):

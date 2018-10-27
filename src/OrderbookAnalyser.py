@@ -4,7 +4,6 @@ from ArbitrageGraphNeo import ArbitrageGraphNeo
 from FeeStore import FeeStore
 from OrderBook import OrderBook, OrderBookPair, Asset
 from PriceStore import PriceStore
-import pandas as pd
 import os
 import dill
 import datetime
@@ -40,21 +39,13 @@ class OrderbookAnalyser:
         self.cmcTicker = None
         self.neo4j_mode = neo4j_mode
         self.priceSource = priceSource
-        self.df_results = pd.DataFrame(columns=[
-            'id', 'timestamp', 'vol_BTC', 'length', 'profit_perc', 'nodes',
-            'edges_weight', 'edges_age_s', 'hops', 'exchanges_involved',
-            'nof_exchanges_involved'
-        ])
         self.tradeLogFilename = self.timestamp_start.strftime(
             '%Y%m%d-%H%M%S') + "_" + tradeLogFilename
         try:
             os.remove(self.resultsdir + self.tradeLogFilename)
         except OSError:
             pass
-        with open(self.resultsdir + self.tradeLogFilename, 'a') as f:
-            self.df_results.to_csv(f, header=True, index=False)
 
-        self.generateExportFilename()
         self.isRunning = True
         assert trader is not None
         self.trader = trader
@@ -65,18 +56,7 @@ class OrderbookAnalyser:
     def updateForexPrice(self, forexTicker):
         self.priceStore.updatePriceFromForex(forexTicker)
 
-    def logArbitrageDeal(self, id, vol_BTC, timestamp, path):
-        df_new = path.toDataFrameLog(
-            id=id,
-            timestamp=timestamp,
-            vol_BTC=vol_BTC,
-            df_columns=self.df_results.columns)
-        self.df_results = self.df_results.append(df_new, ignore_index=True)
-
-        with open(self.resultsdir + self.tradeLogFilename, 'a') as f:
-            df_new.to_csv(f, header=False, index=False)
-
-    def update(self, exchangename, symbol, bids, asks, id, timestamp):
+    def update(self, exchangename, symbol, bids, asks, timestamp):
 
         if self.priceSource == OrderbookAnalyser.PRICE_SOURCE_ORDERBOOK:
             self.priceStore.updatePriceFromOrderBook(
@@ -128,13 +108,7 @@ class OrderbookAnalyser:
 
                 if path.isNegativeCycle is True:
                     logger.info("Found arbitrage deal")
-                    self.logArbitrageDeal(
-                        id=id,
-                        timestamp=timestamp,
-                        vol_BTC=self.vol_BTC[idx],
-                        path=path)
-
-                    
+                    path.log()                    
                     sorl = path.toSegmentedOrderList()
                     self.trader.execute(sorl)
                     logger.info("Arbitrage trade event created succesfully")
@@ -144,22 +118,8 @@ class OrderbookAnalyser:
             logger.error("Exception on exchangename:" + exchangename +
                          " symbol:" + symbol + ":" + str(e))
 
-    def generateExportFilename(self, exchangeList=None):
-        if exchangeList is None:
-            self.exportFilename = "arbitrage_Vol=%s" % ("-".join(
-                [str(i) + "BTC" for i in self.vol_BTC]))
-        else:
-            self.exportFilename = "arbitrage_Vol=%s_XC=%s" % ("-".join(
-                [str(i) + "BTC"
-                 for i in self.vol_BTC]), '-'.join(exchangeList))
-
     def terminate(self):
         self.isRunning = False
-
-    def save(self):
-        fname = self.resultsdir + self.timestamp_start.strftime(
-            '%Y%m%d-%H%M%S') + "_" + self.exportFilename
-        self.df_results.to_csv(fname + ".csv", index=False)
 
     def plotGraphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):

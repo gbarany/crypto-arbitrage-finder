@@ -65,21 +65,18 @@ class TestClass(object):
                 'BTC/USD',
                 bids=[[9000, 1]],
                 asks=[[10000, 1]],
-                id=1,
                 timestamp=100)
             orderbookAnalyser.update(
                 'kraken',
                 'ETH/USD',
                 bids=[[100, 1000]],
                 asks=[[200, 1000]],
-                id=2,
                 timestamp=101)
             orderbookAnalyser.update(
                 'kraken',
                 'ETH/BTC',
                 bids=[[0.03, 1000]],
                 asks=[[0.04, 1000]],
-                id=3,
                 timestamp=102)
 
 

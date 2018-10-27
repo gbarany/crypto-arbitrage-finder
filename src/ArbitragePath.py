@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 
 from OrderRequest import OrderRequest, OrderRequestList, OrderRequestType, SegmentedOrderRequestList
@@ -19,6 +18,9 @@ class ArbitragePath:
     
     def getNofHops(self):
         return len(self.nodes) - 1
+
+    def getVolumeBTCs(self):
+        return  list(map(lambda orderBookPrice:orderBookPrice.,self.orderBookPriceList))
     
     def getExchangesInvolved(self):
         exchangesList = list(map(lambda node:node.split('-')[0],self.nodes))
@@ -29,21 +31,23 @@ class ArbitragePath:
         return len(self.getExchangesInvolved())
 
 
-    def toDataFrameLog(self, id, timestamp, vol_BTC, df_columns):
-        # TODO: fix this
-        df_new = pd.DataFrame([])
-        '''
-        df_new = pd.DataFrame([[
-            int(id), timestamp,
-            float(vol_BTC),
-            np.exp(-1.0 * self.length) * 100 - 100,
-            ",".join(str(x) for x in self.nodes),
-            ",".join(str(x) for x in self.edges_weight),
-            ",".join(str(x) for x in self.edges_age_s), 
-            self.hops, ",".join(str(x) for x in self.exchanges_involved), 
-            self.nof_exchanges_involved
-        ]],columns=df_columns)'''
-        return df_new
+    def log(self, vol_BTC, df_columns):
+        
+        def toCSVStr(itemsList):
+            return ",".join(str(x) for x in itemsList)
+
+        logJSON = {
+            'timestamp':self.timestamp,
+            'vol_BTC': float(vol_BTC),
+            'profit_perc': 0, # Todo: add arbitrageprofithere
+            'nodes': toCSVStr(self.nodes),
+            'price':toCSVStr(self.getPrice()),
+            'age': toCSVStr(self.getAge()),
+            'nofHops': toCSVStr(self.getNofHops()),
+            'exchangesInvolved':toCSVStr(self.getExchangesInvolved()),
+            'nofExchangesInvolved':toCSVStr(self.getNofExchangesInvolved()),
+        }
+        return logJSON
 
     def toOrderList(self):
         orl = []
