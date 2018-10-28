@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.6.6
 
 EXPOSE 5678
 WORKDIR /app
