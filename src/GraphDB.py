@@ -1,7 +1,8 @@
 from neo4j.v1 import GraphDatabase
 import sys
 import logging
-
+from ArbitragePath import ArbitragePath
+from OrderBook import OrderBookPrice, Asset
 logger = logging.getLogger('CryptoArbitrageApp')
 
 class AssetState:
@@ -102,12 +103,12 @@ class GraphDB(object):
                     "WITH node,b, $volumeBTCs as volumes "
                     "FOREACH (volume in volumes | "
                     "MERGE (node)-[r:EXCHANGE {volumeBTC:volume}]->(b) "
-                    "ON CREATE SET r._from=$now, r._to=$forever, r.meanPrice=$meanPrice, r.meanPriceNet=$meanPriceNet, r.limitPrice=$limitPrice "
+                    "ON CREATE SET r.feeRate=0, r._from=$now, r._to=$forever, r.meanPrice=$meanPrice, r.meanPriceNet=$meanPriceNet, r.limitPrice=$limitPrice "
                     ") "
                     "WITH node,b, volumes "
                     "FOREACH (volume in volumes | "
                     "MERGE (b)-[r:EXCHANGE {volumeBTC:volume}]->(node) "
-                    "ON CREATE SET  r._from=$now, r._to=$forever, r.meanPrice=$meanPrice, r.meanPriceNet=$meanPriceNet, r.limitPrice=$limitPrice "
+                    "ON CREATE SET  r.feeRate=0, r._from=$now, r._to=$forever, r.meanPrice=$meanPrice, r.meanPriceNet=$meanPriceNet, r.limitPrice=$limitPrice "
                     ") "
                     "RETURN id(node) as node",
                     symbol=asset.symbol,                    
@@ -117,6 +118,7 @@ class GraphDB(object):
                     limitPrice=1,
                     nodeid=nodeids[0],
                     volumeBTCs=volumeBTCs,
+                    feeRate=0,
                     forever=sys.maxsize)
         logger.info(GraphDB.getRuntime(result))
 
@@ -265,7 +267,7 @@ class GraphDB(object):
             result = tx.run(
                 "MATCH (base:AssetStock),(quotation:AssetStock) "
                 "WHERE base.exchange = $baseExchange AND base.symbol = $baseSymbol AND quotation.exchange = $quotationExchange AND quotation.symbol = $quotationSymbol "
-                "CREATE(base)-[:EXCHANGE {volumeBTC:$volumeBTC,volumeBase:$volumeBase,feeAmountBase:$feeAmountBase,feeAmountBTC:$feeAmountBTC,feeRate:$feeRate,meanPrice:$meanPrice,meanPriceNet:$meanPriceNet,limitPrice:$limitPrice,_from:$timeFrom,_to:$timeTo}]->(quotation)",
+                "CREATE(base)-[:EXCHANGE {volumeBTC:$volumeBTC,volumeBase:$volumeBase,volumeQuote:$volumeQuote,feeAmountBase:$feeAmountBase,feeAmountBTC:$feeAmountBTC,feeRate:$feeRate,meanPrice:$meanPrice,meanPriceNet:$meanPriceNet,limitPrice:$limitPrice,_from:$timeFrom,_to:$timeTo}]->(quotation)",
                 baseExchange=orderBook.getBaseAsset().getExchange(),
                 baseSymbol=orderBook.getBaseAsset().getSymbol(),
                 quotationExchange=orderBook.getQuoteAsset().getExchange(),
@@ -278,6 +280,7 @@ class GraphDB(object):
                 feeAmountBTC=orderBookPrice.feeAmountBTC,
                 volumeBase=orderBookPrice.volumeBase,
                 volumeBTC=orderBookPrice.volumeBTC,
+                volumeQuote=orderBookPrice.volumeQuote,
                 timeTo=now + orderBook.timeToLiveSec,
                 timeFrom=now)
             logger.info(GraphDB.getRuntime(result))
@@ -341,7 +344,7 @@ class GraphDB(object):
                 "WITH path AS x, nodes(path)[0] as c, relationships(path) as r, $startVal as startVal "
                 "WITH x, REDUCE(s = startVal, e IN r | s * e.meanPriceNet) AS endVal, startVal, COLLECT(nodes(x)) as elems "
                 "WHERE endVal > startVal "
-                "RETURN {volumeBTC:$volumeBTC,path:EXTRACT(r IN relationships(x) | {meanPrice:r.meanPrice,meanPriceNet:r.meanPriceNet,start_node:id(startNode(r)),end_node:id(endNode(r))}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
+                "RETURN {volumeBTC:$volumeBTC,path:EXTRACT(r IN relationships(x) | {to:r._to,from:r._from,meanPrice:r.meanPrice,meanPriceNet:r.meanPriceNet,limitPrice:r.limitPrice,volumeBase:r.volumeBase,volumeBTC:r.volumeBTC,volumeQuote:r.volumeQuote,feeRate:r.feeRate}), profit:endVal - startVal, assets:EXTRACT(n IN NODES(x) | {exchange:n.exchange,symbol:n.name,amount:n.currentAmount,nodeid:id(n)})} AS ArbitrageDeal, {profit:endVal - startVal} AS Profit "
                 "ORDER BY Profit DESC "
                 "LIMIT 5",
                 startVal=100,
@@ -352,7 +355,8 @@ class GraphDB(object):
             logger.info(GraphDB.getRuntime(result))
             arbitrage_deals.extend([record["ArbitrageDeal"] for record in result])
 
-        for arbitrage_deal in arbitrage_deals:            
+        # log arbitrage deal in the Neo4j database database
+        for arbitrage_deal in arbitrage_deals:
             cypher_match = []
             cypher_match_set = []
             cypher_create_set = []
@@ -390,8 +394,27 @@ class GraphDB(object):
                 cypher_cmd += ' MATCH '+','.join(cypher_match2)
                 cypher_cmd += ' CREATE '+''.join(cypher_match3)
                 cypher_cmd += " SET " + ','.join(cypher_create_set)
-                #cypher_cmd += " CREATE (arb:ArbitrageDeal {uuid:uuid,volumeBTC:$volumeBTC})"
                 result = tx.run(cypher_cmd,now=now,volumeBTC=arbitrage_deal['volumeBTC'])
                 logger.info(GraphDB.getRuntime(result))
-            print(cypher_cmd)
-        return arbitrage_deals
+            #print(cypher_cmd)
+
+        # create ArbitragePath objects for the Trader to process
+        deals = []
+
+        for arbitrage_deal in arbitrage_deals:
+            nodesList = [Asset(exchange=asset["exchange"],symbol=asset["symbol"]) for asset in arbitrage_deal["assets"]]
+            orderBookPriceList = [OrderBookPrice(
+                timestamp=edge["from"],
+                meanPrice=edge["meanPrice"],
+                limitPrice=edge["limitPrice"],
+                volumeBase=edge["volumeBase"],
+                volumeBTC=edge["volumeBTC"],
+                volumeQuote=edge["volumeQuote"],
+                feeRate=edge["feeRate"],
+                timeToLive=(float(edge["to"])-float(edge["from"]))) for edge in arbitrage_deal["path"]]
+            deals.append(ArbitragePath(
+                nodesList=nodesList,
+                timestamp=now,
+                orderBookPriceList=orderBookPriceList))
+
+        return deals

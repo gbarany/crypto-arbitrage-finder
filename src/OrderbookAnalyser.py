@@ -73,50 +73,49 @@ class OrderbookAnalyser:
                 # self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
                 logger.info('No CMC ticker received yet, skipping update')
                 return
-        try:
-            rateBTCxBase = self.priceStore.getMeanPrice(
-                symbol_base_ref='BTC',
-                symbol_quote_ref=symbol.split('/')[0],
-                timestamp=timestamp)
+        #try:
+        rateBTCxBase = self.priceStore.getMeanPrice(
+            symbol_base_ref='BTC',
+            symbol_quote_ref=symbol.split('/')[0],
+            timestamp=timestamp)
 
-            rateBTCxQuote = self.priceStore.getMeanPrice(
-                symbol_base_ref='BTC',
-                symbol_quote_ref=symbol.split('/')[1],
-                timestamp=timestamp)
+        rateBTCxQuote = self.priceStore.getMeanPrice(
+            symbol_base_ref='BTC',
+            symbol_quote_ref=symbol.split('/')[1],
+            timestamp=timestamp)
 
-            # Price store doesn't have an exchange rate for this trading pair
-            # therefore trading graph won't be updated
-            if rateBTCxBase is None or rateBTCxQuote is None :
-                return
+        # Price store doesn't have an exchange rate for this trading pair
+        # therefore trading graph won't be updated
+        if rateBTCxBase is None or rateBTCxQuote is None :
+            return
 
-            orderBookPair = OrderBookPair(
-                timestamp=timestamp,
-                symbol=symbol,
-                exchange=exchangename,
-                asks=asks,
-                bids=bids,
-                rateBTCxBase=rateBTCxBase,
-                rateBTCxQuote=rateBTCxQuote,
-                feeRate=self.feeStore.getTakerFee(exchangename, symbol),
-                timeToLiveSec=self.edgeTTL)
+        orderBookPair = OrderBookPair(
+            timestamp=timestamp,
+            symbol=symbol,
+            exchange=exchangename,
+            asks=asks,
+            bids=bids,
+            rateBTCxBase=rateBTCxBase,
+            rateBTCxQuote=rateBTCxQuote,
+            feeRate=self.feeStore.getTakerFee(exchangename, symbol),
+            timeToLiveSec=self.edgeTTL)
 
-            path_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
-
-
-            for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-                path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
-
-                if path.isNegativeCycle is True:
-                    logger.info("Found arbitrage deal")
-                    path.log()                    
-                    sorl = path.toSegmentedOrderList()
-                    self.trader.execute(sorl)
-                    logger.info("Arbitrage trade event created succesfully")
+        path_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
 
 
-        except Exception as e:
-            logger.error("Exception on exchangename:" + exchangename +
-                         " symbol:" + symbol + ":" + str(e))
+        for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
+            path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
+
+            if path.isProfitable() is True:
+                logger.info("Found arbitrage deal")
+                path.log()                    
+                sorl = path.toSegmentedOrderList()
+                self.trader.execute(sorl)
+                logger.info("Arbitrage trade event created succesfully")
+
+
+        #except Exception as e:
+        #    logger.error("Exception on exchangename:" + exchangename + " symbol:" + symbol + ":" + str(e))
 
     def terminate(self):
         self.isRunning = False

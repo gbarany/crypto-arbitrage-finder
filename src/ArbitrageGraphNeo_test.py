@@ -23,9 +23,10 @@ class TestClass(object):
         nodesHash = arbitrage_graph_neo.graphDB.getNodesPropertyHash()
         relsHash = arbitrage_graph_neo.graphDB.getRelsPropertyHash()
 
-        nodesHash_ref = ['ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','c13703b55511885f7efea8341cf455cc','51422cecfdd980679b2119651b326258']
-        relsHash_ref = ['f84eed713a6d6a68fc62d7b432918a2c','adda2051ec08e4851837d4758c9cff04','8ebdbdd4fbd496a13f02113c97bad76c','8ebdbdd4fbd496a13f02113c97bad76c','416b158097469c70d18015dad3ec1eb1','29f4d99dfa375a836c897ad90f44c0da']
-        assert any(x != y for x, y in zip(nodesHash+relsHash, nodesHash_ref+relsHash_ref)) == False
+        nodesHash_ref = ['ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','c13703b55511885f7efea8341cf455cc','51422cecfdd980679b2119651b326258']        
+        assert any(x != y for x, y in zip(nodesHash, nodesHash_ref)) == False
+        relsHash_ref = ['f84eed713a6d6a68fc62d7b432918a2c','f2143fbd287ac3920a6feff92dd96fc6','c296c2b01ed00cd435de390d43d8f40f','8ebdbdd4fbd496a13f02113c97bad76c','8ebdbdd4fbd496a13f02113c97bad76c','29f4d99dfa375a836c897ad90f44c0da']
+        assert any(x != y for x, y in zip(relsHash, relsHash_ref)) == False
 
     def test_singleOderbookEntryMultipleVolumes(self):
         edgeTTL=5
@@ -40,7 +41,7 @@ class TestClass(object):
         relsHash = arbitrage_graph_neo.graphDB.getRelsPropertyHash()
 
         nodesHash_ref = ['ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','c13703b55511885f7efea8341cf455cc','51422cecfdd980679b2119651b326258']
-        relsHash_ref = ['f84eed713a6d6a68fc62d7b432918a2c','c4122b504d51abd4d24f67ef8ea219a8','adda2051ec08e4851837d4758c9cff04','8ebdbdd4fbd496a13f02113c97bad76c','8ebdbdd4fbd496a13f02113c97bad76c','803337cfc27d15a71d027ea615b326ef','684f4503eb804139c1590f24ef67f32d','42615e21bdbc36a2d58344b933ef79b3','416b158097469c70d18015dad3ec1eb1','29f4d99dfa375a836c897ad90f44c0da']
+        relsHash_ref = ['f84eed713a6d6a68fc62d7b432918a2c','f2143fbd287ac3920a6feff92dd96fc6','c2e1661af197e1e563af634b21c636a4','c296c2b01ed00cd435de390d43d8f40f','8ebdbdd4fbd496a13f02113c97bad76c','8ebdbdd4fbd496a13f02113c97bad76c','507c019717d65c292c08f049c01a897e','29f4d99dfa375a836c897ad90f44c0da','1bd2c1fcb808b9edcd966827691a5046','084c7fc9ba737a8ce081882c24eaf1cf']
         assert any(x != y for x, y in zip(nodesHash+relsHash, nodesHash_ref+relsHash_ref)) == False
 
     def test_twoOderbookEntries(self):
@@ -58,5 +59,5 @@ class TestClass(object):
         relsHash = arbitrage_graph_neo.graphDB.getRelsPropertyHash()
 
         nodesHash_ref = ['ecf0ab3d17c759110327cd433f1dbb68','ecf0ab3d17c759110327cd433f1dbb68','c13703b55511885f7efea8341cf455cc','51422cecfdd980679b2119651b326258']
-        relsHash_ref = ['e11ba05df801943ccb8b19a277de61ec','dc0eda95a2aedf00a427971b5d1173c0','d45f9486a8a2918b6c43cdba56d40597','8ebdbdd4fbd496a13f02113c97bad76c','8ebdbdd4fbd496a13f02113c97bad76c','82d2845e0c3d23294b80b4dfa734662e','7a47652d70d57abef65ba3d7d75c367e','56f9646d82613a09ac6c0c3dd7992d7e','186354bdd7b13357a940eff550b5da1d','04ab022704fa04e01c96a528373444d7']
+        relsHash_ref = ['dc0eda95a2aedf00a427971b5d1173c0','d45f9486a8a2918b6c43cdba56d40597','c8622fff62948fabdb193de41b380aed','96a201c1421d6ef1678434037a6f6fa6','8ebdbdd4fbd496a13f02113c97bad76c','8ebdbdd4fbd496a13f02113c97bad76c','82d2845e0c3d23294b80b4dfa734662e','4944083f677a04f2c405c10fd1f25ff8','372f5b3d01d1357ad69aadd06adf7f00','186354bdd7b13357a940eff550b5da1d']
         assert any(x != y for x, y in zip(nodesHash+relsHash, nodesHash_ref+relsHash_ref)) == False

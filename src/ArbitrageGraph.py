@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 from ArbitragePath import ArbitragePath
-from OrderBook import OrderBookPrice
+from OrderBook import OrderBookPrice, Asset
 from FWLiveParams import FWLiveParams
 
 
@@ -67,14 +67,15 @@ class ArbitrageGraph:
 
         self.G = nx.DiGraph()
         self.G.add_weighted_edges_from(self.glist)
-        length, nodes, isNegativeCycle = bf.negative_edge_cycle(self.G)
+        _, nodes, _ = bf.negative_edge_cycle(self.G)
         self.negativepath = nodes
 
-        return self.getPath(nodes=nodes,timestamp=timestamp,isNegativeCycle=isNegativeCycle)
+        return self.getPath(nodes=nodes,timestamp=timestamp)
 
-    def getPath(self, nodes, timestamp,isNegativeCycle=None):
+    def getPath(self, nodes, timestamp):
         ## fetch information for the node path
         orderBookPriceList = []
+        nodesList = []
         if nodes != None:
             for i, node in enumerate(nodes[:-1]):
                 source = node.split('-')
@@ -85,19 +86,21 @@ class ArbitrageGraph:
                 
                 if not ((source[0], source[1]),(target[0], target[1])) in self.gdict.keys():
                     raise ValueError("Path non-existent in graph")
-
+                
+                nodesList.append(Asset(exchange=source[0],symbol=source[1]))
                 orderBookPrice = self.gdict[((source[0], source[1]), (target[0], target[1]))]
                 if orderBookPrice.timestamp is not None:
                     if timestamp - orderBookPrice.timestamp > orderBookPrice.timeToLive:
                         raise ValueError("Path used to exist but TTL expired")
 
                 orderBookPriceList.append(orderBookPrice)
+            # add the last node that closes the cycle
+            nodesList.append(Asset(exchange=nodes[-1].split('-')[0],symbol=nodes[-1].split('-')[1]))
 
         return ArbitragePath(
-            nodes=nodes,
+            nodesList=nodesList,
             timestamp=timestamp,
-            orderBookPriceList=orderBookPriceList,
-            isNegativeCycle=isNegativeCycle)
+            orderBookPriceList=orderBookPriceList)
 
     def plotGraph(self, figid=1, vol_BTC=None):
         plt.figure(figid)

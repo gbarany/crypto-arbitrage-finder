@@ -13,6 +13,9 @@ class Asset:
     def getSymbol(self):
         return self.symbol
 
+    def __str__(self):
+        return self.exchange+"-"+self.symbol
+
 class OrderBookPrice:
     def __init__(self, timestamp=None,meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None,volumeQuote=None,feeRate=None,timeToLive=None): 
         self.timestamp = timestamp

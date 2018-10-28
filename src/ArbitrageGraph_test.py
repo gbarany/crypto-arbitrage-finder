@@ -22,7 +22,7 @@ class TestClass(object):
                 timeToLiveSec=edgeTTL
             ),
             volumeBTC=1)
-        assert p1.isNegativeCycle == False
+        assert p1.isProfitable() == False
 
         p2 = arbitrageGraph.updatePoint(
             orderBookPair=OrderBookPair(
@@ -38,7 +38,7 @@ class TestClass(object):
             ),
             volumeBTC=1)
 
-        assert p2.isNegativeCycle == False
+        assert p2.isProfitable() == False
 
         p3 = arbitrageGraph.updatePoint(
             orderBookPair=OrderBookPair(
@@ -54,7 +54,7 @@ class TestClass(object):
             ),
             volumeBTC=1)
 
-        assert p3.isNegativeCycle == True
+        assert p3.isProfitable() == True
 
         with pytest.raises(ValueError):
             path = arbitrageGraph.getPath(
@@ -103,8 +103,7 @@ class TestClass(object):
 
         path = arbitrageGraph.getPath(
             nodes=['kraken-BTC', 'kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC'],
-            timestamp=3,
-            isNegativeCycle=None)
+            timestamp=3)
         
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists) == 2
@@ -146,8 +145,7 @@ class TestClass(object):
 
         path = arbitrageGraph.getPath(
             nodes=['kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC','kraken-USD'],
-            timestamp=3,
-            isNegativeCycle=None)
+            timestamp=3)
         
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists) == 2

@@ -172,19 +172,19 @@ class TestClass(object):
 
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=0.5,volumeBTCs=volumeBTCs )
         assert len(arbitrage_cycles) == 2   
-        assert (arbitrage_cycles[0]['volumeBTC']) == 0.1
         for i in range(2):
-            assert (arbitrage_cycles[i]['assets'][0]['amount'],arbitrage_cycles[0]['assets'][0]['exchange'],arbitrage_cycles[0]['assets'][0]['symbol']) == (0,'Kraken','BTC')
-            assert (arbitrage_cycles[i]['assets'][1]['amount'],arbitrage_cycles[0]['assets'][1]['exchange'],arbitrage_cycles[0]['assets'][1]['symbol']) == (0,'Kraken','ETH')
-            assert (arbitrage_cycles[i]['assets'][2]['amount'],arbitrage_cycles[0]['assets'][2]['exchange'],arbitrage_cycles[0]['assets'][2]['symbol']) == (0,'Kraken','BTC')
-            assert (arbitrage_cycles[i]['profit']) == (2.0*0.6)*100-100
-            assert (arbitrage_cycles[i]['path'][0]['meanPrice']) == 2
-            assert (arbitrage_cycles[i]['path'][1]['meanPrice']) == 0.6        
+            assert arbitrage_cycles[i].getVolumeBTC() == volumeBTCs[i]
+            assert (arbitrage_cycles[i].nodesList[0].exchange,arbitrage_cycles[i].nodesList[0].symbol) == ('Kraken','BTC')
+            assert (arbitrage_cycles[i].nodesList[1].exchange,arbitrage_cycles[i].nodesList[1].symbol) == ('Kraken','ETH')
+            assert (arbitrage_cycles[i].nodesList[2].exchange,arbitrage_cycles[i].nodesList[2].symbol) == ('Kraken','BTC')
+            assert arbitrage_cycles[i].getProfit() == pytest.approx((2.0*0.6)*100-100)
+            assert arbitrage_cycles[i].orderBookPriceList[0].meanPrice == 2.0
+            assert arbitrage_cycles[i].orderBookPriceList[1].meanPrice== 0.6        
 
-
+        # TODO: need to validate these too
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.1,now=1.5,volumeBTCs=volumeBTCs)
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=0.5,now=2.1,volumeBTCs=volumeBTCs)
-
+        
 
     def test_arbitrage_test_with_four_nodes_extraexchange_deal(self):
         volumeBTCs = [0.1,1]
@@ -199,20 +199,21 @@ class TestClass(object):
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=5,now=0.5,volumeBTCs=volumeBTCs )
         assert len(arbitrage_cycles) == 2   
         for i in range(2):
-            assert (arbitrage_cycles[i]['volumeBTC']) == volumeBTCs[i]
-            assert (arbitrage_cycles[i]['assets'][0]['amount'],arbitrage_cycles[i]['assets'][0]['exchange'],arbitrage_cycles[i]['assets'][0]['symbol']) == (0,'Kraken','BTC')
-            assert (arbitrage_cycles[i]['assets'][1]['amount'],arbitrage_cycles[i]['assets'][1]['exchange'],arbitrage_cycles[i]['assets'][1]['symbol']) == (0,'Binance','BTC')
-            assert (arbitrage_cycles[i]['assets'][2]['amount'],arbitrage_cycles[i]['assets'][2]['exchange'],arbitrage_cycles[i]['assets'][2]['symbol']) == (0,'Binance','ETH')
-            assert (arbitrage_cycles[i]['assets'][3]['amount'],arbitrage_cycles[i]['assets'][3]['exchange'],arbitrage_cycles[i]['assets'][3]['symbol']) == (0,'Kraken','ETH')
-            assert (arbitrage_cycles[i]['profit']) == ((1/0.04*0.05)-1)*100
-            assert (arbitrage_cycles[i]['path'][0]['meanPrice']) == 1
-            assert (arbitrage_cycles[i]['path'][1]['meanPrice']) == 1/0.04
-            assert (arbitrage_cycles[i]['path'][2]['meanPrice']) == 1
-            assert (arbitrage_cycles[i]['path'][3]['meanPrice']) == 0.05
-            assert (arbitrage_cycles[i]['path'][0]['meanPriceNet']) == 1
-            assert (arbitrage_cycles[i]['path'][1]['meanPriceNet']) == 1/0.04
-            assert (arbitrage_cycles[i]['path'][2]['meanPriceNet']) == 1
-            assert (arbitrage_cycles[i]['path'][3]['meanPriceNet']) == 0.05
+            assert arbitrage_cycles[i].getVolumeBTC() == volumeBTCs[i]
+            assert (arbitrage_cycles[i].nodesList[0].exchange,arbitrage_cycles[i].nodesList[0].symbol) == ('Kraken','BTC')
+            assert (arbitrage_cycles[i].nodesList[1].exchange,arbitrage_cycles[i].nodesList[1].symbol) == ('Binance','BTC')
+            assert (arbitrage_cycles[i].nodesList[2].exchange,arbitrage_cycles[i].nodesList[2].symbol) == ('Binance','ETH')
+            assert (arbitrage_cycles[i].nodesList[3].exchange,arbitrage_cycles[i].nodesList[3].symbol) == ('Kraken','ETH')
+            assert arbitrage_cycles[i].getProfit() == pytest.approx(((1/0.04*0.05)-1)*100)
+
+            assert arbitrage_cycles[i].orderBookPriceList[0].meanPrice == 1
+            assert arbitrage_cycles[i].orderBookPriceList[1].meanPrice == 1/0.04
+            assert arbitrage_cycles[i].orderBookPriceList[2].meanPrice ==  1
+            assert arbitrage_cycles[i].orderBookPriceList[3].meanPrice ==  0.05
+            assert arbitrage_cycles[i].orderBookPriceList[0].meanPriceNet  == 1
+            assert arbitrage_cycles[i].orderBookPriceList[1].meanPriceNet == 1/0.04
+            assert arbitrage_cycles[i].orderBookPriceList[2].meanPriceNet == 1
+            assert arbitrage_cycles[i].orderBookPriceList[3].meanPriceNet == 0.05
 
 
         arbitrage_cycles = graphDB.getArbitrageCycle(Asset(exchange='Kraken', symbol='BTC'),match_lookback_sec=1.3,now=1.5,volumeBTCs=volumeBTCs)
@@ -263,7 +264,7 @@ class TestClass(object):
             #
             relsHash = graphDB.getRelsPropertyHash()
 
-            relsHash_ref=['ed7127753c7561aff65aa934c3ec0b08','d10dd681cd3c15d953fd5ddf4e35730e','bb5180eb769eb26f6725cc83911012da','bb5180eb769eb26f6725cc83911012da','b7ce49bb20b4d32d31a1861e48b7c6c2','ab575c242a6e2111badc21dee2409fc3','9189f2f8081734c378a924a7fc818f63','909c239aa4101a8394cf96f8b7bd216f','9062679b13a5bf1e9a3896aae1a3fe48','8ebdbdd4fbd496a13f02113c97bad76c','7a519a3f90b4f903841bca9690f6c189','6d4c16b4fe29860e9d59307e5813ecf9','3ab3d46ae90b2899ca7e48b8d454e6e8','11a2fb79dcb1a216a3a062aa90e44e95','1130f54c147f2e6b8f0fab0620c150ca','0d27de7eb5fd078e734a027283db52f8']
+            relsHash_ref=['ed7127753c7561aff65aa934c3ec0b08','d794f53471f01df442d053f452abdef4','d10dd681cd3c15d953fd5ddf4e35730e','b7ce49bb20b4d32d31a1861e48b7c6c2','ab575c242a6e2111badc21dee2409fc3','940bfc678e9a565c173713a3fec69c4c','940bfc678e9a565c173713a3fec69c4c','9062679b13a5bf1e9a3896aae1a3fe48','8ebdbdd4fbd496a13f02113c97bad76c','83f93e9d610ffbfbe4430be7b235bbaf','7a519a3f90b4f903841bca9690f6c189','3ab3d46ae90b2899ca7e48b8d454e6e8','1130f54c147f2e6b8f0fab0620c150ca','0d27de7eb5fd078e734a027283db52f8','09a0a8da97644340bce29000b638cad8','043b1a0eca390ff435a8bf56976f1d45']
 
             pairs = zip(relsHash, relsHash_ref)
             assert any(x != y for x, y in pairs) == False

@@ -2,16 +2,21 @@ import numpy as np
 import json
 from OrderRequest import OrderRequest, OrderRequestList, OrderRequestType, SegmentedOrderRequestList
 import logging
+from functools import reduce
 
 dealLogger = logging.getLogger('CryptoArbitrageDeals')
 
 class ArbitragePath:
-    def __init__(self,nodes,timestamp,orderBookPriceList,isNegativeCycle):
+    def __init__(self,nodesList,timestamp,orderBookPriceList):
 
-        self.nodes = nodes
+        self.nodesList = nodesList
         self.timestamp = timestamp
         self.orderBookPriceList = orderBookPriceList
-        self.isNegativeCycle = isNegativeCycle
+        
+        if orderBookPriceList is not None and orderBookPriceList:
+            self.profit = (reduce((lambda x, y: x*y), [i.getPrice() for i in orderBookPriceList])-1)*100
+        else:
+            self.profit = None
 
     def getAge(self):
         return list(map(lambda orderBookPrice:self.timestamp-orderBookPrice.timestamp,self.orderBookPriceList))
@@ -20,13 +25,25 @@ class ArbitragePath:
         return list(map(lambda orderBookPrice:orderBookPrice.getPrice(),self.orderBookPriceList))
     
     def getNofHops(self):
-        return len(self.nodes) - 1
+        return len(self.nodesList) - 1
 
-    def getVolumeBTCs(self):
-        return  list(map(lambda orderBookPrice:orderBookPrice.getVolumeBTC(),self.orderBookPriceList))
+    def getProfit(self):
+        return self.profit
+
+    def isProfitable(self):
+        if self.profit == None:
+            return False
+        if self.profit <= 0:
+            return False        
+        return True
+
+    def getVolumeBTC(self):
+        volumeBTCs = list(map(lambda orderBookPrice:orderBookPrice.getVolumeBTC(),self.orderBookPriceList))
+        assert volumeBTCs.count(volumeBTCs[0]) == len(volumeBTCs) # check that all prices in path were calculated based on the same volume
+        return  volumeBTCs[0]
     
     def getExchangesInvolved(self):
-        exchangesList = list(map(lambda node:node.split('-')[0],self.nodes))
+        exchangesList = list(map(lambda node:node.getExchange(),self.nodesList))
         exchangesInvolved = sorted(set(exchangesList), key=str.lower)
         return exchangesInvolved
 
@@ -41,9 +58,9 @@ class ArbitragePath:
 
         logJSON = {
             'timestamp':str(self.timestamp),
-            'vol_BTC': toCSVStr(self.getVolumeBTCs()),
+            'vol_BTC': str(self.getVolumeBTC()),
             'profit_perc': str(0), # Todo: add arbitrageprofithere
-            'nodes': toCSVStr(self.nodes),
+            'nodes': toCSVStr(self.nodesList),
             'price':toCSVStr(self.getPrice()),
             'age': toCSVStr(self.getAge()),
             'nofHops': str(self.getNofHops()),
@@ -61,11 +78,11 @@ class ArbitragePath:
         orl = []
         
         #orl.profit = self.profit
-        for idx_node, node in enumerate(self.nodes[:-1]):
-            base_exchange = node.split('-')[0]
-            base_symbol = node.split('-')[1]
-            quote_exchange = self.nodes[idx_node + 1].split('-')[0]
-            quote_symbol = self.nodes[idx_node + 1].split('-')[1]
+        for idx_node, node in enumerate(self.nodesList[:-1]):
+            base_exchange = node.getExchange()
+            base_symbol = node.getSymbol()
+            quote_exchange = self.nodesList[idx_node + 1].getExchange()
+            quote_symbol = self.nodesList[idx_node + 1].getSymbol()
             if base_exchange == quote_exchange:
                 A = base_symbol
                 B = quote_symbol
