@@ -1,6 +1,8 @@
 FROM python:3.6.6
 
+# Open port for Visual Studio Code remote python debugger
 EXPOSE 5678
+
 WORKDIR /app
 
 COPY requirements.txt ./
