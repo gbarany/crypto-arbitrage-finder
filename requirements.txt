@@ -14,6 +14,6 @@ neo4j-driver==1.6.2
 ptvsd==4.1.4
 jsonpickle==1.0
 boto3==1.7.35
-asynctest=0.12.2
+asynctest==0.12.2
 asyncio
 pytest-asyncio
