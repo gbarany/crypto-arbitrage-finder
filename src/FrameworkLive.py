@@ -236,8 +236,7 @@ def main(argv):
 
     if frameworklive_parameters.remoteDebuggingEnabled is True:
         logger.info('Waiting for remote python debugger to connect')
-        address = ('0.0.0.0', 3000)
-        ptvsd.enable_attach(address)
+        ptvsd.enable_attach()
         ptvsd.wait_for_attach()
 
     frameworkLive = FrameworkLive(frameworklive_parameters)

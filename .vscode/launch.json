@@ -8,7 +8,7 @@
             "name": "Attach (Remote Debug Docker)",
             "type": "python",
             "request": "attach",
-            "port": 3000,
+            "port": 5678,
             "host": "localhost"
         },
         {

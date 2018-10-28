@@ -1,6 +1,6 @@
 FROM python:3
 
-EXPOSE 3000
+EXPOSE 5678
 WORKDIR /app
 
 COPY requirements.txt ./
