@@ -13,7 +13,7 @@ class FWLiveParams:
         }
 
     def __init__(self,
-                 enable_plotting=True,
+                 enable_plotting=False,
                  remoteDebuggingEnabled=False,
                  is_sandbox_mode=True,
                  is_forex_enabled=True,
