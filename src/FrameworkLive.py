@@ -189,7 +189,7 @@ def main(argv):
     frameworklive_parameters = FWLiveParams()
     try:
         opts, _ = getopt.getopt(argv, "nrolfe",
-                                ["noplot",
+                                ["enableplotting",
                                  "resultsdir=",
                                  "neo4jmode=",
                                  "live",
@@ -198,7 +198,7 @@ def main(argv):
     except getopt.GetoptError:
         logger.error(
             'Invalid parameter(s) entered. List of valid parameters:\n'
-            ' --noplot: suppress graph plots\n'
+            ' --enableplotting: suppress graph plots\n'
             ' --resultsdir=path: output directory\n'
             ' --live: trades are executed in live mode\n'
             ' --noforex: disable forex\n'
@@ -208,8 +208,8 @@ def main(argv):
         )
         sys.exit(2)
     for opt, arg in opts:
-        if opt in ("-n", "--noplot"):
-            frameworklive_parameters.enable_plotting = False
+        if opt in ("-n", "--enableplotting"):
+            frameworklive_parameters.enable_plotting = True
         if opt in ("-r", "--resultsdir"):
             frameworklive_parameters.results_dir = arg
         if opt in ("-o", "--neo4jmode"):
