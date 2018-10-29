@@ -18,7 +18,6 @@
             "program": "${workspaceFolder}/src/FrameworkLive.py",
             "console": "integratedTerminal",
             "args": [
-                "--noplot",
                 "--resultsdir=./results/",
                 "--neo4jmode=local"
             ]
@@ -30,7 +29,6 @@
             "program": "${workspaceFolder}/src/FrameworkLive.py",
             "console": "integratedTerminal",
             "args": [
-                "--noplot",
                 "--resultsdir=./results/",
                 "--neo4jmode=aws"
             ]
@@ -43,7 +41,6 @@
             "program": "${workspaceFolder}/src/FrameworkLive.py",
             "console": "integratedTerminal",
             "args": [
-                "--noplot",
                 "--resultsdir=./results/",
                 "--live"
             ]
