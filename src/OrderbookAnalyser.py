@@ -100,18 +100,24 @@ class OrderbookAnalyser:
             feeRate=self.feeStore.getTakerFee(exchangename, symbol),
             timeToLiveSec=self.edgeTTL)
 
-        path_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
+        # ArbitrageGraphNeo deal finder (Neo4j)
+        paths_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
+        for path_neo in paths_neo:
+            if path_neo.isProfitable() is True:
+                logger.info("Neo4j Found arbitrage deal")
+                path_neo.log()
+                sorl = path_neo.toSegmentedOrderList()
+                self.trader.execute(sorl)
 
-
+        # ArbitrageGraph deal finder (NetworkX)
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
             path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
 
             if path.isProfitable() is True:
-                logger.info("Found arbitrage deal")
-                path.log()                    
+                logger.info("NetX Found arbitrage deal")
+                path.log()
                 sorl = path.toSegmentedOrderList()
-                self.trader.execute(sorl)
-                logger.info("Arbitrage trade event created succesfully")
+                #self.trader.execute(sorl)
 
 
         #except Exception as e:
