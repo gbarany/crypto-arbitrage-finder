@@ -12,7 +12,7 @@ def getFrameworkLive():
 class TestClass(object):
     def test_testone(self):
         def stop_loop():
-            time.sleep(10)
+            time.sleep(30)
             loop.call_soon_threadsafe(loop.stop)
 
         loop = asyncio.get_event_loop()

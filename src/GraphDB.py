@@ -20,9 +20,7 @@ class GraphDB(object):
             self._driver = GraphDatabase.driver(uri, auth=(user, password))
         except Exception:
             self._driver = None
-            logger.error(
-                "Couldn't connect to Neo4j database, saving to database will be disabled"
-            )
+            logger.error("Couldn't connect to Neo4j database, saving to database will be disabled")
 
         if resetDBData is True:
             self.resetDBData()

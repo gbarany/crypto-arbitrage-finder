@@ -22,7 +22,6 @@ class OrderbookAnalyser:
                  edgeTTL=5,
                  priceTTL=60,
                  resultsdir='./',
-                 tradeLogFilename="tradelog.csv",
                  priceSource=PRICE_SOURCE_ORDERBOOK,
                  trader=None,
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled):
@@ -39,12 +38,6 @@ class OrderbookAnalyser:
         self.cmcTicker = None
         self.neo4j_mode = neo4j_mode
         self.priceSource = priceSource
-        self.tradeLogFilename = self.timestamp_start.strftime(
-            '%Y%m%d-%H%M%S') + "_" + tradeLogFilename
-        try:
-            os.remove(self.resultsdir + self.tradeLogFilename)
-        except OSError:
-            pass
 
         self.isRunning = True
         assert trader is not None
@@ -73,7 +66,7 @@ class OrderbookAnalyser:
                 # self.priceStore.updatePriceFromOrderBook(symbol=symbol,exchangename=exchangename,asks=asks,bids=bids,timestamp=timestamp)
                 logger.info('No CMC ticker received yet, skipping update')
                 return
-        #try:
+
         rateBTCxBase = self.priceStore.getMeanPrice(
             symbol_base_ref='BTC',
             symbol_quote_ref=symbol.split('/')[0],
@@ -119,9 +112,6 @@ class OrderbookAnalyser:
                 sorl = path.toSegmentedOrderList()
                 #self.trader.execute(sorl)
 
-
-        #except Exception as e:
-        #    logger.error("Exception on exchangename:" + exchangename + " symbol:" + symbol + ":" + str(e))
 
     def terminate(self):
         self.isRunning = False

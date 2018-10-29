@@ -22,7 +22,6 @@ def getOrderbookAnalyser():
         edgeTTL=30,
         priceTTL=60,
         resultsdir='./results/',
-        tradeLogFilename='tradelog_live_test.csv',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         trader=Trader(credfile='./cred/api_balance.json', is_sandbox_mode=True),
         neo4j_mode=FWLiveParams.neo4j_mode_localhost)

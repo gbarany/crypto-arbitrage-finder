@@ -71,7 +71,6 @@ class FrameworkLive:
             edgeTTL=15,
             priceTTL=600,
             resultsdir=self.parameters.results_dir,
-            tradeLogFilename='tradelog_live.csv',
             priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
             trader=self.trader,
             neo4j_mode=self.parameters.neo4j_mode)
@@ -84,9 +83,9 @@ class FrameworkLive:
                 yield (symbol, await exchange.fetch_order_book(
                     symbol, limit=20))
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
-                logger.error('Fetch orderbook from ' + exchange.name + " " +
-                             symbol + ": " + type(error).__name__ + " " +
-                             str(error.args))
+                logger.error('Fetch orderbook network/exchange error ' + exchange.name + " " + symbol + ": " + type(error).__name__ + " " + str(error.args))
+            except Exception as error:
+                logger.error('Fetch orderbook error ' + exchange.name + " " + symbol + ": " + type(error).__name__ + " " + str(error.args))
 
             i += 1
             await asyncio.sleep(exchange.rateLimit / 1000)
@@ -103,8 +102,8 @@ class FrameworkLive:
                             params='instruments=' + symbol) as resp:
                         yield (await resp.json())
             except Exception as error:
-                logger.error("Fetch forex rates from Oanda: " +
-                             type(error).__name__ + " " + str(error.args))
+                logger.error("Fetch forex rates from Oanda: " + type(error).__name__ + " " + str(error.args))
+                
             i += 1
             await asyncio.sleep(1)
 
@@ -127,7 +126,10 @@ class FrameworkLive:
                         "sort": "rank"
                     }))
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
-                logger.error("Fetch tickers from coinmarketcap: " + type(error).__name__ + " " + str(error.args))
+                logger.error("Fetch tickers from coinmarketcap network/exchange error: " + type(error).__name__ + " " + str(error.args))
+            except Exception as error:
+                logger.error("Fetch tickers from coinmarketcap generic exception: " + type(error).__name__ + " " + str(error.args))
+
             i += 1
             await asyncio.sleep(cmc.rateLimit / 1000)
 
@@ -198,7 +200,7 @@ def main(argv):
     except getopt.GetoptError:
         logger.error(
             'Invalid parameter(s) entered. List of valid parameters:\n'
-            ' --enableplotting: suppress graph plots\n'
+            ' --enableplotting: enable NetworkX graph plots\n'
             ' --resultsdir=path: output directory\n'
             ' --live: trades are executed in live mode\n'
             ' --noforex: disable forex\n'
@@ -207,6 +209,9 @@ def main(argv):
             ' --remotedebug: enable remote debugging\n'
         )
         sys.exit(2)
+    except Exception as error:
+        logger.error('Generic exception whilst parsing console arguments '+ str(error.args))
+
     for opt, arg in opts:
         if opt in ("-n", "--enableplotting"):
             frameworklive_parameters.enable_plotting = True
