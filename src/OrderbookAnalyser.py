@@ -97,7 +97,7 @@ class OrderbookAnalyser:
         paths_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
         for path_neo in paths_neo:
             if path_neo.isProfitable() is True:
-                logger.info("Neo4j Found arbitrage deal")
+                logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
                 path_neo.log()
                 sorl = path_neo.toSegmentedOrderList()
                 self.trader.execute(sorl)
@@ -107,7 +107,7 @@ class OrderbookAnalyser:
             path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
 
             if path.isProfitable() is True:
-                logger.info("NetX Found arbitrage deal")
+                logger.info("NetX Found arbitrage deal: "+str(path))
                 path.log()
                 sorl = path.toSegmentedOrderList()
                 #self.trader.execute(sorl)
