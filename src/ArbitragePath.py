@@ -17,6 +17,9 @@ class ArbitragePath:
             self.profit = (reduce((lambda x, y: x*y), [i.getPrice() for i in orderBookPriceList])-1)*100
         else:
             self.profit = None
+    
+    def __str__(self):
+        return ",".join(str(x) for x in self.nodesList)
 
     def getAge(self):
         return list(map(lambda orderBookPrice:self.timestamp-orderBookPrice.timestamp,self.orderBookPriceList))
