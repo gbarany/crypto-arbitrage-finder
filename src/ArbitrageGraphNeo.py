@@ -44,5 +44,4 @@ class ArbitrageGraphNeo:
             now=now,
             volumeBTCs=volumeBTCs)
 
-        logger.info('Neo4j arb cycle: ' + str(path))
         return path
