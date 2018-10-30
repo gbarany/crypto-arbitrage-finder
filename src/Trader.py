@@ -12,7 +12,8 @@ from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType, Ord
     SegmentedOrderRequestList, CCXT_ORDER_STATUS_OPEN, CCXT_ORDER_STATUS_CANCELED
 import time
 import logging
-logger = logging.getLogger('CryptoArbitrageApp')
+
+logger = logging.getLogger('Trader')
 
 
 class Trader:
@@ -21,13 +22,26 @@ class Trader:
     NOF_CCTX_RETRY = 4
     TTL_TRADEORDER_S = 2
 
+    EFFICIENCY = 0.9  # Ezzel szorozzuk a beadott amout-okat, hogy elkerüljük a recegést a soros átváltások miatt
+
+    @staticmethod
+    def applyEfficiencyOnAmounts(segmentedOrderRequestList: SegmentedOrderRequestList) -> SegmentedOrderRequestList:
+        for orl in segmentedOrderRequestList.getOrderRequestLists():
+            for idx, orderRequest in enumerate(orl.getOrderRequests()):
+                orderRequest.amount = orderRequest.amount * pow(Trader.EFFICIENCY, idx * 1)
+        return segmentedOrderRequestList
+
     def __init__(self,
                  credfile='./cred/api.json',
                  is_sandbox_mode=True):
         self.__credfile: str = credfile
-        self.__balance: Dict[str, Any] = {}
+        self.__balances: Dict[str, Any] = {}
         self.__is_sandbox_mode: bool = is_sandbox_mode
         self.__exchanges: Dict[str, Exchange] = {}
+        self.__isBusy = False
+
+    def getBalances(self):
+        return self.__balances
 
     async def initExchanges(self):
         with open(self.__credfile) as file:
@@ -35,7 +49,6 @@ class Trader:
             for exchangeName in exchangeCreds:
                 await self.__init_exchange(exchangeName, exchangeCreds[exchangeName])
         await self.fetch_balances()
-
 
     async def __init_exchange(self, exchangeName: str, exchangeCreds):
         exchange = getattr(ccxt, exchangeName)(exchangeCreds)
@@ -54,63 +67,63 @@ class Trader:
         logger.info("Exchanges closed")
 
     async def __cancelOrderRequest(self, orderRequest: OrderRequest):
-        logger.debug(f'Cancel order request ({orderRequest.as_string()})')
-        for retrycntr in range(Trader.NOF_CCTX_RETRY):
-            try:
-                response = await self.__exchanges[
-                    orderRequest.exchange_name_std].cancelOrder(orderRequest.id, orderRequest.market)
-                logger.debug(f'cancelOrder response={response}')
-                if response['error']:
-                    raise ValueError('Error in exchange response:' +
-                                     str(response['error']))
-                logger.info('Cancelled oder ' + orderRequest.id + ' on ' +
-                            orderRequest.exchange_name_std)
-                orderRequest.setCanceled()
-                return
-            except OrderNotFound as onf:
-                logger.error('OrderRequest cancellation failed with OrderNotFound for ' +
-                             str(orderRequest.id) + " " + orderRequest.market + " " +
-                             orderRequest.exchange_name + " " + str(onf.args))
-                return
-            except Exception as e:
-                logger.error(f'OrderRequest cancellation failed for {orderRequest} with {e}, retrycntr={retrycntr}')
-                await asyncio.sleep(
-                    self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
-
-    # async def cancelOpenOrderRequests(self, segmentedOrderRequestList: SegmentedOrderRequestList):
-    #     tasks = []
-    #     for orderRequest in segmentedOrderRequestList.getOrderRequests():
-    #         if orderRequest.getStatus() == OrderRequestStatus.OPEN:
-    #             tasks.append(
-    #                 asyncio.ensure_future(self.__cancelOrderRequest(orderRequest)))
-    #     await asyncio.gather(*tasks)
-    #     logger.info("Cancellation of open order requests completed")
+        logger.info(f'__cancelOrderRequest #{orderRequest.id} ({orderRequest.toString()})')
+        waitingForCreatingStatusRetries = 0
+        while orderRequest.getStatus() == OrderRequestStatus.CREATING and waitingForCreatingStatusRetries < 10:
+            logger.debug(
+                f"Canceling order request (#{orderRequest.id}) is waiting for status CREATING retrycnt={waitingForCreatingStatusRetries}")
+            await asyncio.sleep(0.5)
+            waitingForCreatingStatusRetries = waitingForCreatingStatusRetries + 1
+        if orderRequest.id is None:
+            logger.error(f"Canceling order request (#{orderRequest.id}) is not possible  id=None, state={orderRequest.getStatus().value}")
+            return
+        t1 = time.time()
+        if orderRequest.id is not None:
+            for retrycntr in range(Trader.NOF_CCTX_RETRY):
+                try:
+                    response = await self.__exchanges[
+                        orderRequest.exchange_name_std].cancelOrder(orderRequest.id, orderRequest.market)
+                    logger.debug(f'cancelOrder response={response}')
+                    if 'error' in response:
+                        raise ValueError('Error in exchange response:' +
+                                         str(response['error']))
+                    logger.info(f'Cancelled oder #{orderRequest.id} ({orderRequest})')
+                    orderRequest.setCanceled()
+                    return
+                except OrderNotFound as onf:
+                    logger.error(f'Cancel order request (#{orderRequest.id}) failed with OrderNotFound ({onf})')
+                    break
+                except Exception as e:
+                    logger.debug(f'Cancel order request (#{orderRequest.id}) failed  with {e}, retrycntr={retrycntr}')
+                    await asyncio.sleep(self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
+        dt = (time.time() - t1) * 1000
+        logger.info(f'Cancel order request (#{orderRequest.id}) ended in {dt} ms ({orderRequest.toString()})')
 
     async def cancelAllOrderRequests(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         tasks = []
         for orderRequest in segmentedOrderRequestList.getOrderRequests():
-            if orderRequest.isAlive() is True:
+            if orderRequest.isPending() is True:
                 tasks.append(
                     asyncio.ensure_future(self.__cancelOrderRequest(orderRequest)))
         await asyncio.gather(*tasks)
         logger.info("Cancellation of all order requests completed")
 
     async def abortSegmentedOrderRequestList(self, segmentedOrderRequestList: SegmentedOrderRequestList):
+        logger.debug(f'abortSegmentedOrderRequestList')
         try:
             await self.cancelAllOrderRequests(segmentedOrderRequestList)
         except Exception as e:
             logger.error(f'abortSegmentedOrderRequestList failed: {e}')
 
     async def __fetch_order_status(self, orderRequest: OrderRequest):
+        logger.info(f'__fetch_order_status #{orderRequest.id} ({orderRequest.toString()})')
         for retrycntr in range(Trader.NOF_CCTX_RETRY):
             try:
                 t1 = time.time()
-                response = await self.__exchanges[
-                    orderRequest.exchange_name_std].fetchOrder(orderRequest.id)
+                response = await self.__exchanges[orderRequest.exchange_name_std].fetchOrder(orderRequest.id)
                 t2 = time.time()
                 d = (t2 - t1) * 1000.0
-                logger.info(
-                    f'Order status fetched {orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
+                logger.info(f'Order status fetched {orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
                 orderRequest.setOrder(response)
                 if response['status'] == CCXT_ORDER_STATUS_CANCELED:
                     raise OrderErrorByExchange(orderRequest)
@@ -126,6 +139,12 @@ class Trader:
                 logger.error(f'Order status fetching failed for {orderRequest} with reason {e} retrycntr={retrycntr}')
                 await asyncio.sleep(
                     self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
+
+    async def __fetch_order_status_until_closed_or_timeout(self, orderRequest: OrderRequest):
+        retrycntr = 0
+        while orderRequest.isPending() and retrycntr <= Trader.NOF_CCTX_RETRY:
+            await self.__fetch_order_status(orderRequest)
+            await asyncio.sleep(self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
 
     async def fetch_order_statuses(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         tasks = []
@@ -144,12 +163,12 @@ class Trader:
             t1 = time.time()
             try:
                 balance = await exchange.fetch_balance()
-                self.__balance[exchange.name.lower().replace(
+                self.__balances[exchange.name.lower().replace(
                     " ", "")] = balance
                 d_ms = (time.time() - t1) * 1000.0
                 logger.info('Balance fetching completed from ' +
                             exchange.name + f" in {d_ms} ms")
-                return
+                break
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
                 d_ms = (time.time() - t1) * 1000.0
                 logger.error('Fetch balance failed from ' + exchange.name +
@@ -158,7 +177,7 @@ class Trader:
                 await asyncio.sleep(exchange.rateLimit / 1000)
 
     async def fetch_balances(self):
-        self.__balance = {}
+        self.__balances = {}
         tasks = []
         for _, exchange in self.__exchanges.items():
             tasks.append(asyncio.ensure_future(self.fetch_balance(exchange)))
@@ -166,7 +185,7 @@ class Trader:
 
     def get_free_balance(self, exchangeName, symbol) -> float:
         try:
-            return float(self.__balance[exchangeName][symbol]["free"])
+            return float(self.__balances[exchangeName][symbol]["free"])
         except Exception as e:
             # logger.warning()
             raise ValueError(
@@ -190,39 +209,43 @@ class Trader:
 
     def get_min_trade_amount(self, exchange_name: str, market_str: str):
         market = self.get_market(exchange_name, market_str)
-        return market['limits']['price']['min']
+        return market['limits']['amount']['min']
 
-    def is_transaction_valid(self, exchange_name: str, market_str: str,
-                             amount: float):
-        exchange = self.get_exchange(exchange_name)
-        market = self.get_market(exchange_name, market_str)
-        if market['limits']['price']['min']:
-            if amount < exchange.markets[market_str]['limits']['price']['min']:
+    def is_transaction_valid(self, exchange_name: str, market_str: str, amount: float):
+        try:
+            exchange = self.get_exchange(exchange_name)
+            market = self.get_market(exchange_name, market_str)
+            if market['limits']['amount']['min']:
+                if amount < exchange.markets[market_str]['limits']['amount']['min']:
+                    raise ValueError(
+                        'Amount too small, won'
+                        't execute on ' + exchange.name + " " + market_str +
+                        " Amount: " + str(amount) + " Min.amount:" +
+                        str(exchange.markets[market_str]['limits']['amount']['min'])
+                    )
+
+            if market['limits']['amount']['max']:
+                if amount > exchange.markets[market_str]['limits']['amount']['max']:
+                    raise ValueError(
+                        'Amount too big, won'
+                        't execute on ' + exchange.name + " " + market_str +
+                        " Amount: " + str(amount) + " Max.amount:" +
+                        str(exchange.markets[market_str]['limits']['amount']['max'])
+                    )
+
+            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
+            if free_balance < amount:
                 raise ValueError(
-                    'Amount too small, won'
-                    't execute on ' + exchange.name + " " + market_str +
-                    " Amount: " + str(amount) + " Min.amount:" +
-                    str(exchange.markets[market_str]['limits']['price']['min'])
-                )
+                    'Insufficient stock on ' + exchange.name + " " + market_str +
+                    " Amount available: " +
+                    str(free_balance) +
+                    " Amount required:" + str(amount))
 
-        if market['limits']['price']['max']:
-            if amount > exchange.markets[market_str]['limits']['price']['max']:
-                raise ValueError(
-                    'Amount too big, won'
-                    't execute on ' + exchange.name + " " + market_str +
-                    " Amount: " + str(amount) + " Max.amount:" +
-                    str(exchange.markets[market_str]['limits']['price']['max'])
-                )
-
-        if self.get_free_balance(exchange_name,
-                                 market_str.split('/')[0]) < amount:
-            raise ValueError(
-                'Insufficient stock on ' + exchange.name + " " + market_str +
-                " Amount available: " +
-                str(self.get_free_balance(exchange_name, market_str)) +
-                " Amount required:" + str(amount))
-
-        return True
+            return True
+        except Exception as e:
+            raise ValueError(f"Error during transaction validation: {e}")
+            logger.error(e)
+            return False
 
     def isOrderRequestValid(self, orderRequest: OrderRequest):
         return self.is_transaction_valid(orderRequest.exchange_name_std, orderRequest.market,
@@ -241,7 +264,10 @@ class Trader:
         return ret
 
     async def __create_limit_order(self, orderRequest: OrderRequest):
-        logger.debug(f"create_limit_order({orderRequest.as_string()})")
+        logger.info(f"__create_limit_order ({orderRequest.toString()})")
+        if orderRequest.shouldAbort:
+            logger.info(f"Create limit order is canceled, reason: shouldAbort is True ({orderRequest.toString()})")
+            return
         response = {}
         exchange = self.__exchanges[orderRequest.exchange_name_std]
         symbol = orderRequest.market
@@ -250,22 +276,16 @@ class Trader:
         t1 = time.time()
         try:
             if self.__is_sandbox_mode is True:
-                raise ValueError('trader sandbox mode ON')
+                raise ValueError('Trader sandbox mode ON')
 
             if orderRequest.type == OrderRequestType.BUY:
                 orderRequest.setStatus(OrderRequestStatus.CREATING)
                 response = await exchange.createLimitBuyOrder(symbol, amount, price)
-                logger.debug(f"createLimitBuyOrder response: {response}")
-                d_ms = (time.time() - t1) * 1000.0
-                logger.info(
-                    f"{orderRequest.exchange_name_std}.createLimitBuyOrder {symbol} Amount: {amount} Price: {price} ID: {response['id']}  created successfully in {d_ms} ms")
+                logger.debug(f"{orderRequest.exchange_name_std}.createLimitBuyOrder ({orderRequest.toString()}) response: {response}")
             elif orderRequest.type == OrderRequestType.SELL:
                 orderRequest.setStatus(OrderRequestStatus.CREATING)
                 response = await exchange.createLimitSellOrder(symbol, amount, price)
-                logger.debug(f"createLimitSellOrder response: {response}")
-                d_ms = (time.time() - t1) * 1000.0
-                logger.info(
-                    f"{orderRequest.exchange_name_std}.createLimitSellOrder {symbol} Amount: {amount} Price: {price} ID: {response['id']}  created successfully in {d_ms} ms")
+                logger.debug(f"{orderRequest.exchange_name_std}.createLimitSellOrder ({orderRequest.toString()}) response: {response}")
             else:
                 raise ValueError('orderRequest.type has an invalid value')
 
@@ -283,15 +303,21 @@ class Trader:
                     if response['info']['error']:
                         raise ValueError('Error in exchange response:' +
                                          str(response['error']))
+            d_ms = (time.time() - t1) * 1000.0
+            logger.info(f"Create limit order SUCCESS ({orderRequest.toString()}) in {d_ms} ms")
 
         except Exception as error:
-            logger.error('create_limit_order failed from ' + exchange.name +
-                         " " + symbol + ": " + type(error).__name__ + " " +
-                         str(error.args))
+            d_ms = (time.time() - t1) * 1000.0
+            logger.error(f"Create limit order FAILED ({orderRequest.toString()}) in {d_ms} ms. Reason: {error}")
+            orderRequest.setStatus(OrderRequestStatus.FAILED)
             raise error
 
     async def createLimitOrdersOnOrderRequestList(self, orderRequestList: OrderRequestList):
-        orders = []
+        '''
+        Creates limit order and waits for the order status
+        :param orderRequestList:
+        :return:
+        '''
         try:
             # Pre-check transactions
             if self.isOrderRequestListValid(orderRequestList) is False:
@@ -299,7 +325,12 @@ class Trader:
 
             # Fire real transactions
             for orderRequest in orderRequestList.getOrderRequests():
-                await self.__create_limit_order(orderRequest)
+                if orderRequest.shouldAbort is False:
+                    await self.__create_limit_order(orderRequest)
+                    if orderRequest.shouldAbort is True:
+                        await self.__cancelOrderRequest(orderRequest)
+                    else:
+                        await self.__fetch_order_status(orderRequest)
 
         except Exception as e:
             logger.error(f"OrderRequestList cannot be created: {e}")
@@ -327,22 +358,28 @@ class Trader:
             raise TradesShowstopper("Trade showstopper")
 
     async def execute(self, segmentedOrderRequestList: SegmentedOrderRequestList):
+        if self.__isBusy:
+            logger.info(f"Trader is busy, the execute() call is droped")
+            return
+        self.__isBusy = True
         t1 = time.time()
         try:
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
-            logger.info(
-                f"create_limit_orders_on_segmentedOrderRequestList run in {d_ms} ms")
-            logger.info("Waiting for the order requests to complete for " +
-                        str(Trader.TTL_TRADEORDER_S) + "s")
+            logger.debug(f"createLimitOrdersOnSegmentedOrderRequestList ended in {d_ms} ms")
+            logger.info(f"Waiting for the order requests to complete for {Trader.TTL_TRADEORDER_S} s ")
             await asyncio.sleep(Trader.TTL_TRADEORDER_S)
             await self.fetch_order_statuses(segmentedOrderRequestList)
             await self.cancelAllOrderRequests(segmentedOrderRequestList)
         except Exception as e:
             d_ms = time.time() - t1
-            logger.info(
-                f"execute failed in {d_ms} ms")
-            logger.error(f"Trade stopped: {e}")
+            logger.error(f"execute failed in {d_ms} ms. Reason: {e}")
+            for orderRequest in segmentedOrderRequestList.getOrderRequests():
+                orderRequest.shouldAbort = True
             await self.abortSegmentedOrderRequestList(segmentedOrderRequestList)
         finally:
-            self.fetch_balances()
+            await self.fetch_balances()
+            self.__isBusy = False
+
+    def isSandboxMode(self):
+        return self.__is_sandbox_mode

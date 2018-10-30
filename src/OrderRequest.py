@@ -24,6 +24,8 @@ class OrderRequestType(Enum):
 
 
 class OrderRequest:
+    """ The order should be canceled """
+    shouldAbort: bool
 
     def __init__(self, exchange_name: str, market: str, amount: float, price: float,
                  requestType: OrderRequestType) -> None:
@@ -33,7 +35,7 @@ class OrderRequest:
         self.amount: float = amount
         self.price: float = price
         self.type: OrderRequestType = requestType
-        self.__status: OrderRequestStatus
+
         self.__statusLog: [] = []
         self.id = None
         self.order_from_ccxt = None
@@ -44,6 +46,8 @@ class OrderRequest:
         self.filled = None
         self.remaining = None
 
+        self.shouldAbort = False
+        self.__status: OrderRequestStatus = OrderRequestStatus.INITIAL
         self.setStatus(OrderRequestStatus.INITIAL)
 
     def setStatus(self, status: OrderRequestStatus):
@@ -77,18 +81,27 @@ class OrderRequest:
             raise ValueError(f'Order from ccxt ({order_from_ccxt}) has invalid status: {status}')
         self.order_from_ccxt = order_from_ccxt
 
-    def isAlive(self) -> bool:
+    def isPending(self) -> bool:
         '''
             True: The order request is might be in the exchange
         '''
-        return self.getStatus() not in [OrderRequestStatus.INITIAL, OrderRequestStatus.FAILED,
-                                        OrderRequestStatus.CLOSED]
+        return self.getStatus() in [OrderRequestStatus.CREATING, OrderRequestStatus.CREATED, OrderRequestStatus.OPEN]
 
     def setCanceled(self):
         self.setStatus(OrderRequestStatus.CANCELED)
 
-    def as_string(self) -> str:
-        return jsonpickle.encode(self)
+    def toString(self) -> str:
+        obj = {
+            'id': self.id,
+            'exchange_name': self.exchange_name,
+            'market': self.market,
+            'amount': self.amount,
+            'price': self.price,
+            'status': self.__status.value,
+        }
+        if self.shouldAbort:
+            obj['shouldAbort'] = self.shouldAbort
+        return jsonpickle.encode(obj)
 
 
 class OrderRequestList:
