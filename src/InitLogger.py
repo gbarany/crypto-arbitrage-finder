@@ -1,4 +1,5 @@
 import logging
+import sys
 
 ###################
 ## Init app logger
@@ -8,7 +9,7 @@ logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler('./results/CryptoArbitrageApp.log')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
-ch = logging.StreamHandler()
+ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter(
@@ -28,7 +29,7 @@ dealLogger.setLevel(logging.DEBUG)
 fh = logging.FileHandler('./results/CryptoArbitrageDeals.csv',mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
-ch = logging.StreamHandler()
+ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('%(asctime)s,%(message)s', datefmt='%m/%d/%Y %I:%M:%S')
