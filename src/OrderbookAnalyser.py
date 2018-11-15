@@ -10,6 +10,7 @@ import datetime
 import logging
 from Trader import Trader, SegmentedOrderRequestList, OrderRequestList
 from FWLiveParams import FWLiveParams
+import asyncio
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -100,7 +101,7 @@ class OrderbookAnalyser:
                 logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
                 path_neo.log()
                 sorl = path_neo.toSegmentedOrderList()
-                self.trader.execute(sorl)
+                asyncio.ensure_future(self.trader.execute(sorl))
 
         # ArbitrageGraph deal finder (NetworkX)
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
@@ -110,7 +111,7 @@ class OrderbookAnalyser:
                 logger.info("NetX Found arbitrage deal: "+str(path))
                 path.log()
                 sorl = path.toSegmentedOrderList()
-                #self.trader.execute(sorl)
+                #asyncio.ensure_future(self.trader.execute(sorl))
 
 
     def terminate(self):
