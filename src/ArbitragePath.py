@@ -23,7 +23,7 @@ class ArbitragePath:
         return ",".join(str(x) for x in self.nodesList)
 
     def getAge(self):
-        return list(map(lambda orderBookPrice:self.timestamp-orderBookPrice.timestamp,self.orderBookPriceList))
+        return list(map(lambda orderBookPrice:self.timestamp-(orderBookPrice.timestamp if orderBookPrice.timestamp is not None else self.timestamp),self.orderBookPriceList))
 
     def getPrice(self):
         return list(map(lambda orderBookPrice:orderBookPrice.getPrice(),self.orderBookPriceList))
@@ -43,8 +43,9 @@ class ArbitragePath:
 
     def getVolumeBTC(self):
         volumeBTCs = list(map(lambda orderBookPrice:orderBookPrice.getVolumeBTC(),self.orderBookPriceList))
+        volumeBTCs = [x for x in volumeBTCs if x is not None]
         if volumeBTCs.count(volumeBTCs[0]) is not len(volumeBTCs): # check that all prices in path were calculated based on the same volume
-            logger.warn('Different volumeBTCs in deal: ' + str(volumeBTCs))
+            logger.warning('Different volumeBTCs in deal: ' + str(volumeBTCs))
 
         return  volumeBTCs[0]
     
@@ -65,7 +66,7 @@ class ArbitragePath:
         logJSON = {
             'timestamp':str(self.timestamp),
             'vol_BTC': str(self.getVolumeBTC()),
-            'profit_perc': str(0), # Todo: add arbitrageprofithere
+            'profit_perc': "{:.2f}".format(self.getProfit()),
             'nodes': toCSVStr(self.nodesList),
             'price':toCSVStr(self.getPrice()),
             'age': toCSVStr(self.getAge()),
