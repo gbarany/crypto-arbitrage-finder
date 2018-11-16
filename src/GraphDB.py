@@ -334,7 +334,7 @@ class GraphDB(object):
         arbitrage_deals = []
         for volumeBTC in volumeBTCs:
             result = tx.run(
-                "MATCH path = (c:AssetStock)-[r:EXCHANGE*1..4 {volumeBTC:$volumeBTC}]->(c) "
+                "MATCH path = (c:AssetStock)-[r:EXCHANGE*1..5 {volumeBTC:$volumeBTC}]->(c) "
                 "WHERE c.symbol = $symbol AND  c.exchange = $exchange AND ALL (a in r WHERE a._to>=$now) "
                 "UNWIND NODES(path) AS n "
                 "WITH path, SIZE(COLLECT(DISTINCT n)) AS testLength, c, r "
