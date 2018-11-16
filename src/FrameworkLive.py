@@ -190,10 +190,11 @@ class FrameworkLive:
 def main(argv):
     frameworklive_parameters = FWLiveParams()
     try:
-        opts, _ = getopt.getopt(argv, "nrolfe",
+        opts, _ = getopt.getopt(argv, "nrodlfe",
                                 ["enableplotting",
                                  "resultsdir=",
                                  "neo4jmode=",
+                                 "dealfinder=",
                                  "live",
                                  "noforex",
                                  "remotedebug"])
@@ -202,6 +203,9 @@ def main(argv):
             'Invalid parameter(s) entered. List of valid parameters:\n'
             ' --enableplotting: enable NetworkX graph plots\n'
             ' --resultsdir=path: output directory\n'
+            ' --dealfinder=neo4j: use neo4j to find arbitrage deals\n'
+            ' --dealfinder=networkx: use networkx/belman-ford to find arbitrage deals\n'
+            ' --dealfinder=all: run both neo4j and networkx in parallel to find arbitrage deals\n'
             ' --live: trades are executed in live mode\n'
             ' --noforex: disable forex\n'
             ' --neo4jmode=local: connect to neo4j running on localhost\n'
@@ -224,6 +228,18 @@ def main(argv):
                 frameworklive_parameters.neo4j_mode = FWLiveParams.neo4j_mode_aws_cloud
             if arg not in ['local', 'aws']:
                 logger.error('Invalid neo4j mode in parameter')
+                return
+
+        if opt in ("-d", "--dealfinder"):
+            if arg == 'neo4j':
+                frameworklive_parameters.dealfinder_mode = FWLiveParams.dealfinder_mode_neo4j
+            if arg == 'networkx':
+                frameworklive_parameters.dealfinder_mode = FWLiveParams.dealfinder_mode_networkx
+            if arg == 'all':
+                frameworklive_parameters.dealfinder_mode = FWLiveParams.dealfinder_mode_networkx + FWLiveParams.dealfinder_mode_neo4j
+
+            if arg not in ['neo4j', 'networkx','all']:
+                logger.error('Invalid dealfiner mode in parameter')
                 return
 
         if opt in ("-l", "--live"):

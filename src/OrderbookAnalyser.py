@@ -25,7 +25,8 @@ class OrderbookAnalyser:
                  resultsdir='./',
                  priceSource=PRICE_SOURCE_ORDERBOOK,
                  trader=None,
-                 neo4j_mode=FWLiveParams.neo4j_mode_disabled):
+                 neo4j_mode=FWLiveParams.neo4j_mode_disabled,
+                 dealfinder_mode=FWLiveParams.dealfinder_mode_networkx):
 
         # create Arbitrage Graph objects
         self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
@@ -39,7 +40,7 @@ class OrderbookAnalyser:
         self.cmcTicker = None
         self.neo4j_mode = neo4j_mode
         self.priceSource = priceSource
-
+        self.dealfinder_mode = dealfinder_mode
         self.isRunning = True
         assert trader is not None
         self.trader = trader
@@ -94,24 +95,28 @@ class OrderbookAnalyser:
             feeRate=self.feeStore.getTakerFee(exchangename, symbol),
             timeToLiveSec=self.edgeTTL)
 
+
+        
         # ArbitrageGraphNeo deal finder (Neo4j)
-        paths_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
-        for path_neo in paths_neo:
-            if path_neo.isProfitable() is True:
-                logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
-                path_neo.log()
-                sorl = path_neo.toSegmentedOrderList()
-                asyncio.ensure_future(self.trader.execute(sorl))
+        if self.dealfinder_mode & FWLiveParams.dealfinder_mode_neo4j:
+            paths_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
+            for path_neo in paths_neo:
+                if path_neo.isProfitable() is True:
+                    logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
+                    path_neo.log()
+                    sorl = path_neo.toSegmentedOrderList()
+                    asyncio.ensure_future(self.trader.execute(sorl))
 
         # ArbitrageGraph deal finder (NetworkX)
-        for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-            path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
+        if self.dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
+            for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
+                path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
 
-            if path.isProfitable() is True:
-                logger.info("NetX Found arbitrage deal: "+str(path))
-                path.log()
-                sorl = path.toSegmentedOrderList()
-                #asyncio.ensure_future(self.trader.execute(sorl))
+                if path.isProfitable() is True:
+                    logger.info("NetX Found arbitrage deal: "+str(path))
+                    path.log()
+                    sorl = path.toSegmentedOrderList()
+                    asyncio.ensure_future(self.trader.execute(sorl))
 
 
     def terminate(self):
