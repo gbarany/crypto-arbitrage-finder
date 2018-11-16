@@ -5,6 +5,7 @@ import logging
 from functools import reduce
 
 dealLogger = logging.getLogger('CryptoArbitrageDeals')
+logger = logging.getLogger('CryptoArbitrageApp')
 
 class ArbitragePath:
     def __init__(self,nodesList,timestamp,orderBookPriceList):
@@ -42,7 +43,9 @@ class ArbitragePath:
 
     def getVolumeBTC(self):
         volumeBTCs = list(map(lambda orderBookPrice:orderBookPrice.getVolumeBTC(),self.orderBookPriceList))
-        assert volumeBTCs.count(volumeBTCs[0]) == len(volumeBTCs) # check that all prices in path were calculated based on the same volume
+        if volumeBTCs.count(volumeBTCs[0]) is not len(volumeBTCs): # check that all prices in path were calculated based on the same volume
+            logger.warn('Different volumeBTCs in deal: ' + volumeBTCs)
+
         return  volumeBTCs[0]
     
     def getExchangesInvolved(self):
