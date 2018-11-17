@@ -157,15 +157,26 @@ class FrameworkLive:
             if enablePlotting:
                 orderbookAnalyser.plotGraphs()
 
-    async def kafkaConsumer():
-        topic = 'orderbook'
+    async def kafkaConsumer(self):
+
+        if self.parameters.datasource is FWLiveParams.datasource_kafka_local:
+            cred=FWLiveParams.getKafkaCredentials()
+        elif self.parameters.datasource is FWLiveParams.datasource_kafka_local:
+            cred = FWLiveParams.datasource_kafka_local_details
+        else:
+            logger.error('invalid kafka datasource')
+            return
+
+        topic = cred['topic']
+        kafka_server = cred['uri']
+        group_id = cred['groupid']
+
         loop = asyncio.get_event_loop()
-        kafka_server = "127.0.0.1:9092"
-        group_id='my-group'
         consumer = AIOKafkaConsumer(
             topic,
-            loop=loop, bootstrap_servers=kafka_server,
-            group_id="my-group")
+            loop=loop,
+            bootstrap_servers=kafka_server,
+            group_id=group_id)
         
         # Get cluster layout and join group `my-group`
         await consumer.start()
@@ -203,7 +214,7 @@ class FrameworkLive:
                             orderbookAnalyser=self.orderbookAnalyser))
 
         # start kafka consumer if selected as datasource 
-        if self.parameters.datasource is FWLiveParams.datasource_localpollers:
+        if self.parameters.datasource is FWLiveParams.datasource_kafka_local or self.parameters.datasource is FWLiveParams.datasource_kafka_aws:
             asyncio.ensure_future(self.kafkaConsumer())
 
         def stop_loop():

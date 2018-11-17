@@ -11,13 +11,19 @@ class FWLiveParams:
 
     datasource_localpollers = 1
     datasource_kafka_local = 2
-    datasource_kafka_aws = 2
+    datasource_kafka_aws = 3
 
     neo4j_mode_localhost_details = {
         'uri' : 'bolt://localhost:7687',
         'user' : 'neo4j',
         'password' : 'neo' 
         }
+
+    datasource_kafka_local_details = {
+        'uri' : '127.0.0.1:9092',
+        'topic' : 'orderbook',
+        'group_id' : 'my-group'
+    }
 
     def __init__(self,
                  enable_plotting=False,
@@ -46,13 +52,28 @@ class FWLiveParams:
                 aws_access_key_id=cred['aws_access_key_id'],
                 aws_secret_access_key=cred['aws_secret_access_key'],
                 region_name=cred['region_name'])
-            def getSSMParam(paramName):
-              return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']  
 
         return {
-                'uri' : getSSMParam('/Prod/neo4j/uri'),
-                'user' : getSSMParam('/Prod/neo4j/user'),
-                'password' : getSSMParam('/Prod/neo4j/password')
+                'uri' : FWLiveParams.getSSMParam('/prod/neo4j/uri'),
+                'user' : FWLiveParams.getSSMParam('/prod/neo4j/user'),
+                'password' : FWLiveParams.getSSMParam('/prod/neo4j/password')
                 }
 
-        
+    @staticmethod
+    def getSSMParam(ssm,paramName):
+        return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']  
+
+    def getKafkaCredentials():
+        # Read parameters from AWS SSM         
+        with open('./cred/aws-keys.json') as file:
+            cred = json.load(file)
+            ssm = boto3.client('ssm',
+                aws_access_key_id=cred['aws_access_key_id'],
+                aws_secret_access_key=cred['aws_secret_access_key'],
+                region_name=cred['region_name'])
+
+        return {
+                'uri' : FWLiveParams.getSSMParam('/prod/kafka/uri'),
+                'topic' : FWLiveParams.getSSMParam('/prod/kafka/topic'),
+                'group_id' : FWLiveParams.getSSMParam('/prod/kafka/group_id')
+                }
