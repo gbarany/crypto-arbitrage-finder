@@ -8,6 +8,9 @@ import jsonpickle
 POLONIEX = 'poloniex'
 BINANCE = 'binance'
 KRAKEN = 'kraken'
+BITSTAMP = 'bitstamp'
+COINBASEPRO = 'coinbasepro'
+BITTREX = 'bittrex'
 ETH_EUR = 'ETH/EUR'
 ETH_BTC = 'ETH/BTC'
 BTC_USD = 'ETH/BTC'
@@ -44,15 +47,15 @@ class TestClass(TestCase):
     async def test_fetch_balances(self):
         assert self.trader.isSandboxMode() is False
         await self.__test_fetch_balances(KRAKEN)
-        await self.__test_fetch_balances(BINANCE)
+        await self.__test_fetch_balances(BITSTAMP)
+        await self.__test_fetch_balances(BITTREX)
+        await self.__test_fetch_balances(COINBASEPRO)
 
 
     @pytest.mark.skip(reason="e2e test")
     @pytest.mark.asyncio
     async def test_execute_trades(self):
         # await self.__test_create_and_cancel_order(BINANCE, ETH_BTC, price=200)
-        max_price_eth_btc = self.trader.get_exchange(BINANCE).market(ETH_BTC)["limits"]["price"]["max"]
-        max_price_eth_btc = self.trader.get_exchange(BINANCE).market(ETH_BTC)["limits"]["price"]["max"]
         price = 0.04
         or11 = OrderRequest(KRAKEN, ETH_BTC, 0.1, 0.02, OrderRequestType.BUY)
         or21 = OrderRequest(BINANCE, ETH_BTC, 0.1, 0.04, OrderRequestType.SELL)

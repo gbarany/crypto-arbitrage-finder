@@ -68,6 +68,7 @@ class Trader:
                     value = par['Value']
                     exchangeCreds[key] = value
                 await self.__init_exchange(exch, exchangeCreds)
+        await self.fetch_balances()
 
     async def initExchangesFromCredFile(self, credfile):
         with open(credfile) as file:
@@ -194,13 +195,15 @@ class Trader:
                 d_ms = (time.time() - t1) * 1000.0
                 logger.info('Balance fetching completed from ' +
                             exchange.name + f" in {d_ms} ms")
-                break
+                return
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
                 d_ms = (time.time() - t1) * 1000.0
                 logger.error('Fetch balance failed from ' + exchange.name +
                              " " + type(error).__name__ + " " +
                              str(error.args) + " retrycntr:" + str(retrycntr) + f" in {d_ms} ms")
                 await asyncio.sleep(exchange.rateLimit / 1000)
+        logger.error(f'Error during fetch balance for {exchange}.')
+        raise ValueError(f'Error during fetch balance for {exchange}.')
 
     async def fetch_balances(self):
         self.__balances = {}
@@ -270,8 +273,6 @@ class Trader:
             return True
         except Exception as e:
             raise ValueError(f"Error during transaction validation: {e}")
-            logger.error(e)
-            return False
 
     def isOrderRequestValid(self, orderRequest: OrderRequest):
         return self.is_transaction_valid(orderRequest.exchange_name_std, orderRequest.market,
@@ -388,6 +389,22 @@ class Trader:
             logger.info(f"Trader is busy, the execute() call is droped")
             return
         self.__isBusy = True
+
+        logger.info(f'Start execute the orders:')
+        logger.info(f'{segmentedOrderRequestList}')
+
+        if self.__is_sandbox_mode:
+            logger.info('Trader is in sandbox mode. Skiping the order requests.')
+            return
+        else:
+            ret = input('Write <YES> to authorize the trade:')
+            if ret != "YES":
+                logger.info(f'User does not authorized the trade.')
+                return
+                raise ValueError('USER DID NOT WRITE YES !!!!!!!!!!!!!!!!!!!!!')
+            else:
+                logger.info('Trader is authorized.')
+
         t1 = time.time()
         try:
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)

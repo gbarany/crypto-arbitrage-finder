@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import sys
+import signal
 import getopt
 import asyncio
 import aiohttp
@@ -66,7 +67,7 @@ class FrameworkLive:
         self.arbTradeQueue = []
 
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
-        self.trader = Trader(credfile='./cred/api_trading.json', is_sandbox_mode=frameworklive_parameters.is_sandbox_mode)
+        self.trader = Trader(is_sandbox_mode=frameworklive_parameters.is_sandbox_mode)
         self.orderbookAnalyser = OrderbookAnalyser(
             vol_BTC=[1,0.1,0.01],
             edgeTTL=15,
@@ -205,8 +206,10 @@ class FrameworkLive:
             # Will leave consumer group; perform autocommit if enabled.
             await consumer.stop()
 
-    def run(self):
-        
+    async def asyncRun(self):
+
+        await self.trader.initExchangesFromAWSParameterStore()
+
         # start local pollers if selected as datasource 
         if self.parameters.datasource is FWLiveParams.datasource_localpollers:
             for exchange in self.exchanges.keys():
@@ -233,16 +236,22 @@ class FrameworkLive:
         if self.parameters.datasource is FWLiveParams.datasource_kafka_local or self.parameters.datasource is FWLiveParams.datasource_kafka_aws:
             asyncio.ensure_future(self.kafkaConsumer())
 
-        def stop_loop():
-            input('Press <enter> to stop')
-            loop.call_soon_threadsafe(loop.stop)
 
-        loop = asyncio.get_event_loop()
-        Thread(target=stop_loop).start()
-        
+    def run(self):
+
+        asyncio.ensure_future(self.asyncRun())
+
+        loop = asyncio.get_event_loop()      
         loop.run_forever()
         logger.info("FrameworkLive exited normally. Bye.")
 
+
+
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    loop = asyncio.get_event_loop()
+    loop.stop()
+signal.signal(signal.SIGINT, signal_handler)
 
 def main(argv):
     frameworklive_parameters = FWLiveParams()
