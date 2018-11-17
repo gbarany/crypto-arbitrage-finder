@@ -177,7 +177,8 @@ class FrameworkLive:
             loop=loop,
             bootstrap_servers=kafka_server,
             group_id=group_id,
-            auto_offset_reset='latest', 
+            auto_offset_reset='latest',
+            enable_auto_commit=False,
             value_deserializer=lambda m: json.loads(m.decode('utf-8')))
         
         # Get cluster layout and join group `my-group`
@@ -185,18 +186,20 @@ class FrameworkLive:
         try:
             # Consume messages
             async for msg in consumer:
-                data = json.loads(msg.value)
-                if data['exchange'] == 'coinmarketcap':
-                    self.orderbookAnalyser.updateCoinmarketcapPrice(data)
-                else:
-                    logger.info("Received " + data['symbol'] + " from " + data['exchange'])
-                    self.orderbookAnalyser.update(
-                        exchangename=data['exchange'],
-                        symbol=data['symbol'],
-                        bids=data['bids'],
-                        asks=data['asks'],
-                        timestamp=time.time())
-
+                try:
+                    payload = json.loads(msg.value)
+                    if payload['exchange'] == 'coinmarketcap':
+                        self.orderbookAnalyser.updateCoinmarketcapPrice(payload['data'])
+                    else:
+                        logger.info("Received " + payload['symbol'] + " from " + payload['exchange'] + ' producer timestamp [ms]:' + str(payload['timestamp']) + ' (delay [ms]:'+str(time.time()*1000-float(payload['timestamp']))+')')
+                        self.orderbookAnalyser.update(
+                            exchangename=payload['exchange'],
+                            symbol=payload['symbol'],
+                            bids=payload['data']['bids'],
+                            asks=payload['data']['asks'],
+                            timestamp=payload['timestamp']/1000)
+                except Exception as e:
+                    logger.error('Error during parsing Kafka stream JSON, error:'+str(e))
 
         finally:
             # Will leave consumer group; perform autocommit if enabled.
