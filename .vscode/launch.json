@@ -19,7 +19,8 @@
             "console": "integratedTerminal",
             "args": [
                 "--resultsdir=./results/",
-                "--neo4jmode=local"
+                "--neo4jmode=local",
+                "--dealfinder=all"
             ]
         },
         {
@@ -30,7 +31,8 @@
             "console": "integratedTerminal",
             "args": [
                 "--resultsdir=./results/",
-                "--neo4jmode=aws"
+                "--neo4jmode=aws",
+                "--dealfinder=all"
             ]
         },
 
