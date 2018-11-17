@@ -48,7 +48,10 @@ class OrderBookPrice:
 
     def getLogPrice(self):
         return -1.0 * np.log(self.meanPriceNet)
-    
+
+    def getTimeToLive(self):
+        return self.timeToLive
+
     def getPrice(self):
         return self.meanPriceNet
     
