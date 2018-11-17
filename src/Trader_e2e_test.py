@@ -28,8 +28,8 @@ class TestClass(TestCase):
     isSandboxMode = False
 
     async def setUp(self):
-        self.trader = Trader(credfile='./cred/api_trading.json', is_sandbox_mode=TestClass.isSandboxMode)
-        await self.trader.initExchanges()
+        self.trader = Trader(is_sandbox_mode=TestClass.isSandboxMode)
+        await self.trader.initExchangesFromAWSParameterStore()
 
     async def TearDown(self):
         await self.trader.close_exchanges()

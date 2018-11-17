@@ -115,8 +115,8 @@ class TestClass(TestCase):
         self.poloniex = patch('ccxt.async_support.poloniex').start()
         self.__mockExchange(self.poloniex, POLONIEX)
 
-        self.trader = Trader(credfile='./cred/api_test.json', is_sandbox_mode=False)
-        await self.trader.initExchanges()
+        self.trader = Trader(is_sandbox_mode=False)
+        await self.trader.initExchangesFromCredFile(credfile='./cred/api_test.json')
 
     async def tearDown(self):
 

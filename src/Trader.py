@@ -1,4 +1,5 @@
 import asyncio
+import boto3
 import json
 import traceback
 from typing import Dict, List, Any
@@ -32,9 +33,7 @@ class Trader:
         return segmentedOrderRequestList
 
     def __init__(self,
-                 credfile='./cred/api.json',
                  is_sandbox_mode=True):
-        self.__credfile: str = credfile
         self.__balances: Dict[str, Any] = {}
         self.__is_sandbox_mode: bool = is_sandbox_mode
         self.__exchanges: Dict[str, Exchange] = {}
@@ -43,8 +42,35 @@ class Trader:
     def getBalances(self):
         return self.__balances
 
-    async def initExchanges(self):
-        with open(self.__credfile) as file:
+    async def initExchangesFromAWSParameterStore(self):
+        with open('./cred/aws-keys.json') as file:
+            cred = json.load(file)
+            ssm = boto3.client('ssm',
+                               aws_access_key_id=cred['aws_access_key_id'],
+                               aws_secret_access_key=cred['aws_secret_access_key'],
+                               region_name=cred['region_name'])
+
+            def getSSMParam(paramName):
+                return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']
+
+            enabledExchanges = getSSMParam('/prod/enabledExchanges').split(',')
+
+            for exch in enabledExchanges:
+                path = f'/prod/exchange/{exch}/'
+                pars = ssm.get_parameters_by_path(
+                    Path=path,
+                    Recursive=True,
+                    WithDecryption=True
+                )
+                exchangeCreds = {}
+                for par in pars['Parameters']:
+                    key = par['Name'].split('/')[-1]
+                    value = par['Value']
+                    exchangeCreds[key] = value
+                await self.__init_exchange(exch, exchangeCreds)
+
+    async def initExchangesFromCredFile(self, credfile):
+        with open(credfile) as file:
             exchangeCreds = json.load(file)
             for exchangeName in exchangeCreds:
                 await self.__init_exchange(exchangeName, exchangeCreds[exchangeName])
