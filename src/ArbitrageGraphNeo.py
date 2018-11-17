@@ -27,7 +27,7 @@ class ArbitrageGraphNeo:
         else:
             self.graphDB = None
 
-    def updatePoint(self,orderBookPair,volumeBTCs=[1]):
+    def updatePoint(self,orderBookPair):
         if self.graphDB is None:
             logger.warn('GraphDB is not initialized')
             return
@@ -37,11 +37,12 @@ class ArbitrageGraphNeo:
         self.graphDB.addTradingRelationship(orderBook=orderBookPair.getRebasedAsksOrderbook(),volumeBTCs=self.volumeBTCs)
 
         self.graphDB.addTradingRelationship(orderBook=orderBookPair.bids,volumeBTCs=self.volumeBTCs)
-        
+
+    def getArbitrageDeal(self,timestamp,asset):
         path = self.graphDB.getArbitrageCycle(
-            asset=Asset(exchange=orderBookPair.exchange, symbol=orderBookPair.getSymbolBase()),
+            asset=asset,
             match_lookback_sec=5,
-            now=now,
-            volumeBTCs=volumeBTCs)
+            now=timestamp,
+            volumeBTCs=self.volumeBTCs)
 
         return path
