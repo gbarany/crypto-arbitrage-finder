@@ -17,6 +17,7 @@ from InitLogger import logger
 import json
 from FWLiveParams import FWLiveParams
 import ptvsd
+from aiokafka import AIOKafkaConsumer
 
 class FrameworkLive:
     def __init__(self, frameworklive_parameters):
@@ -156,9 +157,30 @@ class FrameworkLive:
             if enablePlotting:
                 orderbookAnalyser.plotGraphs()
 
+    async def kafkaConsumer():
+        topic = 'orderbook'
+        loop = asyncio.get_event_loop()
+        kafka_server = "127.0.0.1:9092"
+        group_id='my-group'
+        consumer = AIOKafkaConsumer(
+            topic,
+            loop=loop, bootstrap_servers=kafka_server,
+            group_id="my-group")
+        
+        # Get cluster layout and join group `my-group`
+        await consumer.start()
+        try:
+            # Consume messages
+            async for msg in consumer:
+                print("consumed: ", msg.topic, msg.partition, msg.offset,
+                    msg.key, msg.value, msg.timestamp)
+        finally:
+            # Will leave consumer group; perform autocommit if enabled.
+            await consumer.stop()
+
     def run(self):
         
-        # start local pollers if that's the required datasource 
+        # start local pollers if selected as datasource 
         if self.parameters.datasource is FWLiveParams.datasource_localpollers:
             for exchange in self.exchanges.keys():
                 asyncio.ensure_future(
@@ -171,14 +193,18 @@ class FrameworkLive:
             asyncio.ensure_future(
                 self.coinmarketcapPoller(self.cmc, self.orderbookAnalyser))
 
-        if self.parameters.is_forex_enabled is True:
-            with open('./cred/oanda.json') as file:
-                authkeys = json.load(file)
-                asyncio.ensure_future(
-                    self.forexPoller(
-                        symbols=['EUR_USD', 'GBP_USD'],
-                        authkey=authkeys['practice'],
-                        orderbookAnalyser=self.orderbookAnalyser))
+            if self.parameters.is_forex_enabled is True:
+                with open('./cred/oanda.json') as file:
+                    authkeys = json.load(file)
+                    asyncio.ensure_future(
+                        self.forexPoller(
+                            symbols=['EUR_USD', 'GBP_USD'],
+                            authkey=authkeys['practice'],
+                            orderbookAnalyser=self.orderbookAnalyser))
+
+        # start kafka consumer if selected as datasource 
+        if self.parameters.datasource is FWLiveParams.datasource_localpollers:
+            asyncio.ensure_future(self.kafkaConsumer())
 
         def stop_loop():
             input('Press <enter> to stop')
