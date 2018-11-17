@@ -73,7 +73,8 @@ class FrameworkLive:
             resultsdir=self.parameters.results_dir,
             priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
             trader=self.trader,
-            neo4j_mode=self.parameters.neo4j_mode)
+            neo4j_mode=self.parameters.neo4j_mode,
+            dealfinder_mode=self.parameters.dealfinder_mode)
 
     async def pollOrderbook(self, exchange, symbols):
         i = 0
