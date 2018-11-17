@@ -24,7 +24,8 @@ def getOrderbookAnalyser():
         resultsdir='./results/',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         trader=Trader(credfile='./cred/api_balance.json', is_sandbox_mode=True),
-        neo4j_mode=FWLiveParams.neo4j_mode_localhost)
+        neo4j_mode=FWLiveParams.neo4j_mode_localhost,
+        dealfinder_mode=FWLiveParams.dealfinder_mode_neo4j)
 
 
 @pytest.fixture(scope="class")
@@ -74,7 +75,6 @@ class TestClass(object):
                 bids=[[0.03, 1000]],
                 asks=[[0.04, 1000]],
                 timestamp=102)
-
 
             assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
             orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
