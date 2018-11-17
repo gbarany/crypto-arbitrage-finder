@@ -12,7 +12,7 @@
             "host": "localhost"
         },
         {
-            "name": "FrameworkLive Sandbox Neo4j-local",
+            "name": "Sandbox NetX, Kafka AWS",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/FrameworkLive.py",
@@ -20,11 +20,25 @@
             "args": [
                 "--resultsdir=./results/",
                 "--neo4jmode=local",
-                "--dealfinder=all"
+                "--dealfinder=networkx",
+                "--datasource=kafkaaws"
             ]
         },
         {
-            "name": "FrameworkLive Sandbox Neo4j-AWS",
+            "name": "Sandbox Neo4j-local, localpoller",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/FrameworkLive.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--resultsdir=./results/",
+                "--neo4jmode=local",
+                "--dealfinder=all",
+                "--datasource=kafkaaws"
+            ]
+        },
+        {
+            "name": "Sandbox Neo4j-AWS, localpoller",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/FrameworkLive.py",
@@ -33,29 +47,6 @@
                 "--resultsdir=./results/",
                 "--neo4jmode=aws",
                 "--dealfinder=all"
-            ]
-        },
-
-        {
-            "name": "FrameworkLive NO Sandbox",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/src/FrameworkLive.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--resultsdir=./results/",
-                "--live"
-            ]
-        },
-        {
-            "name": "FrameworkSimDB",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/src/FrameworkSimDB.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--limit=10",
-                "--resultsdir=./results/"
             ]
         },
         {
