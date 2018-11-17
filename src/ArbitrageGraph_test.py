@@ -9,7 +9,7 @@ class TestClass(object):
     def test_intraExchange(self):
         arbitrageGraph = ArbitrageGraph()
         edgeTTL=5
-        p1 = arbitrageGraph.updatePoint(
+        arbitrageGraph.updatePoint(
             orderBookPair=OrderBookPair(
                 symbol="BTC/USD",
                 exchange="kraken",
@@ -22,9 +22,10 @@ class TestClass(object):
                 timeToLiveSec=edgeTTL
             ),
             volumeBTC=1)
+        p1 = arbitrageGraph.getArbitrageDeal(0)
         assert p1.isProfitable() == False
 
-        p2 = arbitrageGraph.updatePoint(
+        arbitrageGraph.updatePoint(
             orderBookPair=OrderBookPair(
                 exchange="kraken",
                 symbol="ETH/USD",
@@ -37,10 +38,10 @@ class TestClass(object):
                 timeToLiveSec=edgeTTL
             ),
             volumeBTC=1)
-
+        p2 = arbitrageGraph.getArbitrageDeal(1)
         assert p2.isProfitable() == False
 
-        p3 = arbitrageGraph.updatePoint(
+        arbitrageGraph.updatePoint(
             orderBookPair=OrderBookPair(
                 exchange="kraken",
                 symbol="BTC/ETH",
@@ -53,7 +54,7 @@ class TestClass(object):
                 timeToLiveSec=edgeTTL
             ),
             volumeBTC=1)
-
+        p3 = arbitrageGraph.getArbitrageDeal(2)
         assert p3.isProfitable() == True
 
         with pytest.raises(ValueError):
