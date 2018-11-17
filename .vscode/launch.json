@@ -34,7 +34,7 @@
                 "--resultsdir=./results/",
                 "--neo4jmode=local",
                 "--dealfinder=all",
-                "--datasource=kafkaaws"
+                "--datasource=localpollers"
             ]
         },
         {
@@ -46,7 +46,8 @@
             "args": [
                 "--resultsdir=./results/",
                 "--neo4jmode=aws",
-                "--dealfinder=all"
+                "--dealfinder=all",
+                "--datasource=localpollers"
             ]
         },
         {
