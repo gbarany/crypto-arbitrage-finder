@@ -29,8 +29,15 @@ class OrderbookAnalyser:
                  dealfinder_mode=FWLiveParams.dealfinder_mode_networkx):
 
         # create Arbitrage Graph objects
-        self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
-        self.arbitrageGraphNeo = ArbitrageGraphNeo(neo4j_mode=neo4j_mode,volumeBTCs=vol_BTC)
+        if dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
+            self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
+        else:
+            self.arbitrageGraphs = None
+
+        if dealfinder_mode & FWLiveParams.dealfinder_mode_neo4j:
+            self.arbitrageGraphNeo = ArbitrageGraphNeo(neo4j_mode=neo4j_mode,volumeBTCs=vol_BTC)
+        else:
+            self.arbitrageGraphNeo = None
         self.edgeTTL=edgeTTL
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
