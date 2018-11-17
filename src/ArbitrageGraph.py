@@ -46,9 +46,7 @@ class ArbitrageGraph:
         if bidOrderbookPrice.meanPrice is not None:
             self.gdict[key2] = bidOrderbookPrice
 
-        return self.updateGraph(timestamp=orderBookPair.getTimestamp(),edgeTTL=orderBookPair.timeToLiveSec)
-
-    def updateGraph(self, timestamp,edgeTTL):
+    def getArbitrageDeal(self, timestamp):
         self.glist = []
         now = timestamp
         for k, v in self.gdict.items():
@@ -56,6 +54,7 @@ class ArbitrageGraph:
             symbol_quote = '-'.join(k[1])
             ts = v.timestamp
             edge = v.getLogPrice()
+            edgeTTL = v.getTimeToLive()
             if ts is not None:
                 if (now - ts) < edgeTTL:
                     self.glist.extend([[symbol_base, symbol_quote, edge]])
