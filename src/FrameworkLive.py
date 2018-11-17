@@ -157,16 +157,19 @@ class FrameworkLive:
                 orderbookAnalyser.plotGraphs()
 
     def run(self):
-        for exchange in self.exchanges.keys():
-            asyncio.ensure_future(
-                self.exchangePoller(
-                    exchange=self.exchanges[exchange],
-                    symbols=self.symbols[exchange],
-                    orderbookAnalyser=self.orderbookAnalyser,
-                    enablePlotting=self.parameters.enable_plotting))
+        
+        # start local pollers if that's the required datasource 
+        if self.parameters.datasource is FWLiveParams.datasource_localpollers:
+            for exchange in self.exchanges.keys():
+                asyncio.ensure_future(
+                    self.exchangePoller(
+                        exchange=self.exchanges[exchange],
+                        symbols=self.symbols[exchange],
+                        orderbookAnalyser=self.orderbookAnalyser,
+                        enablePlotting=self.parameters.enable_plotting))
 
-        asyncio.ensure_future(
-            self.coinmarketcapPoller(self.cmc, self.orderbookAnalyser))
+            asyncio.ensure_future(
+                self.coinmarketcapPoller(self.cmc, self.orderbookAnalyser))
 
         if self.parameters.is_forex_enabled is True:
             with open('./cred/oanda.json') as file:
@@ -191,11 +194,12 @@ class FrameworkLive:
 def main(argv):
     frameworklive_parameters = FWLiveParams()
     try:
-        opts, _ = getopt.getopt(argv, "nrodlfe",
+        opts, _ = getopt.getopt(argv, "nrodslfe",
                                 ["enableplotting",
                                  "resultsdir=",
                                  "neo4jmode=",
                                  "dealfinder=",
+                                 "datasource=",
                                  "live",
                                  "noforex",
                                  "remotedebug"])
@@ -205,12 +209,15 @@ def main(argv):
             ' --enableplotting: enable NetworkX graph plots\n'
             ' --resultsdir=path: output directory\n'
             ' --dealfinder=neo4j: use neo4j to find arbitrage deals\n'
-            ' --dealfinder=networkx: use networkx/belman-ford to find arbitrage deals\n'
-            ' --dealfinder=all: run both neo4j and networkx in parallel to find arbitrage deals\n'
+            '              networkx: use networkx/belman-ford to find arbitrage deals\n'
+            '              all: run both neo4j and networkx in parallel to find arbitrage deals\n'
+            ' --datasource=localpollers: local pollers are used as data-source \n'
+            '              kafkalocal: locally hosted kafka stream used as data-source \n'
+            '              kafkaaws: asyncio pollers are used as data-source \n'
             ' --live: trades are executed in live mode\n'
             ' --noforex: disable forex\n'
             ' --neo4jmode=local: connect to neo4j running on localhost\n'
-            ' --neo4jmode=aws: connect to neo4j running in AWS\n'
+            '             aws: connect to neo4j running in AWS\n'
             ' --remotedebug: enable remote debugging\n'
         )
         sys.exit(2)
@@ -241,6 +248,18 @@ def main(argv):
 
             if arg not in ['neo4j', 'networkx','all']:
                 logger.error('Invalid dealfiner mode in parameter')
+                return
+
+        if opt in ("-s", "--datasource"):
+            if arg == 'localpollers':
+                frameworklive_parameters.datasource = FWLiveParams.datasource_localpollers
+            if arg == 'kafkaaws':
+                frameworklive_parameters.datasource = FWLiveParams.datasource_kafka_aws
+            if arg == 'kafkalocal':
+                frameworklive_parameters.datasource = FWLiveParams.datasource_kafka_local
+
+            if arg not in ['localpollers', 'kafkaaws','kafkalocal']:
+                logger.error('Invalid datasource in parameter')
                 return
 
         if opt in ("-l", "--live"):

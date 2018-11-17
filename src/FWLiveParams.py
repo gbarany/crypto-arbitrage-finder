@@ -9,6 +9,10 @@ class FWLiveParams:
     neo4j_mode_localhost = 2
     neo4j_mode_aws_cloud = 3
 
+    datasource_localpollers = 1
+    datasource_kafka_local = 2
+    datasource_kafka_aws = 2
+
     neo4j_mode_localhost_details = {
         'uri' : 'bolt://localhost:7687',
         'user' : 'neo4j',
@@ -22,7 +26,8 @@ class FWLiveParams:
                  is_forex_enabled=True,
                  results_dir='./',
                  neo4j_mode=neo4j_mode_disabled,
-                 dealfinder_mode=dealfinder_mode_networkx):
+                 dealfinder_mode=dealfinder_mode_networkx,
+                 datasource=datasource_localpollers):
         self.enable_plotting = enable_plotting
         self.is_sandbox_mode = is_sandbox_mode
         self.is_forex_enabled = is_forex_enabled
@@ -30,6 +35,7 @@ class FWLiveParams:
         self.neo4j_mode = neo4j_mode
         self.remoteDebuggingEnabled=remoteDebuggingEnabled
         self.dealfinder_mode = dealfinder_mode
+        self.datasource= datasource
 
     @staticmethod
     def getNeo4jCredentials():
