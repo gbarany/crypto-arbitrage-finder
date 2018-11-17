@@ -159,7 +159,7 @@ class FrameworkLive:
 
     async def kafkaConsumer(self):
 
-        if self.parameters.datasource is FWLiveParams.datasource_kafka_local:
+        if self.parameters.datasource is FWLiveParams.datasource_kafka_aws:
             cred=FWLiveParams.getKafkaCredentials()
         elif self.parameters.datasource is FWLiveParams.datasource_kafka_local:
             cred = FWLiveParams.datasource_kafka_local_details
@@ -169,22 +169,35 @@ class FrameworkLive:
 
         topic = cred['topic']
         kafka_server = cred['uri']
-        group_id = cred['groupid']
+        group_id = cred['group_id']
 
         loop = asyncio.get_event_loop()
         consumer = AIOKafkaConsumer(
             topic,
             loop=loop,
             bootstrap_servers=kafka_server,
-            group_id=group_id)
+            group_id=group_id,
+            auto_offset_reset='latest', 
+            value_deserializer=lambda m: json.loads(m.decode('utf-8')))
         
         # Get cluster layout and join group `my-group`
         await consumer.start()
         try:
             # Consume messages
             async for msg in consumer:
-                print("consumed: ", msg.topic, msg.partition, msg.offset,
-                    msg.key, msg.value, msg.timestamp)
+                data = json.loads(msg.value)
+                if data['exchange'] == 'coinmarketcap':
+                    self.orderbookAnalyser.updateCoinmarketcapPrice(data)
+                else:
+                    logger.info("Received " + data['symbol'] + " from " + data['exchange'])
+                    self.orderbookAnalyser.update(
+                        exchangename=data['exchange'],
+                        symbol=data['symbol'],
+                        bids=data['bids'],
+                        asks=data['asks'],
+                        timestamp=time.time())
+
+
         finally:
             # Will leave consumer group; perform autocommit if enabled.
             await consumer.stop()

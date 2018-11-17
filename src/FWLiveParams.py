@@ -54,9 +54,9 @@ class FWLiveParams:
                 region_name=cred['region_name'])
 
         return {
-                'uri' : FWLiveParams.getSSMParam('/prod/neo4j/uri'),
-                'user' : FWLiveParams.getSSMParam('/prod/neo4j/user'),
-                'password' : FWLiveParams.getSSMParam('/prod/neo4j/password')
+                'uri' : FWLiveParams.getSSMParam(ssm,'/prod/neo4j/uri'),
+                'user' : FWLiveParams.getSSMParam(ssm,'/prod/neo4j/user'),
+                'password' : FWLiveParams.getSSMParam(ssm,'/prod/neo4j/password')
                 }
 
     @staticmethod
@@ -73,7 +73,7 @@ class FWLiveParams:
                 region_name=cred['region_name'])
 
         return {
-                'uri' : FWLiveParams.getSSMParam('/prod/kafka/uri'),
-                'topic' : FWLiveParams.getSSMParam('/prod/kafka/topic'),
-                'group_id' : FWLiveParams.getSSMParam('/prod/kafka/group_id')
+                'uri' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/uri'),
+                'topic' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/topic'),
+                'group_id' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/group_id')
                 }
