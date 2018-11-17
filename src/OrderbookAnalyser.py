@@ -99,7 +99,13 @@ class OrderbookAnalyser:
         
         # ArbitrageGraphNeo deal finder (Neo4j)
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_neo4j:
-            paths_neo=self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair,volumeBTCs=self.vol_BTC)
+            
+            self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair)
+            paths_neo=self.arbitrageGraphNeo.getArbitrageDeal(
+                timestamp=timestamp,
+                asset=Asset(exchange=orderBookPair.exchange, symbol=orderBookPair.getSymbolBase()))
+            
+
             for path_neo in paths_neo:
                 if path_neo.isProfitable() is True:
                     logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
@@ -110,8 +116,8 @@ class OrderbookAnalyser:
         # ArbitrageGraph deal finder (NetworkX)
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
             for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-                path = arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
-
+                arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
+                path = arbitrageGraph.getArbitrageDeal(timestamp)
                 if path.isProfitable() is True:
                     logger.info("NetX Found arbitrage deal: "+str(path))
                     path.log()
