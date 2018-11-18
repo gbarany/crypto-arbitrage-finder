@@ -50,6 +50,20 @@
             ]
         },
         {
+            "name": "Sandbox Neo4j-local&NetX, localpollers",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/FrameworkLive.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--resultsdir=./results/",
+                "--neo4jmode=local",
+                "--dealfinder=all",
+                "--datasource=localpollers"
+            ]
+        },
+
+        {
             "name": "Sandbox Neo4j-AWS, localpollers",
             "type": "python",
             "request": "launch",
