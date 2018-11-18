@@ -138,3 +138,9 @@ class SegmentedOrderRequestList:
                     'dtime': logEntry['dtime']
                 })
         return log
+
+    def sorlToString(self):
+        r = "SORL:\n"
+        for orderRequest in self.getOrderRequests():
+            r = r + orderRequest.toString() + "\n"
+        return r
