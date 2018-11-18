@@ -141,12 +141,8 @@ class FrameworkLive:
             logger.info("Received prices from coinmarketcap")
             orderbookAnalyser.updateCoinmarketcapPrice(ticker)
 
-    async def exchangePoller(self, exchange, symbols,
-                             orderbookAnalyser: OrderbookAnalyser,
-                             enablePlotting):
-        id = 0
-        async for (symbol, order_book) in self.pollOrderbook(
-                exchange, symbols):
+    async def exchangePoller(self, exchange, symbols,orderbookAnalyser: OrderbookAnalyser,enablePlotting):
+        async for (symbol, order_book) in self.pollOrderbook(exchange, symbols):
             logger.info("Received " + symbol + " from " + exchange.name)
             orderbookAnalyser.update(
                 exchangename=exchange.name,
@@ -154,7 +150,6 @@ class FrameworkLive:
                 bids=order_book['bids'],
                 asks=order_book['asks'],
                 timestamp=time.time())
-            id += 1
             if enablePlotting:
                 orderbookAnalyser.plotGraphs()
 
@@ -182,7 +177,7 @@ class FrameworkLive:
             enable_auto_commit=False,
             value_deserializer=lambda m: json.loads(m.decode('utf-8')))
         
-        # Get cluster layout and join group `my-group`
+        # Get cluster layout and join group
         await consumer.start()
         try:
             # Consume messages
