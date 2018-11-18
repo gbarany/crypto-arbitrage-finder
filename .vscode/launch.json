@@ -25,7 +25,19 @@
             ]
         },
         {
-            "name": "Sandbox Neo4j-local, localpoller",
+            "name": "Sandbox NetX, localpollers",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/FrameworkLive.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--resultsdir=./results/",
+                "--dealfinder=networkx",
+                "--datasource=localpollers"
+            ]
+        },
+        {
+            "name": "Sandbox Neo4j-local, localpollers",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/FrameworkLive.py",
@@ -33,12 +45,12 @@
             "args": [
                 "--resultsdir=./results/",
                 "--neo4jmode=local",
-                "--dealfinder=all",
+                "--dealfinder=neo4j",
                 "--datasource=localpollers"
             ]
         },
         {
-            "name": "Sandbox Neo4j-AWS, localpoller",
+            "name": "Sandbox Neo4j-AWS, localpollers",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/FrameworkLive.py",
@@ -46,7 +58,7 @@
             "args": [
                 "--resultsdir=./results/",
                 "--neo4jmode=aws",
-                "--dealfinder=all",
+                "--dealfinder=neo4j",
                 "--datasource=localpollers"
             ]
         },
