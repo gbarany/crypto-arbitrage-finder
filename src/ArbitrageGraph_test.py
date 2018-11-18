@@ -73,6 +73,7 @@ class TestClass(object):
         assert path.getNofHops() == 3
         assert path.getExchangesInvolved() == ['kraken']
         assert path.getNofExchangesInvolved() == 1
+        assert path.getProfit() == 800
 
         segmentedOrderList = path.toSegmentedOrderList().getOrderRequestLists()
         assert (segmentedOrderList[0][0].exchange_name,
@@ -105,7 +106,8 @@ class TestClass(object):
         path = arbitrageGraph.getPath(
             nodes=['kraken-BTC', 'kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC'],
             timestamp=3)
-        
+        assert path.getProfit() == 800
+
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists) == 2
         assert len(segmentedOrderRequestLists[0].getOrderRequests()) == 2
@@ -147,7 +149,8 @@ class TestClass(object):
         path = arbitrageGraph.getPath(
             nodes=['kraken-USD', 'kraken-ETH', 'poloniex-ETH','poloniex-BTC', 'kraken-BTC','kraken-USD'],
             timestamp=3)
-        
+        assert path.getProfit() == 800
+
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists) == 2
         assert len(segmentedOrderRequestLists[0].getOrderRequests()) == 2
@@ -292,6 +295,7 @@ class TestClass(object):
         assert path.getNofHops() == 3
         assert path.getExchangesInvolved() == ['kraken']
         assert path.getNofExchangesInvolved() == 1
+        assert path.getProfit() == 400
 
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists)==1
