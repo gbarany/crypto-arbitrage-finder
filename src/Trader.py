@@ -43,18 +43,6 @@ class Trader:
         return self.__balances
 
     async def initExchangesFromAWSParameterStore(self):
-        if self.__is_sandbox_mode:
-            logger.info('Trader is in sandbox mode. Skiping initializing exchanges.')
-            return
-        else:
-            logger.info(f'Trader wants to access AWSParameterStore.')
-            ret = self.input('Write <YES> to authorize access to AWSParameterStore:')
-            if ret != "YES":
-                logger.info(f'Trader is not authorized to access AWSParameterStore')
-                return
-            else:
-                logger.info('AWSParameterStore is authorized.')
-
         with open('./cred/aws-keys.json') as file:
             cred = json.load(file)
             ssm = boto3.client('ssm',
@@ -409,8 +397,8 @@ class Trader:
             logger.info('Trader is in sandbox mode. Skiping the order requests.')
             return
         else:
-            ret = self.input('Write <YES> to authorize the trade:')
-            if ret != "YES":
+            ret = self.input('Write <ok> to authorize the trade:')
+            if ret != "ok":
                 logger.info(f'Trader is not authorized to execute the trade.')
                 return
             else:

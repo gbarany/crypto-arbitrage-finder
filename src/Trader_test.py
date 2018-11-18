@@ -117,7 +117,7 @@ class TestClass(TestCase):
 
         self.trader = Trader(is_sandbox_mode=False)
         await self.trader.initExchangesFromCredFile(credfile='./cred/api_test.json')
-        self.trader.input = lambda x: 'YES'
+        self.trader.input = lambda x: 'ok'
 
     async def tearDown(self):
 
