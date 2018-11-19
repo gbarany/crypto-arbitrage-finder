@@ -11,6 +11,10 @@ import logging
 from Trader import Trader, SegmentedOrderRequestList, OrderRequestList
 from FWLiveParams import FWLiveParams
 import asyncio
+from functools import wraps
+from time import time
+from utilities import timed
+
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -58,6 +62,7 @@ class OrderbookAnalyser:
     def updateForexPrice(self, forexTicker):
         self.priceStore.updatePriceFromForex(forexTicker)
 
+    @timed
     def update(self, exchangename, symbol, bids, asks, timestamp):
 
         if self.priceSource == OrderbookAnalyser.PRICE_SOURCE_ORDERBOOK:
@@ -108,7 +113,7 @@ class OrderbookAnalyser:
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_neo4j:
             
             self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair)
-            paths_neo=self.arbitrageGraphNeo.getArbitrageDeal(
+            '''paths_neo=self.arbitrageGraphNeo.getArbitrageDeal(
                 timestamp=timestamp,
                 asset=Asset(exchange=orderBookPair.exchange, symbol=orderBookPair.getSymbolBase()))
             
@@ -118,7 +123,7 @@ class OrderbookAnalyser:
                     logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
                     path_neo.log()
                     sorl = path_neo.toSegmentedOrderList()
-                    asyncio.ensure_future(self.trader.execute(sorl))
+                    asyncio.ensure_future(self.trader.execute(sorl))'''
 
         # ArbitrageGraph deal finder (NetworkX)
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
