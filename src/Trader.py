@@ -96,7 +96,7 @@ class Trader:
     async def __cancelOrderRequest(self, orderRequest: OrderRequest):
         logger.info(f'__cancelOrderRequest #{orderRequest.id} ({orderRequest.toString()})')
         waitingForCreatingStatusRetries = 0
-        while orderRequest.getStatus() == OrderRequestStatus.CREATING and waitingForCreatingStatusRetries < 10:
+        while orderRequest.getStatus() == OrderRequestStatus.CREATING and waitingForCreatingStatusRetries < 100:
             logger.debug(
                 f"Canceling order request (#{orderRequest.id}) is waiting for status CREATING retrycnt={waitingForCreatingStatusRetries}")
             await asyncio.sleep(0.5)
@@ -116,6 +116,8 @@ class Trader:
                                          str(response['error']))
                     logger.info(f'Cancelled oder #{orderRequest.id} ({orderRequest})')
                     orderRequest.setCanceled()
+                    exchange = self.__exchanges[orderRequest.exchange_name_std]
+                    await asyncio.sleep(exchange.rateLimit / 1000)
                     return
                 except OrderNotFound as onf:
                     logger.error(f'Cancel order request (#{orderRequest.id}) failed with OrderNotFound ({onf})')
@@ -154,6 +156,10 @@ class Trader:
                 orderRequest.setOrder(response)
                 if response['status'] == CCXT_ORDER_STATUS_CANCELED:
                     raise OrderErrorByExchange(orderRequest)
+
+                exchange = self.__exchanges[orderRequest.exchange_name_std]
+                await asyncio.sleep(exchange.rateLimit / 1000)
+
                 return
 
             except OrderErrorByExchange as e:
@@ -195,6 +201,7 @@ class Trader:
                 d_ms = (time.time() - t1) * 1000.0
                 logger.info('Balance fetching completed from ' +
                             exchange.name + f" in {d_ms} ms")
+                await asyncio.sleep(exchange.rateLimit / 1000) # wait for rateLimit
                 return
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
                 d_ms = (time.time() - t1) * 1000.0
@@ -262,7 +269,7 @@ class Trader:
                         str(exchange.markets[market_str]['limits']['amount']['max'])
                     )
 
-            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
+            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
             if free_balance < amount:
                 raise ValueError(
                     'Insufficient stock on ' + exchange.name + " " + market_str +
@@ -332,6 +339,8 @@ class Trader:
                                          str(response['error']))
             d_ms = (time.time() - t1) * 1000.0
             logger.info(f"Create limit order SUCCESS ({orderRequest.toString()}) in {d_ms} ms")
+
+            await asyncio.sleep(exchange.rateLimit / 1000)
 
         except Exception as error:
             d_ms = (time.time() - t1) * 1000.0

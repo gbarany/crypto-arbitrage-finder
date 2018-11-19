@@ -55,13 +55,12 @@ class TestClass(TestCase):
     @pytest.mark.skip(reason="e2e test")
     @pytest.mark.asyncio
     async def test_execute_trades(self):
-        # await self.__test_create_and_cancel_order(BINANCE, ETH_BTC, price=200)
-        price = 0.04
-        or11 = OrderRequest(KRAKEN, ETH_BTC, 0.1, 0.02, OrderRequestType.BUY)
-        or21 = OrderRequest(BINANCE, ETH_BTC, 0.1, 0.04, OrderRequestType.SELL)
-        or22 = OrderRequest(BINANCE, ETH_BTC, 0.1, 0.04, OrderRequestType.SELL)
+
+        self.trader.input = lambda x: 'ok'
+
+        or11 = OrderRequest(COINBASEPRO, ETH_BTC, amount=0.1, price=0.02, requestType=OrderRequestType.BUY)
 
         orl1 = OrderRequestList([or11])
-        orl2 = OrderRequestList([or21, or22])
-        stl = SegmentedOrderRequestList([orl1, orl2])
+        # orl2 = OrderRequestList([or21, or22])
+        stl = SegmentedOrderRequestList([orl1])
         await self.trader.execute(stl)
