@@ -12,6 +12,20 @@
             "host": "localhost"
         },
         {
+            "name": "!LIVE! NetX, Kafka AWS",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/FrameworkLive.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--live",
+                "--resultsdir=./results/",
+                "--neo4jmode=local",
+                "--dealfinder=networkx",
+                "--datasource=kafkaaws"
+            ]
+        },
+        {
             "name": "Sandbox NetX, Kafka AWS",
             "type": "python",
             "request": "launch",
