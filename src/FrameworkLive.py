@@ -245,7 +245,7 @@ class FrameworkLive:
 
 
 def signal_handler(sig, frame):
-    print('You pressed Ctrl+C!')
+    print('Ctrl+C detected, will quit soon.')
     loop = asyncio.get_event_loop()
     loop.stop()
 signal.signal(signal.SIGINT, signal_handler)
