@@ -21,6 +21,7 @@ import json
 from FWLiveParams import FWLiveParams
 import ptvsd
 from aiokafka import AIOKafkaConsumer
+import logging
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
