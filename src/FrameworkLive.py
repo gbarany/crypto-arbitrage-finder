@@ -8,6 +8,8 @@ import aiohttp
 
 import ccxt.async_support as ccxt
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import time
 from OrderbookAnalyser import OrderbookAnalyser
