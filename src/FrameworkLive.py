@@ -22,6 +22,8 @@ from FWLiveParams import FWLiveParams
 import ptvsd
 from aiokafka import AIOKafkaConsumer
 
+logger = logging.getLogger('CryptoArbitrageApp')
+
 class FrameworkLive:
     def __init__(self, frameworklive_parameters):
         self.exchanges = {}
