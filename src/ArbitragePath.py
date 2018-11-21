@@ -3,6 +3,7 @@ import json
 from OrderRequest import OrderRequest, OrderRequestList, OrderRequestType, SegmentedOrderRequestList
 import logging
 from functools import reduce
+from TradingStrategy import TradingStrategy
 
 dealLogger = logging.getLogger('CryptoArbitrageDeals')
 logger = logging.getLogger('CryptoArbitrageApp')
@@ -28,9 +29,18 @@ class ArbitragePath:
     def getPrice(self):
         return list(map(lambda orderBookPrice:orderBookPrice.getPrice(),self.orderBookPriceList))
     
-    def getNofHops(self):
+    def getNofTotalTransactions(self):
         return len(self.nodesList) - 1
+    
+    def getNofIntraexchangeTransactions(self):
+        exchangesList = list(map(lambda node:node.getExchange(),self.nodesList))
+        cntr = 0
+        for idx,exchange in enumerate(exchangesList[:-1]):
+            if exchange == exchangesList[idx+1]:
+                cntr += 1
 
+        return cntr
+    
     def getProfit(self):
         return self.profit
 
@@ -47,7 +57,7 @@ class ArbitragePath:
         if volumeBTCs.count(volumeBTCs[0]) is not len(volumeBTCs): # check that all prices in path were calculated based on the same volume
             logger.warning('Different volumeBTCs in deal: ' + str(volumeBTCs))
 
-        return  volumeBTCs[0]
+        return  max(volumeBTCs)
     
     def getExchangesInvolved(self):
         exchangesList = list(map(lambda node:node.getExchange(),self.nodesList))
@@ -70,9 +80,11 @@ class ArbitragePath:
             'nodes': toCSVStr(self.nodesList),
             'price':toCSVStr(self.getPrice()),
             'age': toCSVStr(self.getAge()),
-            'nofHops': str(self.getNofHops()),
+            'nofTotalTransactions': str(self.getNofTotalTransactions()),
+            'nofIntraexchangeTransactions': str(self.getNofIntraexchangeTransactions()),
             'exchangesInvolved':toCSVStr(self.getExchangesInvolved()),
             'nofExchangesInvolved':str(self.getNofExchangesInvolved()),
+            'tradingStrategyApproved':str(TradingStrategy.isDealApproved(self))
         }
 
         logStr = ""

@@ -38,7 +38,7 @@ ch.setFormatter(formatter)
 # add the handlers to the logger
 dealLogger.addHandler(fh)
 dealLogger.addHandler(ch)
-dealLogger.info('timestamp,vol_BTC,profit_perc,nodes,price,age,nofHops,exchangesInvolved,nofExchangesInvolved')
+dealLogger.info('timestamp,vol_BTC,profit_perc,nodes,price,age,nofTotalTransactions,nofIntraexchangeTransactions,exchangesInvolved,nofExchangesInvolved,tradingStrategyApproved')
 
 ###################
 ## Init trader logger

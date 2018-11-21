@@ -70,7 +70,8 @@ class TestClass(object):
             timestamp=4)
         assert path.getAge() == [4, 3, 2]
         assert path.getPrice() == [9000, 1 / 200, 1 / 5]
-        assert path.getNofHops() == 3
+        assert path.getNofTotalTransactions() == 3
+        assert path.getNofIntraexchangeTransactions() == 3
         assert path.getExchangesInvolved() == ['kraken']
         assert path.getNofExchangesInvolved() == 1
         assert path.getProfit() == 800
@@ -292,7 +293,8 @@ class TestClass(object):
             timestamp=6)
         assert path.getAge() == [1, 3, 2]
         assert path.getPrice() == [5000, 1 / 200, 1 / 5]
-        assert path.getNofHops() == 3
+        assert path.getNofTotalTransactions() == 3
+        assert path.getNofIntraexchangeTransactions() == 3
         assert path.getExchangesInvolved() == ['kraken']
         assert path.getNofExchangesInvolved() == 1
         assert path.getProfit() == 400

@@ -14,7 +14,7 @@ import asyncio
 from functools import wraps
 from time import time
 from utilities import timed
-
+from TradingStrategy import TradingStrategy
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -113,7 +113,7 @@ class OrderbookAnalyser:
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_neo4j:
             
             self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair)
-            '''paths_neo=self.arbitrageGraphNeo.getArbitrageDeal(
+            paths_neo=self.arbitrageGraphNeo.getArbitrageDeal(
                 timestamp=timestamp,
                 asset=Asset(exchange=orderBookPair.exchange, symbol=orderBookPair.getSymbolBase()))
             
@@ -122,8 +122,9 @@ class OrderbookAnalyser:
                 if path_neo.isProfitable() is True:
                     logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
                     path_neo.log()
-                    sorl = path_neo.toSegmentedOrderList()
-                    asyncio.ensure_future(self.trader.execute(sorl))'''
+                    if TradingStrategy.isDealApproved(path_neo) is True:
+                        sorl = path_neo.toSegmentedOrderList()
+                        asyncio.ensure_future(self.trader.execute(sorl))
 
         # ArbitrageGraph deal finder (NetworkX)
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
@@ -133,8 +134,9 @@ class OrderbookAnalyser:
                 if path.isProfitable() is True:
                     logger.info("NetX Found arbitrage deal: "+str(path))
                     path.log()
-                    sorl = path.toSegmentedOrderList()
-                    asyncio.ensure_future(self.trader.execute(sorl))
+                    if TradingStrategy.isDealApproved(path) is True:
+                        sorl = path.toSegmentedOrderList()
+                        asyncio.ensure_future(self.trader.execute(sorl))
 
 
     def terminate(self):
