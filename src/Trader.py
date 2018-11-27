@@ -1,4 +1,6 @@
 import asyncio
+import math
+
 import boto3
 import json
 import traceback
@@ -150,11 +152,13 @@ class Trader:
             try:
                 t1 = time.time()
                 response = await self.__exchanges[orderRequest.exchange_name_std].fetchOrder(orderRequest.id)
+                logger.debug(f'__fetch_order_status #{orderRequest.id} response: {response}')
                 t2 = time.time()
                 d = (t2 - t1) * 1000.0
-                logger.info(f'Order status fetched {orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
+                logger.info(f'Order status fetched #{orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
                 orderRequest.setOrder(response)
                 if response['status'] == CCXT_ORDER_STATUS_CANCELED:
+                    logger.info(f'Order status CANCELED #{orderRequest.id}')
                     raise OrderErrorByExchange(orderRequest)
 
                 exchange = self.__exchanges[orderRequest.exchange_name_std]
@@ -201,7 +205,7 @@ class Trader:
                 d_ms = (time.time() - t1) * 1000.0
                 logger.info('Balance fetching completed from ' +
                             exchange.name + f" in {d_ms} ms")
-                await asyncio.sleep(exchange.rateLimit / 1000) # wait for rateLimit
+                await asyncio.sleep(exchange.rateLimit / 1000)  # wait for rateLimit
                 return
             except (ccxt.ExchangeError, ccxt.NetworkError) as error:
                 d_ms = (time.time() - t1) * 1000.0
@@ -247,7 +251,7 @@ class Trader:
         market = self.get_market(exchange_name, market_str)
         return market['limits']['amount']['min']
 
-    def is_transaction_valid(self, exchange_name: str, market_str: str, amount: float):
+    def hasSufficientBalance(self, exchange_name: str, market_str: str, amount: float, type: OrderRequestType):
         try:
             exchange = self.get_exchange(exchange_name)
             market = self.get_market(exchange_name, market_str)
@@ -269,7 +273,10 @@ class Trader:
                         str(exchange.markets[market_str]['limits']['amount']['max'])
                     )
 
-            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
+            if type == OrderRequestType.SELL:
+                free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
+            else:
+                free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
             if free_balance < amount:
                 raise ValueError(
                     'Insufficient stock on ' + exchange.name + " " + market_str +
@@ -282,19 +289,62 @@ class Trader:
             raise ValueError(f"Error during transaction validation: {e}")
 
     def isOrderRequestValid(self, orderRequest: OrderRequest):
-        return self.is_transaction_valid(orderRequest.exchange_name_std, orderRequest.market,
-                                         orderRequest.amount)
+        exchange_name = orderRequest.exchange_name_std
+        market_str = orderRequest.market
+        amount = orderRequest.amount
+        type = orderRequest.type
+        try:
+            exchange = self.get_exchange(exchange_name)
+            market = self.get_market(exchange_name, market_str)
+            if market['limits']['amount']['min']:
+                if amount < exchange.markets[market_str]['limits']['amount']['min']:
+                    raise ValueError(
+                        'Amount too small, won'
+                        't execute on ' + exchange.name + " " + market_str +
+                        " Amount: " + str(amount) + " Min.amount:" +
+                        str(exchange.markets[market_str]['limits']['amount']['min'])
+                    )
+
+            if market['limits']['amount']['max']:
+                if amount > exchange.markets[market_str]['limits']['amount']['max']:
+                    raise ValueError(
+                        'Amount too big, won'
+                        't execute on ' + exchange.name + " " + market_str +
+                        " Amount: " + str(amount) + " Max.amount:" +
+                        str(exchange.markets[market_str]['limits']['amount']['max'])
+                    )
+
+            return True
+        except Exception as e:
+            raise ValueError(f"Error during validating OrderRequest: {e}")
+
+    def hasSufficientBalanceForOrderRequest(self, orderRequest: OrderRequest):
+        exchange_name = orderRequest.exchange_name_std
+        market_str = orderRequest.market
+        amount = orderRequest.amount
+        if orderRequest.type == OrderRequestType.SELL:
+            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
+        else:
+            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
+        if free_balance < amount:
+            raise ValueError(
+                f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
+                f' Amount available: {free_balance}' +
+                f' Amount required: {amount}')
+
+        return True
 
     def isOrderRequestListValid(self, orderRequestList: OrderRequestList):
-        ret: bool = True
         for orderRequest in orderRequestList.getOrderRequests():
-            ret = ret & self.isOrderRequestValid(orderRequest)
-        return ret
+            if self.isOrderRequestValid(orderRequest) is False:
+                return False
+        ors = orderRequestList.getOrderRequests()
+        return self.hasSufficientBalanceForOrderRequest(ors[0])
 
     def isSegmentedOrderRequestListValid(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         ret: bool = True
-        for orderRequest in segmentedOrderRequestList.getOrderRequests():
-            ret = ret & self.isOrderRequestValid(orderRequest)
+        for orderRequestList in segmentedOrderRequestList.getOrderRequestLists():
+            ret = ret & self.isOrderRequestListValid(orderRequestList)
         return ret
 
     async def __create_limit_order(self, orderRequest: OrderRequest):
@@ -302,7 +352,6 @@ class Trader:
         if orderRequest.shouldAbort:
             logger.info(f"Create limit order is canceled, reason: shouldAbort is True ({orderRequest.toString()})")
             return
-        response = {}
         exchange = self.__exchanges[orderRequest.exchange_name_std]
         symbol = orderRequest.market
         amount = orderRequest.amount
@@ -357,7 +406,8 @@ class Trader:
         try:
             # Pre-check transactions
             if self.isOrderRequestListValid(orderRequestList) is False:
-                raise ValueError(f'TradeList {orderRequestList} is not initialized')
+                logger.error(f'OrderRequestList is not valid: {orderRequestList} ')
+                raise ValueError(f'OrderRequestList is not valid: {orderRequestList} ')
 
             # Fire real transactions
             for orderRequest in orderRequestList.getOrderRequests():
@@ -379,7 +429,7 @@ class Trader:
             # Pre-check transactions
             if self.isSegmentedOrderRequestListValid(segmentedOrderRequestList) is False:
                 raise ValueError(
-                    f"segmentedOrderRequestList {segmentedOrderRequestList} is not initalized")
+                    f"segmentedOrderRequestList is not valid: {segmentedOrderRequestList} ")
 
             # Fire real transactions
             for orderRequestList in segmentedOrderRequestList.getOrderRequestLists():
@@ -400,18 +450,22 @@ class Trader:
         self.__isBusy = True
 
         logger.info(f'Start execute the orders:')
-        logger.info(f'{segmentedOrderRequestList.sorlToString()}')
+        logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
 
         if self.__is_sandbox_mode:
+            logger.info('Trader is in sandbox mode.')
+            isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
+            logger.info(f'Validating result in sandbox mode: {isValid}')
             logger.info('Trader is in sandbox mode. Skiping the order requests.')
+            self.__isBusy = False
+            return
+
+        ret = self.input('Write <ok> to authorize the trade:')
+        if ret != "ok":
+            logger.info(f'Trader is not authorized to execute the trade.')
             return
         else:
-            ret = self.input('Write <ok> to authorize the trade:')
-            if ret != "ok":
-                logger.info(f'Trader is not authorized to execute the trade.')
-                return
-            else:
-                logger.info('Trader is authorized.')
+            logger.info('Trader is authorized.')
 
         t1 = time.time()
         try:
@@ -429,6 +483,10 @@ class Trader:
                 orderRequest.shouldAbort = True
             await self.abortSegmentedOrderRequestList(segmentedOrderRequestList)
         finally:
+            logger.info('SORL after execution:')
+            logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
+            logger.info('History log after execution:')
+            logger.info(f'\n{segmentedOrderRequestList.statusLogToString()}\n')
             await self.fetch_balances()
             self.__isBusy = False
 

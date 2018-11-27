@@ -133,14 +133,21 @@ class SegmentedOrderRequestList:
             for logEntry in orderRequest.getStatusLog():
                 log.append({
                     'id': orderRequest.id,
-                    'status': logEntry['status'],
+                    'status': logEntry['status'].value,
                     'time': logEntry['time'],
                     'dtime': logEntry['dtime']
                 })
         return log
 
+    def statusLogToString(self):
+        log = self.logStatusLogs()
+        ret = ""
+        for l in log:
+            ret = ret + f"{l}\n"
+        return ret
+
     def sorlToString(self):
-        r = "SORL:\n"
+        r = ""
         for orderRequest in self.getOrderRequests():
             r = r + orderRequest.toString() + "\n"
         return r
