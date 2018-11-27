@@ -74,7 +74,7 @@ class FrameworkLive:
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
         self.trader = Trader(is_sandbox_mode=frameworklive_parameters.is_sandbox_mode)
         self.orderbookAnalyser = OrderbookAnalyser(
-            vol_BTC=[1,0.1,0.01],
+            vol_BTC=[0.07], # TODO : this should be conigurable
             edgeTTL=15,
             priceTTL=600,
             resultsdir=self.parameters.results_dir,
