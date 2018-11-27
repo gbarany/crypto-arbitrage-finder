@@ -1,5 +1,6 @@
 import asyncio
 import math
+import sys
 
 import boto3
 import json
@@ -453,7 +454,6 @@ class Trader:
 
         logger.info(f'Start execute the orders:')
         logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
-
         if self.__is_sandbox_mode:
             logger.info('Trader is in sandbox mode.')
             isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
@@ -462,12 +462,12 @@ class Trader:
             self.__isBusy = False
             return
 
-        ret = self.input('Write <ok> to authorize the trade:')
-        if ret != "ok":
-            logger.info(f'Trader is not authorized to execute the trade.')
-            return
-        else:
-            logger.info('Trader is authorized.')
+        # ret = self.input('Write <ok> to authorize the trade:')
+        # if ret != "ok":
+        #     logger.info(f'Trader is not authorized to execute the trade.')
+        #     return
+        # else:
+        #     logger.info('Trader is authorized.')
 
         t1 = time.time()
         try:
@@ -491,6 +491,8 @@ class Trader:
             logger.info(f'\n{segmentedOrderRequestList.statusLogToString()}\n')
             await self.fetch_balances()
             self.__isBusy = False
+            logger.info('Exit after execute()')
+            sys.exit("Exit after execute()")
 
     def isSandboxMode(self):
         return self.__is_sandbox_mode
