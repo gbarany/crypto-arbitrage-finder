@@ -34,17 +34,18 @@ class Trader:
                 orderRequest.amount = orderRequest.amount * pow(Trader.EFFICIENCY, idx * 1)
         return segmentedOrderRequestList
 
-    def __init__(self,
-                 is_sandbox_mode=True):
+    def __init__(self, is_sandbox_mode=True):
         self.__balances: Dict[str, Any] = {}
         self.__is_sandbox_mode: bool = is_sandbox_mode
         self.__exchanges: Dict[str, Exchange] = {}
         self.__isBusy = False
+        logger.info(f'Trader.__init__(is_sandbox_mode={is_sandbox_mode})')
 
     def getBalances(self):
         return self.__balances
 
     async def initExchangesFromAWSParameterStore(self):
+        logger.info(f'initExchangesFromAWSParameterStore')
         with open('./cred/aws-keys.json') as file:
             cred = json.load(file)
             ssm = boto3.client('ssm',
@@ -73,6 +74,7 @@ class Trader:
         await self.fetch_balances()
 
     async def initExchangesFromCredFile(self, credfile):
+        logger.info(f'initExchangesFromCredFile({credfile})')
         with open(credfile) as file:
             exchangeCreds = json.load(file)
             for exchangeName in exchangeCreds:
