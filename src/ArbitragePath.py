@@ -68,8 +68,8 @@ class ArbitragePath:
         return len(self.getExchangesInvolved())
 
 
-    def log(self):
-        
+    def getLogJSON(self):
+
         def toCSVStr(itemsList):
             return ",".join(str(x) for x in itemsList)
 
@@ -86,7 +86,13 @@ class ArbitragePath:
             'nofExchangesInvolved':str(self.getNofExchangesInvolved()),
             'tradingStrategyApproved':str(TradingStrategy.isDealApproved(self))
         }
+        return logJSON
+    
+    def getLogJSONDump(self):
+        return json.dumps(self.getLogJSON())
 
+    def log(self):        
+        logJSON = self.getLogJSON()
         logStr = ""
         for row in logJSON.values():
             logStr+="\""+row+"\","

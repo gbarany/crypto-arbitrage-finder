@@ -11,6 +11,7 @@ import time
 from FeeStore import FeeStore
 from Trader import Trader
 from InitLogger import logger
+import asyncio
 
 #vol_BTC=[1,0.1,0.01]
 vol_BTC = [1]
@@ -90,6 +91,17 @@ class TestClass(object):
             orderRequestList = orderRequestLists[0][0]
             assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
+
+
+    def test_crossExchangeAsync(self,monkeypatch, mocker):
+        async def asyncWrapper(monkeypatch, mocker):            
+            self.test_crossExchange(monkeypatch, mocker)
+            asyncio.sleep(1000)
+
+        loop = asyncio.get_event_loop()      
+        #loop.run_until_complete(asyncWrapper(monkeypatch, mocker))
+        asyncio.ensure_future(asyncWrapper(monkeypatch, mocker))
+        loop.run_forever()
 
 
     def test_crossExchange(self,monkeypatch, mocker):
