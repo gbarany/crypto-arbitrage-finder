@@ -3,4 +3,3 @@ docker run --rm -it \
     --mount type=bind,source="$(pwd)"/cred,target=/app/cred \
     -e MODE='LIVE_NETX_KAFKA_AWS' \
     --name "orderbook-analyser-instance-live" "orderbook-analyser"
-    --live
