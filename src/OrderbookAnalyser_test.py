@@ -92,8 +92,8 @@ class TestClass(object):
             assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
 
-
-    def test_crossExchangeAsync(self,monkeypatch, mocker):
+    # TODO : add unit test for Orderbook Kafka producer scenario 
+    '''def test_crossExchangeAsync(self,monkeypatch, mocker):
         async def asyncWrapper(monkeypatch, mocker):            
             self.test_crossExchange(monkeypatch, mocker)
             asyncio.sleep(1000)
@@ -101,7 +101,7 @@ class TestClass(object):
         loop = asyncio.get_event_loop()      
         #loop.run_until_complete(asyncWrapper(monkeypatch, mocker))
         asyncio.ensure_future(asyncWrapper(monkeypatch, mocker))
-        loop.run_forever()
+        loop.run_forever()'''
 
 
     def test_crossExchange(self,monkeypatch, mocker):
