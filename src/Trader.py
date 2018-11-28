@@ -454,10 +454,14 @@ class Trader:
 
         logger.info(f'Start execute the orders:')
         logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
+        isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
+        logger.info(f'Validating result: {isValid}')
+
+        if isValid is False:
+            self.__isBusy = False
+            return
+
         if self.__is_sandbox_mode:
-            logger.info('Trader is in sandbox mode.')
-            isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
-            logger.info(f'Validating result in sandbox mode: {isValid}')
             logger.info('Trader is in sandbox mode. Skiping the order requests.')
             self.__isBusy = False
             return
