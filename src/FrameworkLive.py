@@ -73,6 +73,9 @@ class FrameworkLive:
 
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
         self.trader = Trader(is_sandbox_mode=frameworklive_parameters.is_sandbox_mode)
+        
+
+        kafkaCredentials=self.parameters.getKafkaProducerCredentials()
         self.orderbookAnalyser = OrderbookAnalyser(
             vol_BTC=[0.07], # TODO : this should be conigurable
             edgeTTL=15,
@@ -81,7 +84,8 @@ class FrameworkLive:
             priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
             trader=self.trader,
             neo4j_mode=self.parameters.neo4j_mode,
-            dealfinder_mode=self.parameters.dealfinder_mode)
+            dealfinder_mode=self.parameters.dealfinder_mode,
+            kafkaCredentials=kafkaCredentials)
 
     async def pollOrderbook(self, exchange, symbols):
         i = 0
@@ -160,14 +164,7 @@ class FrameworkLive:
 
     async def kafkaConsumer(self):
 
-        if self.parameters.datasource is FWLiveParams.datasource_kafka_aws:
-            cred=FWLiveParams.getKafkaCredentials()
-        elif self.parameters.datasource is FWLiveParams.datasource_kafka_local:
-            cred = FWLiveParams.datasource_kafka_local_details
-        else:
-            logger.error('invalid kafka datasource')
-            return
-
+        cred=self.parameters.getKafkaConsumerCredentials()
         topic = cred['topic']
         kafka_server = cred['uri']
         group_id = cred['group_id']
@@ -256,11 +253,12 @@ signal.signal(signal.SIGINT, signal_handler)
 def main(argv):
     frameworklive_parameters = FWLiveParams()
     try:
-        opts, _ = getopt.getopt(argv, "nrodslfe",
+        opts, _ = getopt.getopt(argv, "nrodpslfe",
                                 ["enableplotting",
                                  "resultsdir=",
                                  "neo4jmode=",
                                  "dealfinder=",
+                                 "output=",
                                  "datasource=",
                                  "live",
                                  "noforex",
@@ -269,17 +267,20 @@ def main(argv):
         logger.error(
             'Invalid parameter(s) entered. List of valid parameters:\n'
             ' --enableplotting: enable NetworkX graph plots\n'
-            ' --resultsdir=path: output directory\n'
-            ' --dealfinder=neo4j: use neo4j to find arbitrage deals\n'
-            '              networkx: use networkx/belman-ford to find arbitrage deals\n'
-            '              all: run both neo4j and networkx in parallel to find arbitrage deals\n'
-            ' --datasource=localpollers: local pollers are used as data-source \n'
-            '              kafkalocal: locally hosted kafka stream used as data-source \n'
-            '              kafkaaws: asyncio pollers are used as data-source \n'
-            ' --live: trades are executed in live mode\n'
-            ' --noforex: disable forex\n'
-            ' --neo4jmode=local: connect to neo4j running on localhost\n'
-            '             aws: connect to neo4j running in AWS\n'
+            ' --resultsdir =  path: output directory\n'
+            ' --dealfinder =  neo4j: use neo4j to find arbitrage deals\n'
+            '                 networkx: use networkx/belman-ford to find arbitrage deals\n'
+            '                 all: run both neo4j and networkx in parallel to find arbitrage deals\n'
+            ' --datasource =  localpollers: local pollers are used as data-source \n'
+            '                 kafkalocal: locally hosted kafka stream used as data-source \n'
+            '                 kafkaaws: asyncio pollers are used as data-source \n'
+            ' --output =      logfiles: save output to logfiles (default)\n'
+            '                 kafkalocal: save output to logfiles \n'
+            '                 kafkaaws: save output to logfiles \n'
+            ' --live:         trades are actually executed (not a sandbox)\n'
+            ' --noforex:      disable forex\n'
+            ' --neo4jmode =   local: connect to neo4j running on localhost\n'
+            '                 aws: connect to neo4j running in AWS\n'
             ' --remotedebug: enable remote debugging\n'
         )
         sys.exit(2)
@@ -310,6 +311,18 @@ def main(argv):
 
             if arg not in ['neo4j', 'networkx','all']:
                 logger.error('Invalid dealfiner mode in parameter')
+                return
+
+        if opt in ("-p", "--output"):
+            if arg == 'logfiles':
+                frameworklive_parameters.output = FWLiveParams.output_logfiles
+            if arg == 'kafkalocal':
+                frameworklive_parameters.output = FWLiveParams.output_kafkalocal
+            if arg == 'kafkaaws':
+                frameworklive_parameters.output = FWLiveParams.output_kafkaaws
+
+            if arg not in ['logfiles', 'kafkalocal','kafkaaws']:
+                logger.error("Invalid value in 'output' parameter")
                 return
 
         if opt in ("-s", "--datasource"):

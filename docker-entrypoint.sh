@@ -12,7 +12,7 @@ else
             python ./src/FrameworkLive.py --noforex --resultsdir=./results/ --dealfinder=networkx --datasource=kafkaaws 2> ./results/errorlog.txt
         else
             if [ "$Mode" = "LIVE_NETX_KAFKA_AWS" ]; then
-                python ./src/FrameworkLive.py --noforex --resultsdir=./results/ --dealfinder=networkx --datasource=kafkaaws --live 2> ./results/errorlog.txt
+                python ./src/FrameworkLive.py --noforex --resultsdir=./results/ --dealfinder=networkx --datasource=kafkaaws --output=kafkaaws --live 2> ./results/errorlog.txt
             fi
         fi
     fi

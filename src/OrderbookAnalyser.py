@@ -20,6 +20,41 @@ import json
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
+class KafkaProducerWrapper:
+    def __init__(self,kafkaCredentials):
+        loop = asyncio.get_event_loop()
+        self.kafkaProducer = None
+        
+        if kafkaCredentials is not None:
+            self.topic = kafkaCredentials["topicDeals"]
+            try:
+                self.kafkaProducer = AIOKafkaProducer(
+                    loop=loop,
+                    bootstrap_servers=kafkaCredentials["uri"],
+                    value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+                asyncio.ensure_future(self.kafkaProducer.start())
+            except Exception as e:
+                logger.error('Kafka producer initialization failed')
+                
+        else:
+            logger.info('No credentials available for Kafka producer')
+
+    def sendDeal(self,deal):
+        if self.kafkaProducer is not None:
+            asyncio.ensure_future(self.sendAsync(deal))
+
+    async def sendAsync(self,deal):
+        payload = deal.getLogJSONDump()
+        try:
+            await self.kafkaProducer.send_and_wait(self.topic, payload)
+        except Exception as e:
+            logger.warn('Failed to publish to Kafka stream ') 
+    
+    def __del__(self):
+        if self.kafkaProducer is not None:
+            asyncio.ensure_future(self.kafkaProducer.stop())
+
+
 class OrderbookAnalyser:
     PRICE_SOURCE_ORDERBOOK = "PRICE_SOURCE_ORDERBOOK"
     PRICE_SOURCE_CMC = "PRICE_SOURCE_CMC"
@@ -32,7 +67,8 @@ class OrderbookAnalyser:
                  priceSource=PRICE_SOURCE_ORDERBOOK,
                  trader=None,
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled,
-                 dealfinder_mode=FWLiveParams.dealfinder_mode_networkx):
+                 dealfinder_mode=FWLiveParams.dealfinder_mode_networkx,
+                 kafkaCredentials=None):
 
         # create Arbitrage Graph objects
         if dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
@@ -58,13 +94,7 @@ class OrderbookAnalyser:
         assert trader is not None
         self.trader = trader
         
-        # init Kafka producer
-        loop = asyncio.get_event_loop()
-        self.kafkaProducer = AIOKafkaProducer(
-            loop=loop,
-            bootstrap_servers='kafka.cryptoindex.me:9092',
-            value_serializer=lambda v: json.dumps(v).encode('utf-8'))
-        asyncio.ensure_future(self.kafkaProducer.start())
+        self.kafkaProducer = KafkaProducerWrapper(kafkaCredentials)
 
         
     def updateCoinmarketcapPrice(self, cmcTicker):
@@ -133,7 +163,7 @@ class OrderbookAnalyser:
                 if path_neo.isProfitable() is True:
                     logger.info("Neo4j Found arbitrage deal: "+str(path_neo))
                     path_neo.log()
-                    asyncio.ensure_future(self.sendKafka(path_neo.getLogJSONDump()))
+                    self.kafkaProducer.sendDeal(path_neo)
                     if TradingStrategy.isDealApproved(path_neo) is True:
                         sorl = path_neo.toSegmentedOrderList()
                         asyncio.ensure_future(self.trader.execute(sorl))
@@ -146,19 +176,13 @@ class OrderbookAnalyser:
                 if path.isProfitable() is True:
                     logger.info("NetX Found arbitrage deal: "+str(path))
                     path.log()
-                    asyncio.ensure_future(self.sendKafka(path.getLogJSONDump()))
+                    self.kafkaProducer.sendDeal(path)
                     
                     if TradingStrategy.isDealApproved(path) is True:
                         sorl = path.toSegmentedOrderList()
                         asyncio.ensure_future(self.trader.execute(sorl))
 
 
-
-    async def sendKafka(self,payload):
-        try:
-            await self.kafkaProducer.send_and_wait("arbitrageDeals", payload)
-        except Exception as e:
-            logger.warn('Failed to publish to Kafka stream ') 
 
     def terminate(self):
         self.isRunning = False

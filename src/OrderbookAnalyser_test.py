@@ -18,6 +18,9 @@ vol_BTC = [1]
 
 
 def getOrderbookAnalyser():
+    parameters = FWLiveParams()
+    #parameters.output = FWLiveParams.output_kafkaaws
+    parameters.output = FWLiveParams.output_kafkalocal
     return OrderbookAnalyser(
         vol_BTC=vol_BTC,
         edgeTTL=30,
@@ -26,7 +29,8 @@ def getOrderbookAnalyser():
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         trader=Trader(is_sandbox_mode=True),
         neo4j_mode=FWLiveParams.neo4j_mode_localhost,
-        dealfinder_mode=FWLiveParams.dealfinder_mode_neo4j)
+        dealfinder_mode=FWLiveParams.dealfinder_mode_neo4j,
+        kafkaCredentials=parameters.getKafkaProducerCredentials())
 
 
 @pytest.fixture(scope="class")
@@ -92,16 +96,18 @@ class TestClass(object):
             assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
 
-    # TODO : add unit test for Orderbook Kafka producer scenario 
-    '''def test_crossExchangeAsync(self,monkeypatch, mocker):
+    def test_crossExchangeAsync(self,monkeypatch, mocker):
         async def asyncWrapper(monkeypatch, mocker):            
             self.test_crossExchange(monkeypatch, mocker)
-            asyncio.sleep(1000)
+
+        def stop_loop():
+            time.sleep(3)
+            loop.call_soon_threadsafe(loop.stop)
 
         loop = asyncio.get_event_loop()      
-        #loop.run_until_complete(asyncWrapper(monkeypatch, mocker))
         asyncio.ensure_future(asyncWrapper(monkeypatch, mocker))
-        loop.run_forever()'''
+        Thread(target=stop_loop).start()
+        loop.run_forever()
 
 
     def test_crossExchange(self,monkeypatch, mocker):

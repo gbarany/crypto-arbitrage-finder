@@ -13,6 +13,12 @@ class FWLiveParams:
     datasource_kafka_local = 2
     datasource_kafka_aws = 3
 
+    output_logfiles = 1
+    output_kafkalocal = 2
+    output_kafkaaws = 3
+    KAFKA_STREAM_CONSUMER = 1
+    KAFKA_STREAM_PRODUCER = 2
+
     neo4j_mode_localhost_details = {
         'uri' : 'bolt://localhost:7687',
         'user' : 'neo4j',
@@ -22,6 +28,7 @@ class FWLiveParams:
     datasource_kafka_local_details = {
         'uri' : '127.0.0.1:9092',
         'topic' : 'orderbook',
+        'topicDeals' : 'arbitrageDeals',
         'group_id' : 'my-group'
     }
 
@@ -33,7 +40,8 @@ class FWLiveParams:
                  results_dir='./',
                  neo4j_mode=neo4j_mode_disabled,
                  dealfinder_mode=dealfinder_mode_networkx,
-                 datasource=datasource_localpollers):
+                 datasource=datasource_localpollers,
+                 output=output_logfiles):
         self.enable_plotting = enable_plotting
         self.is_sandbox_mode = is_sandbox_mode
         self.is_forex_enabled = is_forex_enabled
@@ -42,6 +50,7 @@ class FWLiveParams:
         self.remoteDebuggingEnabled=remoteDebuggingEnabled
         self.dealfinder_mode = dealfinder_mode
         self.datasource= datasource
+        self.output=output
 
     @staticmethod
     def getNeo4jCredentials():
@@ -63,7 +72,28 @@ class FWLiveParams:
     def getSSMParam(ssm,paramName):
         return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']  
 
-    def getKafkaCredentials():
+
+    def getKafkaConsumerCredentials(self):
+        if self.datasource is FWLiveParams.datasource_kafka_aws:
+            cred=self.getKafkaCredentials()
+        elif self.datasource is FWLiveParams.datasource_kafka_local:
+            cred = FWLiveParams.datasource_kafka_local_details
+        else:
+            cred = None
+        return cred
+
+    def getKafkaProducerCredentials(self):
+        if self.output is FWLiveParams.output_kafkaaws:
+            cred =self.getKafkaCredentials()
+        elif self.output is FWLiveParams.output_kafkalocal:
+            cred = FWLiveParams.datasource_kafka_local_details
+        else:
+            cred = None
+        
+        return cred
+
+    def getKafkaCredentials(self):
+
         # Read parameters from AWS SSM         
         with open('./cred/aws-keys.json') as file:
             cred = json.load(file)
@@ -75,5 +105,6 @@ class FWLiveParams:
         return {
                 'uri' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/uri'),
                 'topic' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/topic'),
+                'topicDeals' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/topicDeals'),
                 'group_id' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/group_id')
                 }
