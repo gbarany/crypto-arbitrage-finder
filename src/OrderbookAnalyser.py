@@ -167,6 +167,7 @@ class OrderbookAnalyser:
                     if TradingStrategy.isDealApproved(path_neo) is True:
                         sorl = path_neo.toSegmentedOrderList()
                         asyncio.ensure_future(self.trader.execute(sorl))
+                        logger.info("Called Trader ensure_future")
 
         # ArbitrageGraph deal finder (NetworkX)
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
@@ -181,6 +182,7 @@ class OrderbookAnalyser:
                     if TradingStrategy.isDealApproved(path) is True:
                         sorl = path.toSegmentedOrderList()
                         asyncio.ensure_future(self.trader.execute(sorl))
+                        logger.info("Called Trader ensure_future")
 
 
 
