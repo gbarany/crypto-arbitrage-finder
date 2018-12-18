@@ -77,7 +77,7 @@ class FrameworkLive:
 
         kafkaCredentials=self.parameters.getKafkaProducerCredentials()
         self.orderbookAnalyser = OrderbookAnalyser(
-            vol_BTC=[0.07], # TODO : this should be conigurable
+            vol_BTC=[0.05], # TODO : this should be conigurable
             edgeTTL=15,
             priceTTL=600,
             resultsdir=self.parameters.results_dir,
