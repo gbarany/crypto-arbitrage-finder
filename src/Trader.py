@@ -452,17 +452,23 @@ class Trader:
             return
         self.__isBusy = True
 
-        logger.info(f'Start execute the orders:')
-        logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
-        isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
-        logger.info(f'Validating result: {isValid}')
+        try:
+            logger.info(f'Start execute the orders:')
+            logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
+            isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
+            logger.info(f'Validating result: {isValid}')
 
-        if isValid is False:
-            self.__isBusy = False
-            return
+            if isValid is False:
+                self.__isBusy = False
+                return
 
-        if self.__is_sandbox_mode:
-            logger.info('Trader is in sandbox mode. Skiping the order requests.')
+            if self.__is_sandbox_mode:
+                logger.info('Trader is in sandbox mode. Skiping the order requests.')
+                self.__isBusy = False
+                return
+
+        except Exception as e:
+            logger.error(f"execute failed during pre validation. Reason: {e}")
             self.__isBusy = False
             return
 
@@ -473,8 +479,8 @@ class Trader:
         # else:
         #     logger.info('Trader is authorized.')
 
-        t1 = time.time()
         try:
+            t1 = time.time()
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
             logger.debug(f"createLimitOrdersOnSegmentedOrderRequestList ended in {d_ms} ms")
