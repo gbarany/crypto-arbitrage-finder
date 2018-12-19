@@ -16,6 +16,7 @@ from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType, Ord
     SegmentedOrderRequestList, CCXT_ORDER_STATUS_OPEN, CCXT_ORDER_STATUS_CANCELED
 import time
 import logging
+from Notifications import sendNotification
 
 logger = logging.getLogger('Trader')
 
@@ -480,6 +481,7 @@ class Trader:
         #     logger.info('Trader is authorized.')
 
         try:
+            sendNotification("Trader is placing orders! Check the logs for details.")
             t1 = time.time()
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
