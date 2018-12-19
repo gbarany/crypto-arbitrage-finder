@@ -97,6 +97,7 @@ class OrderRequest:
             'market': self.market,
             'amount': self.amount,
             'price': self.price,
+            'type': self.type,
             'status': self.__status.value,
         }
         if self.shouldAbort:
