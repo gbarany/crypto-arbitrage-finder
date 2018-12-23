@@ -10,7 +10,6 @@ sendNotification("your message")
 import boto3
 import json
 
-snsClient = boto3.client('sns')
 topicARN = "arn:aws:sns:eu-west-1:605012833506:analyser-notifications"
 
 def sendNotification(message):
@@ -22,9 +21,9 @@ def sendNotification(message):
             aws_secret_access_key=cred['aws_secret_access_key'],
             region_name=cred['region_name'])
 
-    # For local testing with profile
-    # session = boto3.Session(profile_name='crypto')
-    # sns = session.client('sns', region_name='eu-west-1')
+        # For local testing with profile
+        # session = boto3.Session(profile_name='crypto')
+        # sns = session.client('sns', region_name='eu-west-1')
 
-    response = sns.publish(TopicArn=topicARN, Message=message)
+        response = sns.publish(TopicArn=topicARN, Message=message)
     return response
