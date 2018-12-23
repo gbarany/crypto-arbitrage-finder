@@ -481,7 +481,7 @@ class Trader:
         #     logger.info('Trader is authorized.')
 
         try:
-            sendNotification("Trader is placing orders! Check the logs for details.")
+            sendNotification("CryptoArb Trader is placing orders. Check the logs for details.")
             t1 = time.time()
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
