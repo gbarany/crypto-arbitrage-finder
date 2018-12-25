@@ -1,3 +1,3 @@
 git reset --hard HEAD
-git pull
+git pull origin develop
 ./docker-build.sh
