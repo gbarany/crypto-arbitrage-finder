@@ -367,11 +367,11 @@ class Trader:
 
             if orderRequest.type == OrderRequestType.BUY:
                 orderRequest.setStatus(OrderRequestStatus.CREATING)
-                response = await exchange.createLimitBuyOrder(symbol, amount, price)
+                response = await exchange.createLimitBuyOrder(symbol, exchange.amountToPrecision(symbol, amount), exchange.priceToPrecision(symbol, price))
                 logger.debug(f"{orderRequest.exchange_name_std}.createLimitBuyOrder ({orderRequest.toString()}) response: {response}")
             elif orderRequest.type == OrderRequestType.SELL:
                 orderRequest.setStatus(OrderRequestStatus.CREATING)
-                response = await exchange.createLimitSellOrder(symbol, amount, price)
+                response = await exchange.createLimitSellOrder(symbol, exchange.amountToPrecision(symbol, amount), exchange.priceToPrecision(symbol, price))
                 logger.debug(f"{orderRequest.exchange_name_std}.createLimitSellOrder ({orderRequest.toString()}) response: {response}")
             else:
                 raise ValueError('orderRequest.type has an invalid value')
