@@ -24,7 +24,7 @@ class Trader:
     PHASE_CREATE_TIMEOUT = 5  # sec (Az összes create-nek létre kell jönnie ennyi idő után)
     PHASE_FETCH_TIMEOUT = 10  # sec (Az összes order-nek CLOSED-nak kell lennie ennyi idő után, ha ez nem igaz, akkor ABORT ALL)
     NOF_CCTX_RETRY = 4
-    TTL_TRADEORDER_S = 2
+    TTL_TRADEORDER_S = 60
 
     EFFICIENCY = 0.9  # Ezzel szorozzuk a beadott amout-okat, hogy elkerüljük a recegést a soros átváltások miatt
 
@@ -486,7 +486,9 @@ class Trader:
             logger.debug(f"createLimitOrdersOnSegmentedOrderRequestList ended in {d_ms} ms")
             logger.info(f"Waiting for the order requests to complete for {Trader.TTL_TRADEORDER_S} s ")
             await asyncio.sleep(Trader.TTL_TRADEORDER_S)
+            logger.info(f"Waiting for TTL_TRADEORDER_S is over. ({Trader.TTL_TRADEORDER_S} s) ")
             await self.fetch_order_statuses(segmentedOrderRequestList)
+            logger.info(f"Canceling all requests")
             await self.cancelAllOrderRequests(segmentedOrderRequestList)
         except Exception as e:
             d_ms = time.time() - t1
