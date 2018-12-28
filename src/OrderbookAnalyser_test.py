@@ -9,6 +9,7 @@ from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType
 from threading import Condition, Thread
 import time
 from FeeStore import FeeStore
+from TradingStrategy import TradingStrategy
 from Trader import Trader
 from InitLogger import logger
 import asyncio
@@ -48,7 +49,7 @@ def getCMCSampleFetch():
 
 class TestClass(object):
 
-    def test_threeNodesVariousFees(self,monkeypatch, mocker):
+    def test_threeNodesNoFees(self,monkeypatch, mocker):
         feeRates = [0]#[0.02]
         for feeRate in feeRates:
             def getTakerFeeMock(self,exchangename, symbol):
@@ -95,6 +96,90 @@ class TestClass(object):
             orderRequestList = orderRequestLists[0][0]
             assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
+
+    def test_threeNodesWithFees(self,monkeypatch, mocker):
+        feeRates = [0.0951]
+        for feeRate in feeRates:
+            def getTakerFeeMock(self,exchangename, symbol):
+                    return feeRate
+            monkeypatch.setattr(FeeStore, 'getTakerFee', getTakerFeeMock)
+            monkeypatch.setattr(TradingStrategy,'MIN_PROFIT_LIMIT_PERCENTAGE',0)
+            orderbookAnalyser = getOrderbookAnalyser()
+            cmc = getCMCSampleFetch()
+            orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
+            
+            mocker.spy(orderbookAnalyser.trader, 'execute')
+
+            orderbookAnalyser.updateCoinmarketcapPrice(cmc)
+            orderbookAnalyser.update(
+                'kraken',
+                'BTC/USD',
+                bids=[[9000, 1]],
+                asks=[[10000, 1]],
+                timestamp=100)
+            orderbookAnalyser.update(
+                'kraken',
+                'ETH/USD',
+                bids=[[100, 1000]],
+                asks=[[200, 1000]],
+                timestamp=101)
+            orderbookAnalyser.update(
+                'kraken',
+                'ETH/BTC',
+                bids=[[0.03, 1000]],
+                asks=[[0.04, 1000]],
+                timestamp=102)
+
+            assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
+            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
+            
+            orderRequestList = orderRequestLists[0][1]
+            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+                    ('BTC/USD', vol_BTC[0], 9000, OrderRequestType.SELL,OrderRequestStatus.INITIAL)
+
+            orderRequestList = orderRequestLists[0][2]
+            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+                    ('ETH/USD',vol_BTC[0] / cmc['ETH/BTC']['last'], 200,OrderRequestType.BUY, OrderRequestStatus.INITIAL)
+
+            orderRequestList = orderRequestLists[0][0]
+            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+                    ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
+
+
+    def test_threeNodesWithTooHighFees(self,monkeypatch, mocker):
+        feeRates = [0.0952]
+        for feeRate in feeRates:
+            def getTakerFeeMock(self,exchangename, symbol):
+                    return feeRate
+            monkeypatch.setattr(FeeStore, 'getTakerFee', getTakerFeeMock)
+            monkeypatch.setattr(TradingStrategy,'MIN_PROFIT_LIMIT_PERCENTAGE',0)
+            orderbookAnalyser = getOrderbookAnalyser()
+            cmc = getCMCSampleFetch()
+            orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
+            
+            mocker.spy(orderbookAnalyser.trader, 'execute')
+
+            orderbookAnalyser.updateCoinmarketcapPrice(cmc)
+            orderbookAnalyser.update(
+                'kraken',
+                'BTC/USD',
+                bids=[[9000, 1]],
+                asks=[[10000, 1]],
+                timestamp=100)
+            orderbookAnalyser.update(
+                'kraken',
+                'ETH/USD',
+                bids=[[100, 1000]],
+                asks=[[200, 1000]],
+                timestamp=101)
+            orderbookAnalyser.update(
+                'kraken',
+                'ETH/BTC',
+                bids=[[0.03, 1000]],
+                asks=[[0.04, 1000]],
+                timestamp=102)
+
+            assert orderbookAnalyser.trader.execute.call_count == 0
 
     def test_crossExchangeAsync(self,monkeypatch, mocker):
         async def asyncWrapper(monkeypatch, mocker):            
