@@ -28,7 +28,10 @@ class ArbitragePath:
 
     def getPrice(self):
         return list(map(lambda orderBookPrice:orderBookPrice.getPrice(),self.orderBookPriceList))
-    
+
+    def getLimitPrice(self):
+        return list(map(lambda orderBookPrice:orderBookPrice.getLimitPrice(),self.orderBookPriceList))
+
     def getNofTotalTransactions(self):
         return len(self.nodesList) - 1
     
@@ -84,7 +87,8 @@ class ArbitragePath:
             'nofIntraexchangeTransactions': str(self.getNofIntraexchangeTransactions()),
             'exchangesInvolved':toCSVStr(self.getExchangesInvolved()),
             'nofExchangesInvolved':str(self.getNofExchangesInvolved()),
-            'tradingStrategyApproved':str(TradingStrategy.isDealApproved(self))
+            'tradingStrategyApproved':str(TradingStrategy.isDealApproved(self)),
+            'limitPrice':toCSVStr(self.getLimitPrice())
         }
         return logJSON
     
