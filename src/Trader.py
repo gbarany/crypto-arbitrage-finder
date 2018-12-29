@@ -233,7 +233,7 @@ class Trader:
         except Exception as e:
             # logger.warning()
             raise ValueError(
-                f"No balance available from {exchangeName} {symbol} {self.__balance[exchangeName][symbol]['free']}")
+                f"No balance available from {exchangeName} {symbol} {self.__balances[exchangeName][symbol]['free']}")
 
     def get_exchange(self, exchange_name: str) -> Exchange:
         if exchange_name not in self.__exchanges:
