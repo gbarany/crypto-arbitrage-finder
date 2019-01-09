@@ -9,7 +9,8 @@ from kafka import KafkaConsumer
 # import logging 
 # logging.basicConfig(level=logging.DEBUG)
 
-topic = 'arbitrageDeals'
+#topic = 'arbitrageDeals'
+topic = 'orderbook'
 
 kafka_server = "kafka.cryptoindex.me:9092"
 kafka_consumer = KafkaConsumer(topic, group_id='asd', bootstrap_servers=kafka_server)
@@ -17,4 +18,5 @@ consumer = KafkaConsumer(bootstrap_servers=kafka_server, enable_auto_commit=Fals
 consumer.subscribe([topic])
 for msg in consumer:
     data = json.loads(msg.value)
-    print(data)
+    if data['exchange'] == 'coinmarketcap':
+        print(data)
