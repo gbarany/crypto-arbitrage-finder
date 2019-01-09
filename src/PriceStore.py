@@ -98,8 +98,9 @@ class PriceStore:
                 and timestamp >= ts:
                 acc += rate
                 cntr += 1
+                priceage = timestamp-ts
         if cntr != 0:
-            logger.info('Price information found for %s/%s timestamp %f (age: %3.1fs)' %(symbol_base_ref, symbol_quote_ref, timestamp,timestamp-ts))
+            logger.info('Price information found for %s/%s timestamp %f (age: %3.1fs)' %(symbol_base_ref, symbol_quote_ref, timestamp,priceage))
             return acc / cntr
         else:
             logger.warning('Price information not available for %s/%s timestamp %f' %(symbol_base_ref, symbol_quote_ref, timestamp))
