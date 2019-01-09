@@ -187,7 +187,7 @@ class FrameworkLive:
                 try:
                     payload = json.loads(msg.value)
                     if payload['exchange'] == 'coinmarketcap':
-                        logger.info("Received Coinmarketcap sample " + ' producer timestamp [ms]:' + str(payload['timestamp']) + ' (delay [ms]:'+str(time.time()*1000-float(payload['timestamp']))+')')
+                        logger.info("Received Coinmarketcap sample " + payload['symbol'] + ' producer timestamp [ms]:' + str(payload['timestamp']) + ' (delay [ms]:'+str(time.time()*1000-float(payload['timestamp']))+')')
                         self.orderbookAnalyser.updateCoinmarketcapPrice(payload['data'])
                     else:
                         logger.info("Received " + payload['symbol'] + " from " + payload['exchange'] + ' producer timestamp [ms]:' + str(payload['timestamp']) + ' (delay [ms]:'+str(time.time()*1000-float(payload['timestamp']))+')')
