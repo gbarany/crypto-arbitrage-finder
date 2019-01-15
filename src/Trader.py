@@ -469,7 +469,7 @@ class Trader:
                 return
 
         except Exception as e:
-            logger.error(f"execute failed during pre validation. Reason: {e}")
+            logger.error(f"execute failed during pre validation. Reason: {e}", exc_info=True)
             self.__isBusy = False
             return
 
