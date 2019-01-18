@@ -108,3 +108,18 @@ class FWLiveParams:
                 'topicDeals' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/topicDeals'),
                 'group_id' : FWLiveParams.getSSMParam(ssm,'/prod/kafka/group_id')
                 }
+
+    @staticmethod
+    def getOandaCredentials():
+        # Read parameters from AWS SSM         
+        with open('./cred/aws-keys.json') as file:
+            cred = json.load(file)
+            ssm = boto3.client('ssm',
+                aws_access_key_id=cred['aws_access_key_id'],
+                aws_secret_access_key=cred['aws_secret_access_key'],
+                region_name=cred['region_name'])
+
+        return {
+                'accountid' : FWLiveParams.getSSMParam(ssm,'/prod/exchange/oanda/accountid'),
+                'apikey' : FWLiveParams.getSSMParam(ssm,'/prod/exchange/oanda/apikey')
+                }
