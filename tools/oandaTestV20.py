@@ -22,7 +22,7 @@ async def pollForex(symbols, authkey,accountid):
             print("Error while fetching forex rates from Oanda: " + type(error).__name__ + " " + str(error.args))
             
         i += 1
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
 
 async def forexPoller(symbols, authkey, accountid, orderbookAnalyser):
     async for ticker in pollForex(symbols=symbols, authkey=authkey,accountid=accountid):
@@ -45,7 +45,7 @@ async def forexPoller(symbols, authkey, accountid, orderbookAnalyser):
 oandaCredentials=FWLiveParams.getOandaCredentials()
 asyncio.ensure_future(
     forexPoller(
-        symbols=['EUR_USD', 'GBP_USD'],
+        symbols=['EUR_USD', 'GBP_USD', 'EUR_GBP'],
         authkey=oandaCredentials['apikey'],
         accountid=oandaCredentials['accountid'],
         orderbookAnalyser=None))
