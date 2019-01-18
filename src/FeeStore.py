@@ -27,6 +27,9 @@ class FeeStore:
             return 0
 
     def getTakerFee(self, exchangename, symbols):
+        if exchangename=='oanda': # TODO: refactor
+            return 0.0
+
         try:
             return self.numberOrZero(
                 self.getExchange(
@@ -36,6 +39,8 @@ class FeeStore:
             return FeeStore.DEFAULT_TAKER_FEE
 
     def getMakerFee(self, exchangename, symbols):
+        if exchangename=='oanda': # TODO: refactor
+            return 0.0
         try:
             return self.numberOrZero(
                 self.getExchange(
