@@ -22,6 +22,7 @@ from FWLiveParams import FWLiveParams
 import ptvsd
 from aiokafka import AIOKafkaConsumer
 import logging
+import dateutil
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -102,29 +103,48 @@ class FrameworkLive:
             i += 1
             await asyncio.sleep(exchange.rateLimit / 1000)
 
-    async def pollForex(self, symbols, authkey):
+    async def pollForex(self,symbols, authkey,accountid):
         i = 0
         while True:
             symbol = symbols[i % len(symbols)]
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(
-                            url="https://api-fxpractice.oanda.com/v1/prices",
+                            url="https://api-fxpractice.oanda.com/v3/accounts/"+accountid+"/pricing",
                             headers={'Authorization': ('Bearer ' + authkey)},
                             params='instruments=' + symbol) as resp:
                         yield (await resp.json())
             except Exception as error:
-                logger.error("Fetch forex rates from Oanda: " + type(error).__name__ + " " + str(error.args))
+                logger.error("Error while fetching forex rates from Oanda: " + type(error).__name__ + " " + str(error.args))
                 
             i += 1
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
 
-    async def forexPoller(self, symbols, authkey, orderbookAnalyser):
-        async for ticker in self.pollForex(symbols=symbols, authkey=authkey):
-            logger.info("Received " +
-                        ticker['prices'][0]['instrument'].replace("_", "/") +
-                        " prices from Oanda")
-            orderbookAnalyser.updateForexPrice(ticker['prices'][0])
+    async def forexPoller(self,symbols, authkey, accountid, orderbookAnalyser):
+        async for ticker in self.pollForex(symbols=symbols, authkey=authkey,accountid=accountid):
+            try:
+                symbolBase = ticker['prices'][0]['instrument'].split("_")[0]
+                symbolQuote = ticker['prices'][0]['instrument'].split("_")[1]
+                asks = ticker['prices'][0]['asks']
+                bids = ticker['prices'][0]['bids']
+                payload = {}
+                payload['exchange'] = "oanda"
+                payload['symbol'] = symbolBase + "/" + symbolQuote
+                payload['data'] = {}
+                payload['data']['asks'] = [[float(asks[0]['price']),asks[0]['liquidity']]]
+                payload['data']['bids'] = [[float(bids[0]['price']),bids[0]['liquidity']]]
+                payload['timestamp'] = time.mktime(dateutil.parser.parse(ticker['time']).timetuple())
+                logger.info("Received " + symbolBase+"/"+ symbolQuote + " from Oanda")
+                orderbookAnalyser.update(
+                    exchangename="oanda",
+                    symbol=payload['symbol'],
+                    bids=payload['data']['bids'],
+                    asks=payload['data']['asks'],
+                    timestamp=payload['timestamp'])
+
+            except Exception as error:
+                logger.error("Error interpreting Oanda ticker: " + type(error).__name__ + " " + str(error.args))
+
 
     async def pollCoinmarketcap(self, cmc):
         i = 0
@@ -221,15 +241,16 @@ class FrameworkLive:
             asyncio.ensure_future(
                 self.coinmarketcapPoller(self.cmc, self.orderbookAnalyser))
 
-            if self.parameters.is_forex_enabled is True:
-                with open('./cred/oanda.json') as file:
-                    authkeys = json.load(file)
-                    asyncio.ensure_future(
-                        self.forexPoller(
-                            symbols=['EUR_USD', 'GBP_USD'],
-                            authkey=authkeys['practice'],
-                            orderbookAnalyser=self.orderbookAnalyser))
+            #TODO: add if self.parameters.is_forex_enabled is True:
+            oandaCredentials=FWLiveParams.getOandaCredentials()
+            asyncio.ensure_future(
+                self.forexPoller(
+                    symbols=['EUR_USD', 'GBP_USD', 'EUR_GBP'],
+                    authkey=oandaCredentials['apikey'],
+                    accountid=oandaCredentials['accountid'],
+                    orderbookAnalyser=self.orderbookAnalyser))
 
+            
         # start kafka consumer if selected as datasource 
         if self.parameters.datasource is FWLiveParams.datasource_kafka_local or self.parameters.datasource is FWLiveParams.datasource_kafka_aws:
             asyncio.ensure_future(self.kafkaConsumer())
