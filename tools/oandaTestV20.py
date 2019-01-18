@@ -6,6 +6,19 @@ import time
 import sys
 sys.path.append('./src/')
 from FWLiveParams import FWLiveParams
+import logging
+
+# Init logger
+logger = logging.getLogger('oandaTestLogger')
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s - [%(filename)s:%(funcName)s:%(lineno)s]',
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 async def pollForex(symbols, authkey,accountid):
     i = 0
@@ -19,7 +32,7 @@ async def pollForex(symbols, authkey,accountid):
                         params='instruments=' + symbol) as resp:
                     yield (await resp.json())
         except Exception as error:
-            print("Error while fetching forex rates from Oanda: " + type(error).__name__ + " " + str(error.args))
+            logger.error("Error while fetching forex rates from Oanda: " + type(error).__name__ + " " + str(error.args))
             
         i += 1
         await asyncio.sleep(0.5)
@@ -38,9 +51,9 @@ async def forexPoller(symbols, authkey, accountid, orderbookAnalyser):
             payload['data']['asks'] = [[float(asks[0]['price']),asks[0]['liquidity']]]
             payload['data']['bids'] = [[float(bids[0]['price']),bids[0]['liquidity']]]
             payload['timestamp'] = time.mktime(dateutil.parser.parse(ticker['time']).timetuple())
-            print("Received " + symbolBase+"/"+ symbolQuote + " prices from Oanda")
+            logger.info("Received " + symbolBase+"/"+ symbolQuote + " prices from Oanda")
         except Exception as error:
-            print("Error interpreting Oanda ticker: " + type(error).__name__ + " " + str(error.args))
+            logger.error("Error interpreting Oanda ticker: " + type(error).__name__ + " " + str(error.args))
 
 oandaCredentials=FWLiveParams.getOandaCredentials()
 asyncio.ensure_future(
