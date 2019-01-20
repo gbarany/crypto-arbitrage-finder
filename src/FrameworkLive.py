@@ -293,7 +293,7 @@ class FrameworkLive:
             #TODO: add parameter to make sfox configurable
             asyncio.ensure_future(
                 self.sfoxWebSocket(
-                    symbols=["btcusd","ethusd"],
+                    symbols=["bchbtc","bchusd","ethbtc","btcusd","ethusd"],
                     orderbookAnalyser=self.orderbookAnalyser))
             
         # start kafka consumer if selected as datasource 

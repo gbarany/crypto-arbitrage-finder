@@ -52,4 +52,4 @@ async def sfoxWebSocket(symbols):
             except Exception as error:
                 logger.warn("Error while parsing SFOX websocket data: "+ type(error).__name__ + " " + str(error.args))
 
-asyncio.get_event_loop().run_until_complete(sfoxWebSocket(symbols=["btcusd","ethusd"]))
+asyncio.get_event_loop().run_until_complete(sfoxWebSocket(symbols=["bchbtc","bchusd","ethbtc","btcusd","ethusd"],))
