@@ -18,3 +18,4 @@ asynctest==0.12.2
 aiokafka==0.4.3
 asyncio
 pytest-asyncio
+websockets==5.0.1
