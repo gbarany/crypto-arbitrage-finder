@@ -23,6 +23,7 @@ import ptvsd
 from aiokafka import AIOKafkaConsumer
 import logging
 import dateutil
+import websockets
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -145,6 +146,45 @@ class FrameworkLive:
             except Exception as error:
                 logger.error("Error interpreting Oanda ticker: " + type(error).__name__ + " " + str(error.args))
 
+    async def sfoxWebSocket(self,symbols,orderbookAnalyser):
+        async with websockets.connect('wss://ws.sfox.com/ws') as ws:
+            subscribeMsg = {
+                "type": "subscribe",
+                "feeds": list(map(lambda symbol:'orderbook.sfox.'+symbol,symbols))
+            }
+            await ws.send(json.dumps(subscribeMsg))
+            resp = await ws.recv()
+            
+            try:
+                msg = json.loads(resp)
+                if msg["type"] != "success":
+                    logger.error("Subscribtion to SFOX unsuccessful, response type="+msg["type"])
+                    return
+            except Exception as error:
+                logger.error("Failed to subscribe to SFOX web socket: "+ type(error).__name__ + " " + str(error.args))
+
+            async for message in ws:
+                try:
+                    msg = json.loads(message)
+                    symbol = msg['recipient'].split('.')[2].upper()
+                    symbol = symbol[0:3]+"/"+symbol[3:]
+                    payload = {}
+                    payload['exchange'] = "sfox"
+                    payload['symbol'] = symbol
+                    payload['data'] = {}
+                    payload['data']['asks'] = list(map(lambda entry:entry[0:2],msg['payload']['asks']))
+                    payload['data']['bids'] = list(map(lambda entry:entry[0:2],msg['payload']['bids']))
+                    payload['timestamp'] = msg['timestamp']/1e9
+                    logger.info("Received " + symbol +  " prices from SFOX")
+                    self.orderbookAnalyser.update(
+                            exchangename=payload['exchange'],
+                            symbol=payload['symbol'],
+                            bids=payload['data']['bids'],
+                            asks=payload['data']['asks'],
+                            timestamp=payload['timestamp'])
+
+                except Exception as error:
+                    logger.warn("Error while parsing SFOX websocket data: "+ type(error).__name__ + " " + str(error.args))
 
     async def pollCoinmarketcap(self, cmc):
         i = 0
@@ -250,6 +290,11 @@ class FrameworkLive:
                     accountid=oandaCredentials['accountid'],
                     orderbookAnalyser=self.orderbookAnalyser))
 
+            #TODO: add parameter to make sfox configurable
+            asyncio.ensure_future(
+                self.sfoxWebSocket(
+                    symbols=["btcusd","ethusd"],
+                    orderbookAnalyser=self.orderbookAnalyser))
             
         # start kafka consumer if selected as datasource 
         if self.parameters.datasource is FWLiveParams.datasource_kafka_local or self.parameters.datasource is FWLiveParams.datasource_kafka_aws:
