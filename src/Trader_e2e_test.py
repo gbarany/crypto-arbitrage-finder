@@ -26,7 +26,6 @@ ch.setFormatter(formatter)
 rootLogger.addHandler(ch)
 
 
-
 class TestClass(TestCase):
     isSandboxMode = False
 
@@ -51,11 +50,9 @@ class TestClass(TestCase):
         await self.__test_fetch_balances(BITTREX)
         await self.__test_fetch_balances(COINBASEPRO)
 
-
     @pytest.mark.skip(reason="e2e test")
     @pytest.mark.asyncio
     async def test_execute_trades(self):
-
         self.trader.input = lambda x: 'ok'
 
         or11 = OrderRequest(COINBASEPRO, ETH_BTC, amount=0.1, price=0.02, requestType=OrderRequestType.BUY)
@@ -64,3 +61,4 @@ class TestClass(TestCase):
         # orl2 = OrderRequestList([or21, or22])
         stl = SegmentedOrderRequestList([orl1])
         await self.trader.execute(stl)
+
