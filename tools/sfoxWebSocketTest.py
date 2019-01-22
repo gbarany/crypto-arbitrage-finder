@@ -7,7 +7,7 @@ import logging
 import sys
 
 # Init logger
-logger = logging.getLogger('oandaTestLogger')
+logger = logging.getLogger('testLogger')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
