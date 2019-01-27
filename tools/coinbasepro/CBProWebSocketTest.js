@@ -5,11 +5,11 @@ const BigNumber = require('bignumber.js');
 // Parameters
 var maxEntryCount = 3
 var maxVolumeCount = Infinity
-//var pairs = ['BTC-USD', 'ETH-USD']
-var pairs = ['BTC-USD']
+var pairs = ['BCH/BTC', 'BTC/EUR', 'LTC/EUR', 'BTC/USD', 'BTC/EUR', 'ETH/USD',
+'ETH/EUR', 'BCH/EUR', 'ETH/BTC', 'BCH/USD']
 
 const publicClient = new Gdax.PublicClient();
-const orderbookSync = new Gdax.OrderbookSync(pairs);
+const orderbookSync = new Gdax.OrderbookSync(pairs.map(x => x.replace('/','-')));
 var asksConsolidated_old = new Array()
 var bidsConsolidated_old = new Array()
 
