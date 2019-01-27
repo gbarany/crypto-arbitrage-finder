@@ -95,6 +95,12 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "NodeJS: CoinbasePro WebSocket",
+            "program": "${workspaceFolder}/tools/coinbasepro/CBProWebSocketTest.js"
         }
     ]
 }
