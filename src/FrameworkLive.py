@@ -259,7 +259,8 @@ class FrameworkLive:
                             timestamp=payload['timestamp']/1000)
                 except Exception as e:
                     logger.error('Error during parsing Kafka stream JSON, error:'+str(e))
-
+                # TODO : last resort solution: drop frames that cannot be processed
+                #await consumer.seek_to_end()
         finally:
             # Will leave consumer group; perform autocommit if enabled.
             await consumer.stop()
