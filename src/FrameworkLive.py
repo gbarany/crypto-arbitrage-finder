@@ -19,7 +19,7 @@ import datetime
 from InitLogger import logger
 import json
 from FWLiveParams import FWLiveParams
-import ptvsd
+#import ptvsd
 from aiokafka import AIOKafkaConsumer
 import logging
 import dateutil
@@ -75,7 +75,6 @@ class FrameworkLive:
 
         self.cmc = ccxt.coinmarketcap({'enableRateLimit': True})
         self.trader = Trader(is_sandbox_mode=frameworklive_parameters.is_sandbox_mode)
-        
 
         kafkaCredentials=self.parameters.getKafkaProducerCredentials()
         self.orderbookAnalyser = OrderbookAnalyser(
