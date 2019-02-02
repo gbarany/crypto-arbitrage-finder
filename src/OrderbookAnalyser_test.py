@@ -20,7 +20,6 @@ vol_BTC = [1]
 
 def getOrderbookAnalyser():
     parameters = FWLiveParams()
-    #parameters.output = FWLiveParams.output_kafkaaws
     parameters.output = FWLiveParams.output_kafkalocal
     return OrderbookAnalyser(
         vol_BTC=vol_BTC,
@@ -29,8 +28,10 @@ def getOrderbookAnalyser():
         resultsdir='./results/',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
         trader=Trader(is_sandbox_mode=True),
-        neo4j_mode=FWLiveParams.neo4j_mode_localhost,
-        dealfinder_mode=FWLiveParams.dealfinder_mode_neo4j,
+#        neo4j_mode=FWLiveParams.neo4j_mode_localhost,
+#        dealfinder_mode=FWLiveParams.dealfinder_mode_neo4j,
+        neo4j_mode=FWLiveParams.neo4j_mode_disabled,
+        dealfinder_mode=FWLiveParams.dealfinder_mode_networkx,
         kafkaCredentials=parameters.getKafkaProducerCredentials())
 
 
@@ -106,7 +107,7 @@ class TestClass(object):
             monkeypatch.setattr(TradingStrategy,'MIN_PROFIT_LIMIT_PERCENTAGE',0)
             orderbookAnalyser = getOrderbookAnalyser()
             cmc = getCMCSampleFetch()
-            orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
+            #orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
             
             mocker.spy(orderbookAnalyser.trader, 'execute')
 

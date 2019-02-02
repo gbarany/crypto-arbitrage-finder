@@ -1,22 +1,17 @@
-import numpy as np
 from ArbitrageGraph import ArbitrageGraph
 from ArbitrageGraphNeo import ArbitrageGraphNeo
 from FeeStore import FeeStore
 from OrderBook import OrderBook, OrderBookPair, Asset
 from PriceStore import PriceStore
-import os
-import dill
 import datetime
 import logging
-from Trader import Trader, SegmentedOrderRequestList, OrderRequestList
 from FWLiveParams import FWLiveParams
 import asyncio
-from functools import wraps
-from time import time
 from utilities import timed
 from TradingStrategy import TradingStrategy
 from aiokafka import AIOKafkaProducer
 import json
+from multiprocessing import Process, Pipe, Queue
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -73,6 +68,11 @@ class OrderbookAnalyser:
         # create Arbitrage Graph objects
         if dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
             self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
+            self.pipes = [Pipe() for count in range(len(vol_BTC))]
+            self.dealQueue = Queue()
+            self.processes = [Process(target=self.updatePointProcess, args=(self.arbitrageGraphs[i], vol_BTC[i], self.pipes[i], self.dealQueue)) for i in range(len(vol_BTC))]
+            self.dealProcessor = Process(target=self.dealProcess)
+            self.dealProcessor.daemon = True
         else:
             self.arbitrageGraphs = None
 
@@ -80,6 +80,7 @@ class OrderbookAnalyser:
             self.arbitrageGraphNeo = ArbitrageGraphNeo(neo4j_mode=neo4j_mode,volumeBTCs=vol_BTC)
         else:
             self.arbitrageGraphNeo = None
+
         self.edgeTTL=edgeTTL
         self.feeStore = FeeStore()
         self.priceStore = PriceStore(priceTTL=priceTTL)
@@ -96,12 +97,40 @@ class OrderbookAnalyser:
         
         self.kafkaProducer = KafkaProducerWrapper(kafkaCredentials)
 
-        
+        self.dealProcessor.start()
+        # kick-of processes
+        for process in self.processes:
+            process.daemon = True
+            process.start()
+
     def updateCoinmarketcapPrice(self, cmcTicker):
         self.cmcTicker = cmcTicker
 
     def updateForexPrice(self, forexTicker):
         self.priceStore.updatePriceFromForex(forexTicker)
+
+    def dealProcess(self):
+        while True:
+            path = self.dealQueue.get()  # Read from the queue and do nothing
+            logger.info("NetX Found arbitrage deal: " + str(path))
+            path.log()
+            self.kafkaProducer.sendDeal(path)
+
+            if TradingStrategy.isDealApproved(path) is True:
+                sorl = path.toSegmentedOrderList()
+                asyncio.ensure_future(self.trader.execute(sorl))
+                logger.info("Called Trader ensure_future")
+
+    @staticmethod
+    def updatePointProcess(arbitrageGraph, volumeBTC, pipe, dealQueue):
+        p_output, p_input = pipe
+        while True:
+            orderBookPair, timestamp = p_output.recv()    # Read from the output pipe and do nothing
+            arbitrageGraph.updatePoint(orderBookPair=orderBookPair, volumeBTC=volumeBTC)
+            path = arbitrageGraph.getArbitrageDeal(timestamp)
+            if path.isProfitable() is True:
+                dealQueue.put(path)
+
 
     @timed
     def update(self, exchangename, symbol, bids, asks, timestamp):
@@ -151,7 +180,8 @@ class OrderbookAnalyser:
 
         
         # ArbitrageGraphNeo deal finder (Neo4j)
-        if self.dealfinder_mode & FWLiveParams.dealfinder_mode_neo4j:
+        # TODO: add neo4j processing back on
+        '''if self.dealfinder_mode & FWLiveParams.dealfinder_mode_neo4j:
             
             self.arbitrageGraphNeo.updatePoint(orderBookPair=orderBookPair)
             paths_neo=self.arbitrageGraphNeo.getArbitrageDeal(
@@ -168,11 +198,12 @@ class OrderbookAnalyser:
                         sorl = path_neo.toSegmentedOrderList()
                         asyncio.ensure_future(self.trader.execute(sorl))
                         logger.info("Called Trader ensure_future")
-
+        '''
         # ArbitrageGraph deal finder (NetworkX)
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
-            for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
-                arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
+            for idx, pipe in enumerate(self.pipes):
+                pipe[1].send((orderBookPair,timestamp))
+                '''arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
                 path = arbitrageGraph.getArbitrageDeal(timestamp)
                 if path.isProfitable() is True:
                     logger.info("NetX Found arbitrage deal: "+str(path))
@@ -182,7 +213,7 @@ class OrderbookAnalyser:
                     if TradingStrategy.isDealApproved(path) is True:
                         sorl = path.toSegmentedOrderList()
                         asyncio.ensure_future(self.trader.execute(sorl))
-                        logger.info("Called Trader ensure_future")
+                        logger.info("Called Trader ensure_future")'''
 
 
 
