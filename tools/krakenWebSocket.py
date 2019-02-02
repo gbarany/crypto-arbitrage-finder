@@ -105,7 +105,7 @@ my_client = client.WssClient()
 my_client.subscribe_public(
     subscription={
         'name': 'book',
-        'depth': 25
+        'depth': orderbookDepthInSubscription
     },
     #pair=translateNamingFromStandardToKraken(['BTC/USD']),
     pair=translateNamingFromStandardToKraken(['BTC/USD', 'BTC/EUR', 'BTC/USD', 'BCH/USD', 'XRP/USD', 'LTC/EUR','LTC/USD', 'ETH/BTC', 'BCH/BTC', 'XRP/BTC']),
