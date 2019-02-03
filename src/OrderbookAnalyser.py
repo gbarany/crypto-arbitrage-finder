@@ -12,6 +12,7 @@ from TradingStrategy import TradingStrategy
 from aiokafka import AIOKafkaProducer
 import json
 from multiprocessing import Process, Pipe, Queue
+import numbers
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -125,7 +126,7 @@ class OrderbookAnalyser:
     def updatePointProcess(arbitrageGraph, volumeBTC, pipe, dealQueue):
         p_output, p_input = pipe
         while True:
-            orderBookPair, timestamp = p_output.recv()    # Read from the output pipe and do nothing
+            orderBookPair, timestamp = p_output.recv()    # Read from the output pipe
             arbitrageGraph.updatePoint(orderBookPair=orderBookPair, volumeBTC=volumeBTC)
             path = arbitrageGraph.getArbitrageDeal(timestamp)
             if path.isProfitable() is True:
@@ -134,6 +135,13 @@ class OrderbookAnalyser:
 
     @timed
     def update(self, exchangename, symbol, bids, asks, timestamp):
+        # Validate inputs and reject if invalid
+        if isinstance(exchangename, str) is False:
+            raise Exception("Exchange name is not a string: " + str(exchangename)+" "+str(symbol))
+        if (isinstance(symbol, str) is False) or (symbol.find("/") == -1):
+            raise Exception("Invalid symbol:"+symbol + " "+str(exchangename))
+        if (not bids) or any(not isinstance(entry, list) for entry in bids) or any(not isinstance(entry[0], numbers.Number) or not isinstance(entry[1], numbers.Number) for entry in bids):
+            raise Exception("Invalid bids format on " + str(exchangename)+" "+str(symbol)+", bids:"+str(bids))
 
         if self.priceSource == OrderbookAnalyser.PRICE_SOURCE_ORDERBOOK:
             self.priceStore.updatePriceFromOrderBook(

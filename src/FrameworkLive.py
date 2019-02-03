@@ -257,7 +257,7 @@ class FrameworkLive:
                             asks=payload['data']['asks'],
                             timestamp=payload['timestamp']/1000)
                 except Exception as e:
-                    logger.error('Error during parsing Kafka stream JSON, error:'+str(e))
+                    logger.warning('Error parsing Kafka JSON:'+str(e))
                 # TODO : last resort solution: drop frames that cannot be processed
                 #await consumer.seek_to_end()
         finally:
