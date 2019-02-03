@@ -24,7 +24,7 @@ class FeeStore:
         if isinstance(x, numbers.Number):
             return x
         else:
-            return 0
+            return FeeStore.DEFAULT_TAKER_FEE
 
     def getTakerFee(self, exchangename, symbols):
         if exchangename == 'oanda': # TODO: refactor
