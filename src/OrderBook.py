@@ -46,10 +46,17 @@ class OrderBookPrice:
         self.volumeBTC = volumeBTC
 
     def __str__(self):
-        return "mean price:" + str(self.meanPrice) + ", " + "limit price:" + str(self.limitPrice)
+        return "mean price:" + str(self.meanPrice) + ", " + \
+               "mean price net:" + str(self.meanPriceNet) + ", " + \
+               "limit price:" + str(self.limitPrice) + ", " +\
+               "timestamp:" + str(self.timestamp)
 
     def getLogPrice(self):
-        return -1.0 * math.log(self.meanPriceNet)
+        try:
+            return -1.0 * math.log(self.meanPriceNet)
+        except Exception as e:
+            print("error:" + str(self))
+
 
     def getTimeToLive(self):
         return self.timeToLive
