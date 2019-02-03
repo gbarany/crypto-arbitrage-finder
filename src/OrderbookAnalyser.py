@@ -132,16 +132,26 @@ class OrderbookAnalyser:
             if path.isProfitable() is True:
                 dealQueue.put(path)
 
+    @staticmethod
+    def __isOrderbookFormatValid(orderbook):
+        return (not orderbook) or \
+               any(not isinstance(entry, list) for entry in orderbook) or \
+               any(not isinstance(entry[0], numbers.Number) or
+                   not isinstance(entry[1], numbers.Number) for entry in orderbook)
 
     @timed
     def update(self, exchangename, symbol, bids, asks, timestamp):
         # Validate inputs and reject if invalid
         if isinstance(exchangename, str) is False:
-            raise Exception("Exchange name is not a string: " + str(exchangename)+" "+str(symbol))
+            raise Exception("Invalid exchange name is not a string: " + str(exchangename)+" "+str(symbol))
         if (isinstance(symbol, str) is False) or (symbol.find("/") == -1):
             raise Exception("Invalid symbol:"+symbol + " "+str(exchangename))
-        if (not bids) or any(not isinstance(entry, list) for entry in bids) or any(not isinstance(entry[0], numbers.Number) or not isinstance(entry[1], numbers.Number) for entry in bids):
+        if self.__isOrderbookFormatValid(bids):
             raise Exception("Invalid bids format on " + str(exchangename)+" "+str(symbol)+", bids:"+str(bids))
+        if self.__isOrderbookFormatValid(asks):
+            raise Exception("Invalid asks format on " + str(exchangename)+" "+str(symbol)+", bids:"+str(asks))
+        if not isinstance(timestamp, numbers.Number):
+            raise Exception("Invalid timestamp on " + str(exchangename) + " " + str(symbol)+":"+str(timestamp))
 
         if self.priceSource == OrderbookAnalyser.PRICE_SOURCE_ORDERBOOK:
             self.priceStore.updatePriceFromOrderBook(
