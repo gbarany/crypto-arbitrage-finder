@@ -2,7 +2,9 @@ import ast
 import copy
 #import numpy as np
 import math
+import logging
 
+logger = logging.getLogger('CryptoArbitrageApp')
 
 class Asset:
     def __init__(self, exchange, symbol):
@@ -55,7 +57,7 @@ class OrderBookPrice:
         try:
             return -1.0 * math.log(self.meanPriceNet)
         except Exception as e:
-            print("error:" + str(self))
+            logger.error("getLogPrice failed " + str(self))
 
 
     def getTimeToLive(self):
