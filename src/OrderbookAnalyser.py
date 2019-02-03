@@ -111,7 +111,7 @@ class OrderbookAnalyser:
 
     def dealProcess(self):
         while True:
-            path = self.dealQueue.get()  # Read from the queue and do nothing
+            path = self.dealQueue.get()  # Read from the queue
             logger.info("NetX Found arbitrage deal: " + str(path))
             path.log()
             self.kafkaProducer.sendDeal(path)
@@ -202,7 +202,7 @@ class OrderbookAnalyser:
         # ArbitrageGraph deal finder (NetworkX)
         if self.dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
             for idx, pipe in enumerate(self.pipes):
-                pipe[1].send((orderBookPair,timestamp))
+                pipe[1].send((orderBookPair, timestamp))
                 '''arbitrageGraph.updatePoint(orderBookPair=orderBookPair,volumeBTC = self.vol_BTC[idx])
                 path = arbitrageGraph.getArbitrageDeal(timestamp)
                 if path.isProfitable() is True:
@@ -214,8 +214,6 @@ class OrderbookAnalyser:
                         sorl = path.toSegmentedOrderList()
                         asyncio.ensure_future(self.trader.execute(sorl))
                         logger.info("Called Trader ensure_future")'''
-
-
 
     def terminate(self):
         self.isRunning = False
