@@ -217,6 +217,10 @@ class OrderbookAnalyser:
 
     def terminate(self):
         self.isRunning = False
+        # terminate running processes
+        self.dealProcessor.terminate()
+        for process in self.processes:
+            process.terminate()
 
     def plotGraphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):

@@ -307,6 +307,7 @@ class FrameworkLive:
 
         loop = asyncio.get_event_loop()      
         loop.run_forever()
+        self.orderbookAnalyser.terminate()
         logger.info("FrameworkLive exited normally. Bye.")
 
 
