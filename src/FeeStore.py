@@ -27,9 +27,9 @@ class FeeStore:
             return 0
 
     def getTakerFee(self, exchangename, symbols):
-        if exchangename=='oanda': # TODO: refactor
+        if exchangename == 'oanda': # TODO: refactor
             return 0.0
-        elif exchangename=='sfox': # TODO: refactor
+        elif exchangename == 'sfox': # TODO: refactor
             return 0.003
 
         try:
@@ -37,13 +37,13 @@ class FeeStore:
                 self.getExchange(
                     exchangename.lower()).markets[symbols]['taker'])
         except Exception as e:
-            logger.warn("Couldn't fetch taker fee from " + exchangename + " "+ symbols +" , defaulting to " + str(FeeStore.DEFAULT_TAKER_FEE) + " " + str(e.args))
+            logger.warning("Couldn't fetch taker fee from " + exchangename + " "+ symbols +" , defaulting to " + str(FeeStore.DEFAULT_TAKER_FEE) + " " + str(e.args))
             return FeeStore.DEFAULT_TAKER_FEE
 
     def getMakerFee(self, exchangename, symbols):
-        if exchangename=='oanda': # TODO: refactor
+        if exchangename == 'oanda': # TODO: refactor
             return 0.0
-        elif exchangename=='sfox': # TODO: refactor
+        elif exchangename == 'sfox': # TODO: refactor
             return 0.003
 
         try:
