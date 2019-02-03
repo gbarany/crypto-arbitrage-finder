@@ -43,7 +43,7 @@ class KafkaProducerWrapper:
         try:
             await self.kafkaProducer.send_and_wait(self.topic, payload)
         except Exception as e:
-            logger.warn('Failed to publish to Kafka stream ') 
+            logger.warning('Failed to publish to Kafka stream ')
     
     def __del__(self):
         if self.kafkaProducer is not None:
