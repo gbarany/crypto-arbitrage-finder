@@ -1,6 +1,8 @@
 import ast
 import copy
-import numpy as np
+#import numpy as np
+import math
+
 
 class Asset:
     def __init__(self, exchange, symbol):
@@ -15,6 +17,7 @@ class Asset:
 
     def __str__(self):
         return self.exchange+"-"+self.symbol
+
 
 class OrderBookPrice:
     def __init__(self, timestamp=None,meanPrice=None, limitPrice=None, volumeBase=None,volumeBTC=None,volumeQuote=None,feeRate=None,timeToLive=None): 
@@ -34,7 +37,6 @@ class OrderBookPrice:
         else:
             self.feeAmountBase = None
 
-
         if volumeBTC is not None and feeRate is not None:
             self.feeAmountBTC=volumeBTC*feeRate
         else:
@@ -47,7 +49,7 @@ class OrderBookPrice:
         return "mean price:" + str(self.meanPrice) + ", " + "limit price:" + str(self.limitPrice)
 
     def getLogPrice(self):
-        return -1.0 * np.log(self.meanPriceNet)
+        return -1.0 * math.log(self.meanPriceNet)
 
     def getTimeToLive(self):
         return self.timeToLive
@@ -63,17 +65,20 @@ class OrderBookPrice:
     
     def getVolumeBase(self):
         return self.volumeBase
+
     def getVolumeBTC(self):
         return self.volumeBTC
 
+
 class OrderBookPair:
-    def __init__(self,timestamp,symbol,exchange,asks,bids,rateBTCxBase,rateBTCxQuote,feeRate,timeToLiveSec):
+    def __init__(self, timestamp, symbol, exchange, asks, bids, rateBTCxBase, rateBTCxQuote, feeRate, timeToLiveSec):
             self.bids = OrderBook(timestamp=timestamp,symbol=symbol,exchange=exchange,orderbook=bids,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate,timeToLiveSec=timeToLiveSec)
             self.asks = OrderBook(timestamp=timestamp,symbol=symbol,exchange=exchange,orderbook=asks,rateBTCxBase=rateBTCxBase,rateBTCxQuote=rateBTCxQuote,feeRate=feeRate,timeToLiveSec=timeToLiveSec)
             self.exchange = exchange
             self.symbol = symbol
             self.timestamp = timestamp
             self.timeToLiveSec = timeToLiveSec
+
     def getBidsOrderbook(self):
         return self.bids
 
@@ -94,6 +99,7 @@ class OrderBookPair:
     
     def getTimestamp(self):
         return self.timestamp
+
 
 class OrderBook:
     def __init__(self, timestamp, symbol, exchange,orderbook, rateBTCxBase, rateBTCxQuote,feeRate,timeToLiveSec):
