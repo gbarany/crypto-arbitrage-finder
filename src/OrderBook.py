@@ -151,7 +151,10 @@ class OrderBook:
         vol = volumeBase
 
         if volumeBase <= 0:
-            raise Exception("Price calculation error for negative volume:"+str(volumeBase))
+            raise Exception("Price calculation error for negative volume " +
+                            self.exchange + " " + self.symbol +
+                            ", volumeBase:"
+                            + str(volumeBase))
 
         for entry in self.orderbook:
             entry_price = entry[0]
@@ -176,8 +179,10 @@ class OrderBook:
                 feeRate=self.feeRate,
                 timeToLive=self.timeToLiveSec)
         else:
-            raise Exception("Price calculation error due to insufficient order book depth (volumeBase:"
-                            + str(volumeBase) + ")")
+            raise Exception("Price calculation error due to insufficient order book depth on " +
+                            self.exchange + " " + self.symbol +
+                            ", volumeBase:"
+                            + str(volumeBase))
 
 
     def getPriceByBTCVolume(self, volumeBTC):

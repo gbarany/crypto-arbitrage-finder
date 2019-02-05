@@ -1,13 +1,15 @@
 import bellmanford as bf
 import networkx as nx
-import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 from ArbitragePath import ArbitragePath
 from OrderBook import OrderBookPrice, Asset
-from FWLiveParams import FWLiveParams
+import logging
+import matplotlib
+matplotlib.use('TkAgg')
+
+logger = logging.getLogger('CryptoArbitrageApp')
 
 
 class ArbitrageGraph:
@@ -20,10 +22,12 @@ class ArbitrageGraph:
         self.negativepath = []
 
     def updatePoint(self, orderBookPair, volumeBTC):
-        askOrderbookPrice = orderBookPair.asks.getPriceByBTCVolume(volumeBTC=volumeBTC)
-        askOrderbookPriceRebased = orderBookPair.asks.getRebasedOrderbook().getPriceByBTCVolume(volumeBTC=volumeBTC)
-        bidOrderbookPrice = orderBookPair.bids.getPriceByBTCVolume(volumeBTC=volumeBTC)
-
+        try:
+            askOrderbookPrice = orderBookPair.asks.getPriceByBTCVolume(volumeBTC=volumeBTC)
+            askOrderbookPriceRebased = orderBookPair.asks.getRebasedOrderbook().getPriceByBTCVolume(volumeBTC=volumeBTC)
+            bidOrderbookPrice = orderBookPair.bids.getPriceByBTCVolume(volumeBTC=volumeBTC)
+        except Exception as e:
+            logger.error(str(e))
 
         symbol_base = (orderBookPair.getExchange(), orderBookPair.getSymbolBase())
         symbol_quote = (orderBookPair.getExchange(), orderBookPair.getSymbolQuote())
