@@ -26,31 +26,31 @@ class ArbitrageGraph:
             askOrderbookPrice = orderBookPair.asks.getPriceByBTCVolume(volumeBTC=volumeBTC)
             askOrderbookPriceRebased = orderBookPair.asks.getRebasedOrderbook().getPriceByBTCVolume(volumeBTC=volumeBTC)
             bidOrderbookPrice = orderBookPair.bids.getPriceByBTCVolume(volumeBTC=volumeBTC)
+
+            symbol_base = (orderBookPair.getExchange(), orderBookPair.getSymbolBase())
+            symbol_quote = (orderBookPair.getExchange(), orderBookPair.getSymbolQuote())
+
+            key1 = (symbol_quote, symbol_base)
+            key2 = (symbol_base, symbol_quote)
+
+            def connectSameCurrenciesOnDifferentExchanges(node, uniqueNodes):
+                if node not in uniqueNodes:
+                    for nodeIterator in uniqueNodes:
+                        if nodeIterator[1] == node[1]:
+                            self.gdict[(node, nodeIterator)] = OrderBookPrice(timestamp=None,meanPrice=1, limitPrice=1, volumeBase=None,volumeBTC=None,feeRate=0)
+                            self.gdict[(nodeIterator, node)] = OrderBookPrice(timestamp=None,meanPrice=1, limitPrice=1, volumeBase=None,volumeBTC=None,feeRate=0)
+
+            uniqueNodes = list(
+                set(itertools.chain(*[[s[0], s[1]] for s in self.gdict.keys()])))
+            connectSameCurrenciesOnDifferentExchanges(symbol_base, uniqueNodes)
+            connectSameCurrenciesOnDifferentExchanges(symbol_quote, uniqueNodes)
+
+            if askOrderbookPrice.meanPrice is not None:
+                self.gdict[key1] = askOrderbookPriceRebased
+            if bidOrderbookPrice.meanPrice is not None:
+                self.gdict[key2] = bidOrderbookPrice
         except Exception as e:
-            logger.error(str(e))
-
-        symbol_base = (orderBookPair.getExchange(), orderBookPair.getSymbolBase())
-        symbol_quote = (orderBookPair.getExchange(), orderBookPair.getSymbolQuote())
-
-        key1 = (symbol_quote, symbol_base)
-        key2 = (symbol_base, symbol_quote)
-
-        def connectSameCurrenciesOnDifferentExchanges(node, uniqueNodes):
-            if node not in uniqueNodes:
-                for nodeIterator in uniqueNodes:
-                    if nodeIterator[1] == node[1]:
-                        self.gdict[(node, nodeIterator)] = OrderBookPrice(timestamp=None,meanPrice=1, limitPrice=1, volumeBase=None,volumeBTC=None,feeRate=0)
-                        self.gdict[(nodeIterator, node)] = OrderBookPrice(timestamp=None,meanPrice=1, limitPrice=1, volumeBase=None,volumeBTC=None,feeRate=0)
-
-        uniqueNodes = list(
-            set(itertools.chain(*[[s[0], s[1]] for s in self.gdict.keys()])))
-        connectSameCurrenciesOnDifferentExchanges(symbol_base, uniqueNodes)
-        connectSameCurrenciesOnDifferentExchanges(symbol_quote, uniqueNodes)
-
-        if askOrderbookPrice.meanPrice is not None:
-            self.gdict[key1] = askOrderbookPriceRebased
-        if bidOrderbookPrice.meanPrice is not None:
-            self.gdict[key2] = bidOrderbookPrice
+            logger.error("updatePoint failed : " + str(e))
 
     def getArbitrageDeal(self, timestamp):
         self.glist = []
