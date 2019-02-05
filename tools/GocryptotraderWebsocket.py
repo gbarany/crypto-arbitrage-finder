@@ -23,18 +23,20 @@ async def gocryptotraderWebSocket():
     async with websockets.connect('wss://18.185.134.222:9050') as ws:
         async for message in ws:
             try:
-                msg = json.loads(message)
-                symbol = msg['recipient'].split('.')[2].upper()
-                symbol = symbol[0:3]+"/"+symbol[3:]
-                payload = {}
-                payload['exchange'] = "gocryptotrader"
-                payload['symbol'] = symbol
-                payload['data'] = {}
-                payload['data']['asks'] = list(map(lambda entry:entry[0:2],msg['payload']['asks']))
-                payload['data']['bids'] = list(map(lambda entry:entry[0:2],msg['payload']['bids']))
-                payload['timestamp'] = msg['timestamp']/1e9
-                logger.info("Received " + symbol +  " prices from gocryptotrader")
+                #msg = json.loads(message)
+                #symbol = msg['recipient'].split('.')[2].upper()
+                #symbol = symbol[0:3]+"/"+symbol[3:]
+                #payload = {}
+                #payload['exchange'] = "gocryptotrader"
+                #payload['symbol'] = symbol
+                #payload['data'] = {}
+                #payload['data']['asks'] = list(map(lambda entry:entry[0:2],msg['payload']['asks']))
+                #payload['data']['bids'] = list(map(lambda entry:entry[0:2],msg['payload']['bids']))
+                #payload['timestamp'] = msg['timestamp']/1e9
+                #logger.info("Received " + symbol +  " prices from gocryptotrader")
+                print(message)
             except Exception as error:
-                logger.warn("Error while parsing gocryptotrader websocket data: "+ type(error).__name__ + " " + str(error.args))
+                logger.warn("Error while parsing gocryptotrader websocket data")
+                #logger.warn("Error while parsing gocryptotrader websocket data: "+ type(error).__name__ + " " + str(error.args))
 
 asyncio.get_event_loop().run_until_complete(gocryptotraderWebSocket())
