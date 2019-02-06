@@ -1,12 +1,12 @@
 import asyncio
 import aiohttp
-import json
 import dateutil.parser
 import time
 import sys
-sys.path.append('./src/')
 from FWLiveParams import FWLiveParams
 import logging
+
+sys.path.append('./src/')
 
 # Init logger
 logger = logging.getLogger('oandaTestLogger')
