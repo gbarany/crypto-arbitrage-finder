@@ -13,6 +13,7 @@ from aiokafka import AIOKafkaProducer
 import json
 from multiprocessing import Process, Pipe, Queue
 import numbers
+from threading import Thread
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -72,8 +73,10 @@ class OrderbookAnalyser:
             self.pipes = [Pipe() for count in range(len(vol_BTC))]
             self.dealQueue = Queue()
             self.processes = [Process(target=self.updatePointProcess, args=(self.arbitrageGraphs[i], vol_BTC[i], self.pipes[i], self.dealQueue)) for i in range(len(vol_BTC))]
-            self.dealProcessor = Process(target=self.dealProcess)
-            self.dealProcessor.daemon = True
+            self.eventLoop = asyncio.get_event_loop()
+            #self.dealProcessor = Process(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader))
+            #self.dealProcessor.daemon = True
+            self.dealProcessorThread = Thread(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader))
         else:
             self.arbitrageGraphs = None
 
@@ -98,7 +101,8 @@ class OrderbookAnalyser:
         
         self.kafkaProducer = KafkaProducerWrapper(kafkaCredentials)
 
-        self.dealProcessor.start()
+        #self.dealProcessor.start()
+        self.dealProcessorThread.start()
         # kick-of processes
         for process in self.processes:
             process.daemon = True
@@ -110,16 +114,19 @@ class OrderbookAnalyser:
     def updateForexPrice(self, forexTicker):
         self.priceStore.updatePriceFromForex(forexTicker)
 
-    def dealProcess(self):
+    @staticmethod
+    def dealProcess(eventLoop, dealQueue, trader):
         while True:
-            path = self.dealQueue.get()  # Read from the queue
+            path = dealQueue.get()  # Read from the queue
+            if path is None:
+                return
             logger.info("NetX Found arbitrage deal: " + str(path))
             path.log()
-            self.kafkaProducer.sendDeal(path)
+            #self.kafkaProducer.sendDeal(path)
 
             if TradingStrategy.isDealApproved(path) is True:
                 sorl = path.toSegmentedOrderList()
-                asyncio.ensure_future(self.trader.execute(sorl))
+                asyncio.ensure_future(trader.execute(sorl), loop=eventLoop)
                 logger.info("Called Trader ensure_future")
 
     @staticmethod
@@ -236,7 +243,8 @@ class OrderbookAnalyser:
     def terminate(self):
         self.isRunning = False
         # terminate running processes
-        self.dealProcessor.terminate()
+        # self.dealProcessor.terminate()
+        self.dealQueue.put(None)
         for process in self.processes:
             process.terminate()
 
