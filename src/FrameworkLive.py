@@ -212,12 +212,15 @@ class FrameworkLive:
     async def exchangePoller(self, exchange, symbols,orderbookAnalyser: OrderbookAnalyser,enablePlotting):
         async for (symbol, order_book) in self.pollOrderbook(exchange, symbols):
             logger.info("Received " + symbol + " from " + exchange.name)
-            orderbookAnalyser.update(
-                exchangename=exchange.name,
-                symbol=symbol,
-                bids=order_book['bids'],
-                asks=order_book['asks'],
-                timestamp=time.time())
+            try:
+                orderbookAnalyser.update(
+                    exchangename=exchange.name,
+                    symbol=symbol,
+                    bids=order_book['bids'],
+                    asks=order_book['asks'],
+                    timestamp=time.time())
+            except Exception as e:
+                logger.error("Error updating orederbook analyser:" + str(e))
             if enablePlotting:
                 orderbookAnalyser.plotGraphs()
 
