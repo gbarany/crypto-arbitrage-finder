@@ -20,7 +20,7 @@ vol_BTC = [1]
 
 def getOrderbookAnalyser():
     parameters = FWLiveParams()
-    parameters.output = FWLiveParams.output_kafkalocal
+    parameters.output = FWLiveParams.output_kafkaaws
     return OrderbookAnalyser(
         vol_BTC=vol_BTC,
         edgeTTL=30,
@@ -112,7 +112,7 @@ class TestClass(object):
                 orderbookAnalyser.arbitrageGraphNeo.graphDB.resetDBData()
             
             mocker.spy(orderbookAnalyser.trader, 'execute')
-
+            mocker.spy(orderbookAnalyser.kafkaProducer, 'sendAsync')
             orderbookAnalyser.updateCoinmarketcapPrice(cmc)
             orderbookAnalyser.update(
                 'kraken',
@@ -134,8 +134,11 @@ class TestClass(object):
                 timestamp=102)
 
             # wait for the Deal finder Threads to run
-            time.sleep(0.05)
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(1))
+            time.sleep(2)
+            #time.sleep(10)
             assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
+            assert orderbookAnalyser.kafkaProducer.sendAsync.call_count == len(vol_BTC)
             orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
             
             orderRequestList = orderRequestLists[0][0]
