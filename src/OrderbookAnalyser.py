@@ -18,34 +18,32 @@ from threading import Thread
 logger = logging.getLogger('CryptoArbitrageApp')
 
 class KafkaProducerWrapper:
-    def __init__(self,kafkaCredentials):
-        loop = asyncio.get_event_loop()
+    def __init__(self, kafkaCredentials, eventLoop):
         self.kafkaProducer = None
-        
+        self.eventLoop = eventLoop
         if kafkaCredentials is not None:
             self.topic = kafkaCredentials["topicDeals"]
             try:
                 self.kafkaProducer = AIOKafkaProducer(
-                    loop=loop,
+                    loop=self.eventLoop,
                     bootstrap_servers=kafkaCredentials["uri"],
                     value_serializer=lambda v: json.dumps(v).encode('utf-8'))
-                asyncio.ensure_future(self.kafkaProducer.start())
+                asyncio.ensure_future(self.kafkaProducer.start(), loop=self.eventLoop)
             except Exception as e:
                 logger.error('Kafka producer initialization failed')
                 
         else:
             logger.info('No credentials available for Kafka producer')
 
-    def sendDeal(self,deal):
+    async def sendAsync(self, deal):
         if self.kafkaProducer is not None:
-            asyncio.ensure_future(self.sendAsync(deal))
-
-    async def sendAsync(self,deal):
-        payload = deal.getLogJSONDump()
-        try:
-            await self.kafkaProducer.send_and_wait(self.topic, payload)
-        except Exception as e:
-            logger.warning('Failed to publish to Kafka stream ')
+            logger.info('Deal published to kafka stream')
+            payload = deal.getLogJSONDump()
+            try:
+                await self.kafkaProducer.send_and_wait(self.topic, payload)
+                logger.info('Deal published to kafka stream')
+            except Exception as e:
+                logger.warning('Failed to publish to Kafka stream ')
     
     def __del__(self):
         if self.kafkaProducer is not None:
@@ -67,16 +65,18 @@ class OrderbookAnalyser:
                  dealfinder_mode=FWLiveParams.dealfinder_mode_networkx,
                  kafkaCredentials=None):
 
+        self.eventLoop = asyncio.get_event_loop()
+        self.kafkaProducer = KafkaProducerWrapper(kafkaCredentials, eventLoop=self.eventLoop)
+
         # create Arbitrage Graph objects
         if dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
             self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
             self.pipes = [Pipe() for count in range(len(vol_BTC))]
             self.dealQueue = Queue()
             self.processes = [Process(target=self.updatePointProcess, args=(self.arbitrageGraphs[i], vol_BTC[i], self.pipes[i], self.dealQueue)) for i in range(len(vol_BTC))]
-            self.eventLoop = asyncio.get_event_loop()
             #self.dealProcessor = Process(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader))
             #self.dealProcessor.daemon = True
-            self.dealProcessorThread = Thread(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader))
+            self.dealProcessorThread = Thread(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader, self.kafkaProducer))
         else:
             self.arbitrageGraphs = None
 
@@ -99,7 +99,6 @@ class OrderbookAnalyser:
         assert trader is not None
         self.trader = trader
         
-        self.kafkaProducer = KafkaProducerWrapper(kafkaCredentials)
 
         #self.dealProcessor.start()
         self.dealProcessorThread.start()
@@ -115,14 +114,14 @@ class OrderbookAnalyser:
         self.priceStore.updatePriceFromForex(forexTicker)
 
     @staticmethod
-    def dealProcess(eventLoop, dealQueue, trader):
+    def dealProcess(eventLoop, dealQueue, trader, kafkaProducer):
         while True:
             path = dealQueue.get()  # Read from the queue
             if path is None:
                 return
             logger.info("NetX Found arbitrage deal: " + str(path))
             path.log()
-            #self.kafkaProducer.sendDeal(path)
+            asyncio.ensure_future(kafkaProducer.sendAsync(path), loop=eventLoop)
 
             if TradingStrategy.isDealApproved(path) is True:
                 sorl = path.toSegmentedOrderList()
@@ -249,6 +248,8 @@ class OrderbookAnalyser:
         self.dealQueue.put(None)
         for process in self.processes:
             process.terminate()
+
+        self.kafkaProducer.__del__()
 
     def plotGraphs(self):
         for idx, arbitrageGraph in enumerate(self.arbitrageGraphs):
