@@ -220,7 +220,7 @@ class FrameworkLive:
                     asks=order_book['asks'],
                     timestamp=time.time())
             except Exception as e:
-                logger.error("Error updating orederbook analyser:" + str(e))
+                logger.error("Error updating orderbook analyser:" + str(e))
             if enablePlotting:
                 orderbookAnalyser.plotGraphs()
 
