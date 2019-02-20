@@ -1,4 +1,3 @@
-import numpy as np
 import json
 from OrderRequest import OrderRequest, OrderRequestList, OrderRequestType, SegmentedOrderRequestList
 import logging
@@ -14,14 +13,14 @@ class ArbitragePath:
         self.nodesList = nodesList
         self.timestamp = timestamp
         self.orderBookPriceList = orderBookPriceList
-        
+        self.uuid = ''
         if orderBookPriceList is not None and orderBookPriceList:
             self.profit = (reduce((lambda x, y: x*y), [i.getPrice() for i in orderBookPriceList])-1)*100
         else:
             self.profit = None
     
     def __str__(self):
-        return ",".join(str(x) for x in self.nodesList)
+        return (",".join(str(x) for x in self.nodesList)) + " uuid:" + self.uuid
 
     def getAge(self):
         return list(map(lambda orderBookPrice:self.timestamp-(orderBookPrice.timestamp if orderBookPrice.timestamp is not None else self.timestamp),self.orderBookPriceList))
@@ -70,32 +69,38 @@ class ArbitragePath:
     def getNofExchangesInvolved(self):
         return len(self.getExchangesInvolved())
 
+    @staticmethod
+    def toCSVStr(itemsList):
+        return ",".join(str(x) for x in itemsList)
 
     def getLogJSON(self):
 
-        def toCSVStr(itemsList):
-            return ",".join(str(x) for x in itemsList)
-
         logJSON = {
-            'timestamp':str(self.timestamp),
+            'timestamp': str(self.timestamp),
             'vol_BTC': str(self.getVolumeBTC()),
             'profit_perc': "{:.2f}".format(self.getProfit()),
-            'nodes': toCSVStr(self.nodesList),
-            'price':toCSVStr(self.getPrice()),
-            'age': toCSVStr(self.getAge()),
+            'nodes': ArbitragePath.toCSVStr(self.nodesList),
+            'price': ArbitragePath.toCSVStr(self.getPrice()),
+            'age': ArbitragePath.toCSVStr(self.getAge()),
             'nofTotalTransactions': str(self.getNofTotalTransactions()),
             'nofIntraexchangeTransactions': str(self.getNofIntraexchangeTransactions()),
-            'exchangesInvolved':toCSVStr(self.getExchangesInvolved()),
-            'nofExchangesInvolved':str(self.getNofExchangesInvolved()),
-            'tradingStrategyApproved':str(TradingStrategy.isDealApproved(self)),
-            'limitPrice':toCSVStr(self.getLimitPrice())
+            'exchangesInvolved': ArbitragePath.toCSVStr(self.getExchangesInvolved()),
+            'nofExchangesInvolved': str(self.getNofExchangesInvolved()),
+            'tradingStrategyApproved': str(TradingStrategy.isDealApproved(self)),
+            'limitPrice': ArbitragePath.toCSVStr(self.getLimitPrice()),
+            'uuid': self.uuid
         }
         return logJSON
     
     def getLogJSONDump(self):
         return json.dumps(self.getLogJSON())
 
-    def log(self):        
+    def updateUUID(self, dealUUIDGenerator):
+        self.uuid = dealUUIDGenerator.getUUID(timestamp=self.timestamp,
+                                              nodesStr=ArbitragePath.toCSVStr(self.nodesList),
+                                              profitPerc=self.getProfit())
+
+    def log(self):
         logJSON = self.getLogJSON()
         logStr = ""
         for row in logJSON.values():

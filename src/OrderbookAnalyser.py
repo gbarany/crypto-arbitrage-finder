@@ -14,6 +14,7 @@ import json
 from multiprocessing import Process, Pipe, Queue
 import numbers
 from threading import Thread
+from DealUUIDGenerator import DealUUIDGenerator
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -67,7 +68,7 @@ class OrderbookAnalyser:
 
         self.eventLoop = asyncio.get_event_loop()
         self.kafkaProducer = KafkaProducerWrapper(kafkaCredentials, eventLoop=self.eventLoop)
-
+        self.dealUUIDGenerator = DealUUIDGenerator()
         # create Arbitrage Graph objects
         if dealfinder_mode & FWLiveParams.dealfinder_mode_networkx:
             self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
@@ -76,7 +77,7 @@ class OrderbookAnalyser:
             self.processes = [Process(target=self.updatePointProcess, args=(self.arbitrageGraphs[i], vol_BTC[i], self.pipes[i], self.dealQueue)) for i in range(len(vol_BTC))]
             #self.dealProcessor = Process(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader))
             #self.dealProcessor.daemon = True
-            self.dealProcessorThread = Thread(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader, self.kafkaProducer))
+            self.dealProcessorThread = Thread(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader, self.kafkaProducer, self.dealUUIDGenerator))
         else:
             self.arbitrageGraphs = None
 
@@ -114,13 +115,15 @@ class OrderbookAnalyser:
         self.priceStore.updatePriceFromForex(forexTicker)
 
     @staticmethod
-    def dealProcess(eventLoop, dealQueue, trader, kafkaProducer):
+    def dealProcess(eventLoop, dealQueue, trader, kafkaProducer, dealUUIDGenerator):
         while True:
             path = dealQueue.get()  # Read from the queue
             if path is None:
                 return
+            path.updateUUID(dealUUIDGenerator)
             logger.info("NetX Found arbitrage deal: " + str(path))
             path.log()
+
             asyncio.ensure_future(kafkaProducer.sendAsync(path), loop=eventLoop)
 
             if TradingStrategy.isDealApproved(path) is True:
