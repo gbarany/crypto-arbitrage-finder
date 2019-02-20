@@ -27,9 +27,9 @@ class DealUUIDGenerator:
         for key in keysToDelete:
             self.dealHistoryDict.pop(key)
 
-    def getUUID(self, timestamp, nodesStr, profitPerc):
+    def getUUID(self, timestamp, volBTC, nodesStr, profitPerc):
 
-        key = nodesStr
+        key = (nodesStr, volBTC)
 
         self.purgeExpiredDictItems(timestamp)
 

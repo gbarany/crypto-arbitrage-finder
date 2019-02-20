@@ -59,7 +59,7 @@ class ArbitragePath:
         if volumeBTCs.count(volumeBTCs[0]) is not len(volumeBTCs): # check that all prices in path were calculated based on the same volume
             logger.warning('Different volumeBTCs in deal: ' + str(volumeBTCs))
 
-        return  max(volumeBTCs)
+        return max(volumeBTCs)
     
     def getExchangesInvolved(self):
         exchangesList = list(map(lambda node:node.getExchange(),self.nodesList))
@@ -98,7 +98,8 @@ class ArbitragePath:
     def updateUUID(self, dealUUIDGenerator):
         self.uuid = dealUUIDGenerator.getUUID(timestamp=self.timestamp,
                                               nodesStr=ArbitragePath.toCSVStr(self.nodesList),
-                                              profitPerc=self.getProfit())
+                                              profitPerc=self.getProfit(),
+                                              volBTC=self.getVolumeBTC())
 
     def log(self):
         logJSON = self.getLogJSON()
