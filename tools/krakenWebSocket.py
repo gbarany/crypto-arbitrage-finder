@@ -2,7 +2,7 @@ from kraken_wsclient_py import kraken_wsclient_py as client
 from sortedcontainers import SortedDict
 
 # configurable parameters
-orderbookDepthInSubscription = 25
+orderbookDepthInSubscription = 10
 consolidatedOrderbookDepth = 10
 
 orderbooks = dict()
@@ -21,6 +21,7 @@ def processDelta(orderbook,entries):
             try:
                 orderbook.pop(float(entry[0]))
             except KeyError as e:
+                print('Error: Kraken asked to remove price level that doesn''t exist')
                 pass
 
 def getTop(orderbook, itemCount = 3, reverse=False):
@@ -56,22 +57,21 @@ def krakenMessageHandler(message):
         return
 
     channelID = message[0]
-    payload = message[1]
+    for payload in message[1:]:
+        # Process snapshot
+        if 'as' in payload and 'bs' in payload:
+            processSnapshot(orderbook=orderbooks[channelID]['asks'], entries=payload['as'])
+            processSnapshot(orderbook=orderbooks[channelID]['bids'], entries=payload['bs'])
+            orderbooks[channelID]['timestamp']=getSnapshotTimestamp(payload['as'], payload['bs'])*1e3
+            return
 
-    # Process snapshot
-    if 'as' in payload and 'bs' in payload:        
-        processSnapshot(orderbook=orderbooks[channelID]['asks'], entries=payload['as'])
-        processSnapshot(orderbook=orderbooks[channelID]['bids'], entries=payload['bs'])
-        orderbooks[channelID]['timestamp']=getSnapshotTimestamp(payload['as'], payload['bs'])*1e3
-        return
-    
-    # Prodess deltas
-    if 'a' in payload:
-        processDelta(orderbook=orderbooks[channelID]['asks'],entries=payload['a'])
-        orderbooks[channelID]['timestamp']=getSnapshotTimestamp(payload['a'])*1e3
-    if 'b' in payload:
-        processDelta(orderbook=orderbooks[channelID]['bids'],entries=payload['b'])
-        orderbooks[channelID]['timestamp']=getSnapshotTimestamp(payload['b'])*1e3
+        # Prodess deltas
+        if 'a' in payload:
+            processDelta(orderbook=orderbooks[channelID]['asks'],entries=payload['a'])
+            orderbooks[channelID]['timestamp']=getSnapshotTimestamp(payload['a'])*1e3
+        if 'b' in payload:
+            processDelta(orderbook=orderbooks[channelID]['bids'],entries=payload['b'])
+            orderbooks[channelID]['timestamp']=getSnapshotTimestamp(payload['b'])*1e3
     
     
     # Data conversion
