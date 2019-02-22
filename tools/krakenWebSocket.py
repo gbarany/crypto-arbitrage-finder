@@ -60,6 +60,8 @@ def krakenMessageHandler(message):
     for payload in message[1:]:
         # Process snapshot
         if 'as' in payload and 'bs' in payload:
+            orderbooks[channelID]['asks'] = SortedDict()
+            orderbooks[channelID]['bids'] = SortedDict()
             processSnapshot(orderbook=orderbooks[channelID]['asks'], entries=payload['as'])
             processSnapshot(orderbook=orderbooks[channelID]['bids'], entries=payload['bs'])
             orderbooks[channelID]['timestamp']=getSnapshotTimestamp(payload['as'], payload['bs'])*1e3
