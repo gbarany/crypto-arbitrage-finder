@@ -15,6 +15,7 @@ from multiprocessing import Process, Pipe, Queue
 import numbers
 from threading import Thread
 from DealUUIDGenerator import DealUUIDGenerator
+import time
 
 logger = logging.getLogger('CryptoArbitrageApp')
 
@@ -134,12 +135,17 @@ class OrderbookAnalyser:
     @staticmethod
     def updatePointProcess(arbitrageGraph, volumeBTC, pipe, dealQueue):
         p_output, p_input = pipe
+
+        timeOfNextDealfinderCall = time.time()
+
         while True:
             orderBookPair, timestamp = p_output.recv()    # Read from the output pipe
             arbitrageGraph.updatePoint(orderBookPair=orderBookPair, volumeBTC=volumeBTC)
-            path = arbitrageGraph.getArbitrageDeal(timestamp)
-            if path.isProfitable() is True:
-                dealQueue.put(path)
+            if timeOfNextDealfinderCall <= time.time():
+                timeOfNextDealfinderCall = time.time()+0.05
+                path = arbitrageGraph.getArbitrageDeal(timestamp)
+                if path.isProfitable() is True:
+                    dealQueue.put(path)
 
     @staticmethod
     def __isOrderbookFormatValid(orderbook):
