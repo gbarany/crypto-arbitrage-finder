@@ -1,8 +1,29 @@
 from kraken_wsclient_py import kraken_wsclient_py as client
 from sortedcontainers import SortedDict
+import logging
+import sys
+
+# Init logger
+logger = logging.getLogger('KrakenWebSocketTestLogger')
+logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+fh = logging.FileHandler('./krakenWebSocketLog.txt',mode='w')
+fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt="%Y-%m-%d %H:%M:%S")
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
+
+
 
 # configurable parameters
-orderbookDepthInSubscription = 10
+orderbookDepthInSubscription = 1000
 consolidatedOrderbookDepth = 10
 
 orderbooks = dict()
@@ -21,7 +42,7 @@ def processDelta(orderbook,entries):
             try:
                 orderbook.pop(entry[0])
             except KeyError as e:
-                print('Error: Kraken asked to remove price level that doesn''t exist')
+                logger.error('Error: Kraken asked to remove price level that doesn''t exist')
                 pass
 
 def getTop(orderbook, itemCount = 3, reverse=False):
@@ -39,6 +60,7 @@ def getTop(orderbook, itemCount = 3, reverse=False):
 
         
 def krakenMessageHandler(message):
+    logger.info(str(message))
     # Is subscription confirmation message?
     if 'event' in message and 'status' in message and 'channelID' in message and 'pair' in message:
         # Was subscription successful?
@@ -78,7 +100,7 @@ def krakenMessageHandler(message):
     # Data conversion
     asks = getTop(orderbook=orderbooks[channelID]['asks'],itemCount=consolidatedOrderbookDepth)
     bids = getTop(orderbook=orderbooks[channelID]['bids'],itemCount=consolidatedOrderbookDepth,reverse=True)
-    payload = {}
+    payload = dict()
     payload['exchange'] = "kraken"
     payload['symbol'] = orderbooks[channelID]['symbol']
     payload['data'] = {}
@@ -87,7 +109,8 @@ def krakenMessageHandler(message):
     payload['timestamp'] = orderbooks[channelID]['timestamp']
 
     print(orderbooks[channelID]['symbol'] + " asks:"+str(asks)+", bids:"+str(bids) + " timestamp:"+str(payload['timestamp']))
-
+    if bids[0][0]>=asks[0][0]:
+         logger.error('Error' + orderbooks[channelID]['symbol'] + ': Bid ' + str(bids[0][0]) + ' is higher than ask ' + str(asks[0][0]) +'(gap:'+str((bids[0][0]-asks[0][0])/asks[0][0]*100)+'%)')
 
 krakenNamingMappings = [('BTC','XBT')]
 def translateNamingFromStandardToKraken(symbolsList,reversed=False):
