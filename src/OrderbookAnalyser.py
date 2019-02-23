@@ -142,10 +142,10 @@ class OrderbookAnalyser:
             orderBookPair, timestamp = p_output.recv()    # Read from the output pipe
             arbitrageGraph.updatePoint(orderBookPair=orderBookPair, volumeBTC=volumeBTC)
             if timeOfNextDealfinderCall <= time.time():
-                timeOfNextDealfinderCall = time.time()+0.05
                 path = arbitrageGraph.getArbitrageDeal(timestamp)
                 if path.isProfitable() is True:
                     dealQueue.put(path)
+                timeOfNextDealfinderCall = time.time() + 0.01
 
     @staticmethod
     def __isOrderbookFormatValid(orderbook):
