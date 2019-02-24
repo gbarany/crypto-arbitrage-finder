@@ -32,7 +32,8 @@ def getOrderbookAnalyser():
 #        dealfinder_mode=FWLiveParams.dealfinder_mode_neo4j,
         neo4j_mode=FWLiveParams.neo4j_mode_disabled,
         dealfinder_mode=FWLiveParams.dealfinder_mode_networkx,
-        kafkaCredentials=parameters.getKafkaProducerCredentials())
+        kafkaCredentials=parameters.getKafkaProducerCredentials(),
+        dealFinderRateLimitTimeSeconds=0)
 
 
 @pytest.fixture(scope="class")
@@ -142,15 +143,15 @@ class TestClass(object):
             orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
             
             orderRequestList = orderRequestLists[0][0]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('BTC/USD', vol_BTC[0], 9000, OrderRequestType.SELL,OrderRequestStatus.INITIAL)
 
             orderRequestList = orderRequestLists[0][1]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/USD', vol_BTC[0] / cmc['ETH/BTC']['last'], 200,OrderRequestType.BUY, OrderRequestStatus.INITIAL)
 
             orderRequestList = orderRequestLists[0][2]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC', vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
 
             orderbookAnalyser.terminate()
