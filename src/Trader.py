@@ -461,7 +461,7 @@ class Trader:
 
     async def execute(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         if self.__isBusy:
-            logger.info(f"Trader is busy, the execute() call is droped")
+            # logger.info(f"Trader is busy, the execute() call is droped")
             return
         self.__isBusy = True
 
