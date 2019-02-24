@@ -135,9 +135,9 @@ class TestClass(object):
                 timestamp=102)
 
             # wait for the Deal finder Threads to run
-            asyncio.get_event_loop().run_until_complete(asyncio.sleep(1))
-            time.sleep(2)
-            #time.sleep(10)
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
+            time.sleep(0.1)
+
             assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
             assert orderbookAnalyser.kafkaProducer.sendAsync.call_count == len(vol_BTC)
             orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
