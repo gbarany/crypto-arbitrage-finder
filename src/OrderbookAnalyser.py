@@ -49,7 +49,10 @@ class KafkaProducerWrapper:
     
     def __del__(self):
         if self.kafkaProducer is not None:
-            asyncio.ensure_future(self.kafkaProducer.stop())
+            try:
+                asyncio.ensure_future(self.kafkaProducer.stop())
+            except Exception as e:
+                logger.error('Error during destroying Kafka producer: '+str(e))
 
 
 class OrderbookAnalyser:
