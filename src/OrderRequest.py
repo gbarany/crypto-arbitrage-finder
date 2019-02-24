@@ -96,8 +96,9 @@ class OrderRequest:
             'id': self.id,
             'exchange_name': self.exchange_name,
             'market': self.market,
-            'amount': self.volumeBase,
-            'price': self.limitPrice,
+            'volumeBase': self.volumeBase,
+            'limitPrice': self.limitPrice,
+            'meanPrice': self.meanPrice,
             'type': self.type,
             'status': self.__status.value,
         }
@@ -150,7 +151,7 @@ class SegmentedOrderRequestList:
         return ret
 
     def sorlToString(self):
-        r = ""
+        r = f'uuid: {self.uuid}\n'
         for orderRequest in self.getOrderRequests():
             r = r + orderRequest.toString() + "\n"
         return r
