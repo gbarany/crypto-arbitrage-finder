@@ -17,6 +17,7 @@ import asyncio
 #vol_BTC=[1,0.1,0.01]
 vol_BTC = [1]
 
+SLEEP_TIME = 0.1
 
 def getOrderbookAnalyser():
     parameters = FWLiveParams()
@@ -86,20 +87,26 @@ class TestClass(object):
                 asks=[[0.04, 1000]],
                 timestamp=102)
 
+            # wait for the Deal finder Threads to run
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(SLEEP_TIME))
+            time.sleep(SLEEP_TIME)
+
             assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
-            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
-            
-            orderRequestList = orderRequestLists[0][1]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()[0].getOrderRequests()
+
+            orderRequestList = orderRequestLists[0]
+
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('BTC/USD', vol_BTC[0], 9000, OrderRequestType.SELL,OrderRequestStatus.INITIAL)
 
-            orderRequestList = orderRequestLists[0][2]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            orderRequestList = orderRequestLists[1]
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/USD',vol_BTC[0] / cmc['ETH/BTC']['last'], 200,OrderRequestType.BUY, OrderRequestStatus.INITIAL)
 
-            orderRequestList = orderRequestLists[0][0]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            orderRequestList = orderRequestLists[2]
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
+            orderbookAnalyser.terminate()
 
     def test_threeNodesWithFees(self,monkeypatch, mocker):
         feeRates = [0.0951]
@@ -136,8 +143,8 @@ class TestClass(object):
                 timestamp=102)
 
             # wait for the Deal finder Threads to run
-            asyncio.get_event_loop().run_until_complete(asyncio.sleep(2))
-            time.sleep(2)
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(SLEEP_TIME))
+            time.sleep(SLEEP_TIME)
 
             assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
             assert orderbookAnalyser.kafkaProducer.sendAsync.call_count == len(vol_BTC)
@@ -191,20 +198,13 @@ class TestClass(object):
                 asks=[[0.04, 1000]],
                 timestamp=102)
 
+            # wait for the Deal finder Threads to run
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(SLEEP_TIME))
+            time.sleep(SLEEP_TIME)
+
             assert orderbookAnalyser.trader.execute.call_count == 0
+            orderbookAnalyser.terminate()
 
-    def test_crossExchangeAsync(self,monkeypatch, mocker):
-        async def asyncWrapper(monkeypatch, mocker):            
-            self.test_crossExchange(monkeypatch, mocker)
-
-        def stop_loop():
-            time.sleep(3)
-            loop.call_soon_threadsafe(loop.stop)
-
-        loop = asyncio.get_event_loop()      
-        asyncio.ensure_future(asyncWrapper(monkeypatch, mocker))
-        Thread(target=stop_loop).start()
-        loop.run_forever()
 
 
     def test_crossExchange(self,monkeypatch, mocker):
@@ -243,17 +243,21 @@ class TestClass(object):
                 timestamp=102)
 
 
+            # wait for the Deal finder Threads to run
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(SLEEP_TIME))
+            time.sleep(SLEEP_TIME)
+
             assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
-            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
-            
-            orderRequestList = orderRequestLists[1].getOrderRequests()[0]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0]
+            orderRequestList = orderRequestLists.getOrderRequestLists()[1].getOrderRequests()[0]
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('BTC/USD', vol_BTC[0], 9000, OrderRequestType.SELL,OrderRequestStatus.INITIAL)
 
-            orderRequestList = orderRequestLists[1].getOrderRequests()[1]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            orderRequestList = orderRequestLists.getOrderRequestLists()[1].getOrderRequests()[1]
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/USD',vol_BTC[0] / cmc['ETH/BTC']['last'], 200,OrderRequestType.BUY, OrderRequestStatus.INITIAL)
 
-            orderRequestList = orderRequestLists[0].getOrderRequests()[0]
-            assert (orderRequestList.market, orderRequestList.amount, orderRequestList.price, orderRequestList.type,orderRequestList.getStatus()) == \
+            orderRequestList = orderRequestLists.getOrderRequestLists()[0].getOrderRequests()[0]
+            assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC',vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
+            orderbookAnalyser.terminate()
