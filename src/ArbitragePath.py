@@ -125,21 +125,25 @@ class ArbitragePath:
                 if A == 'EUR' or A == 'USD' or A == 'GBP':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.orderBookPriceList[idx_node].getLimitPrice()
+                    meanPrice = 1 / self.orderBookPriceList[idx_node].getPrice()
                     tradetype = OrderRequestType.BUY
                     volume = self.orderBookPriceList[idx_node].getVolumeQuote()
                 elif A == 'BTC' and B != 'EUR' and B != 'USD' and B != 'GBP':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.orderBookPriceList[idx_node].getLimitPrice()
+                    meanPrice = 1 / self.orderBookPriceList[idx_node].getPrice()
                     tradetype = OrderRequestType.BUY
                     volume = self.orderBookPriceList[idx_node].getVolumeQuote()
                 elif A == 'ETH' and B != 'EUR' and B != 'USD' and B != 'GBP' and B != 'BTC':
                     tradesymbols = B + "/" + A
                     limitPrice = 1 / self.orderBookPriceList[idx_node].getLimitPrice()
+                    meanPrice = 1 / self.orderBookPriceList[idx_node].getPrice()
                     tradetype = OrderRequestType.BUY
                     volume = self.orderBookPriceList[idx_node].getVolumeQuote()
                 else:
                     tradesymbols = A + "/" + B
                     limitPrice = self.orderBookPriceList[idx_node].getLimitPrice()
+                    meanPrice = self.orderBookPriceList[idx_node].getPrice()
                     tradetype = OrderRequestType.SELL
                     volume = self.orderBookPriceList[idx_node].getVolumeBase()
 
@@ -147,7 +151,8 @@ class ArbitragePath:
                         exchange_name=base_exchange,
                         market=tradesymbols,
                         amount=volume,
-                        price=limitPrice,
+                        limitPrice=limitPrice,
+                        meanPrice=meanPrice,
                         requestType=tradetype))
         return OrderRequestList(orl)
 
