@@ -255,47 +255,47 @@ class Trader:
         market = self.get_market(exchange_name, market_str)
         return market['limits']['amount']['min']
 
-    def hasSufficientBalance(self, exchange_name: str, market_str: str, amount: float, type: OrderRequestType):
-        try:
-            exchange = self.get_exchange(exchange_name)
-            market = self.get_market(exchange_name, market_str)
-            if market['limits']['amount']['min']:
-                if amount < exchange.markets[market_str]['limits']['amount']['min']:
-                    raise ValueError(
-                        'Amount too small, won'
-                        't execute on ' + exchange.name + " " + market_str +
-                        " Amount: " + str(amount) + " Min.amount:" +
-                        str(exchange.markets[market_str]['limits']['amount']['min'])
-                    )
-
-            if market['limits']['amount']['max']:
-                if amount > exchange.markets[market_str]['limits']['amount']['max']:
-                    raise ValueError(
-                        'Amount too big, won'
-                        't execute on ' + exchange.name + " " + market_str +
-                        " Amount: " + str(amount) + " Max.amount:" +
-                        str(exchange.markets[market_str]['limits']['amount']['max'])
-                    )
-
-            if type == OrderRequestType.SELL:
-                free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
-            else:
-                free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
-            if free_balance < amount:
-                raise ValueError(
-                    'Insufficient stock on ' + exchange.name + " " + market_str +
-                    " Amount available: " +
-                    str(free_balance) +
-                    " Amount required:" + str(amount))
-
-            return True
-        except Exception as e:
-            raise ValueError(f"Error during transaction validation: {e}")
+    # def hasSufficientBalance(self, exchange_name: str, market_str: str, amount: float, type: OrderRequestType):
+    #     try:
+    #         exchange = self.get_exchange(exchange_name)
+    #         market = self.get_market(exchange_name, market_str)
+    #         if market['limits']['amount']['min']:
+    #             if amount < exchange.markets[market_str]['limits']['amount']['min']:
+    #                 raise ValueError(
+    #                     'Amount too small, won'
+    #                     't execute on ' + exchange.name + " " + market_str +
+    #                     " Amount: " + str(amount) + " Min.amount:" +
+    #                     str(exchange.markets[market_str]['limits']['amount']['min'])
+    #                 )
+    #
+    #         if market['limits']['amount']['max']:
+    #             if amount > exchange.markets[market_str]['limits']['amount']['max']:
+    #                 raise ValueError(
+    #                     'Amount too big, won'
+    #                     't execute on ' + exchange.name + " " + market_str +
+    #                     " Amount: " + str(amount) + " Max.amount:" +
+    #                     str(exchange.markets[market_str]['limits']['amount']['max'])
+    #                 )
+    #
+    #         if type == OrderRequestType.SELL:
+    #             free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
+    #         else:
+    #             free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
+    #         if free_balance < amount:
+    #             raise ValueError(
+    #                 'Insufficient stock on ' + exchange.name + " " + market_str +
+    #                 " Amount available: " +
+    #                 str(free_balance) +
+    #                 " Amount required:" + str(amount))
+    #
+    #         return True
+    #     except Exception as e:
+    #         raise ValueError(f"Error during transaction validation: {e}")
 
     def isOrderRequestValid(self, orderRequest: OrderRequest):
         exchange_name = orderRequest.exchange_name_std
         market_str = orderRequest.market
-        amount = orderRequest.amount
+        amount = orderRequest.volumeBase
         type = orderRequest.type
         try:
             exchange = self.get_exchange(exchange_name)
@@ -325,18 +325,26 @@ class Trader:
     def hasSufficientBalanceForOrderRequest(self, orderRequest: OrderRequest):
         exchange_name = orderRequest.exchange_name_std
         market_str = orderRequest.market
-        amount = orderRequest.amount
+        volumeBase = orderRequest.volumeBase
         if orderRequest.type == OrderRequestType.SELL:
-            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
-        else:
-            free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
-        if free_balance < amount:
-            raise ValueError(
-                f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
-                f' Amount available: {free_balance}' +
-                f' Amount required: {amount}')
+            free_balance_base = self.get_free_balance(exchange_name, market_str.split('/')[0])
+            if free_balance_base < volumeBase:
+                raise ValueError(
+                    f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
+                    f' free_balance_base: {free_balance_base}' +
+                    f' volumeBase: {volumeBase}' +
+                    f' type: {orderRequest.type}')
 
-        return True
+        elif orderRequest.type == OrderRequestType.BUY:
+            free_balance_quote = self.get_free_balance(exchange_name, market_str.split('/')[1])
+            if free_balance_quote < volumeBase * orderRequest.meanPrice:
+                raise ValueError(
+                    f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
+                    f' free_balance_quote: {free_balance_quote}' +
+                    f' volumeBase: {volumeBase}' +
+                    f' type: {orderRequest.type}')
+        else:
+            raise ValueError('Invalid orderRequest.type')
 
     def isOrderRequestListValid(self, orderRequestList: OrderRequestList):
         for orderRequest in orderRequestList.getOrderRequests():
@@ -358,8 +366,8 @@ class Trader:
             return
         exchange = self.__exchanges[orderRequest.exchange_name_std]
         symbol = orderRequest.market
-        amount = orderRequest.amount
-        price = orderRequest.price
+        amount = orderRequest.volumeBase
+        price = orderRequest.limitPrice
         t1 = time.time()
         try:
             if self.__is_sandbox_mode is True:

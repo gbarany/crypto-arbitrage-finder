@@ -150,7 +150,7 @@ class ArbitragePath:
                 orl.append(OrderRequest(
                         exchange_name=base_exchange,
                         market=tradesymbols,
-                        amount=volume,
+                        volumeBase=volume,
                         limitPrice=limitPrice,
                         meanPrice=meanPrice,
                         requestType=tradetype))
@@ -170,7 +170,7 @@ class ArbitragePath:
             raise ValueError("Trade list is empty, there are no trades to execute")
 
         if ArbitragePath.isOrderListSingleExchange(orderList) == True:
-            return SegmentedOrderRequestList([orderList])
+            return SegmentedOrderRequestList(self.uuid, [orderList])
 
         segmentedOrderList = []
         orderListCurrentSegment = []
@@ -196,5 +196,5 @@ class ArbitragePath:
             del segmentedOrderList[-1]
             segmentedOrderList = [OrderRequestList(mergedOrderList)] + segmentedOrderList
 
-        return SegmentedOrderRequestList(segmentedOrderList)
+        return SegmentedOrderRequestList(self.uuid, segmentedOrderList)
 

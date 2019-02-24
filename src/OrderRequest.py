@@ -27,13 +27,14 @@ class OrderRequest:
     """ The order should be canceled """
     shouldAbort: bool
 
-    def __init__(self, exchange_name: str, market: str, amount: float, price: float,
+    def __init__(self, exchange_name: str, market: str, volumeBase: float, limitPrice: float, meanPrice: float,
                  requestType: OrderRequestType) -> None:
         self.exchange_name: str = exchange_name
         self.exchange_name_std: str = exchange_name.lower().replace(" ", "")
         self.market: str = market
-        self.amount: float = amount
-        self.price: float = price
+        self.volumeBase: float = volumeBase
+        self.limitPrice: float = limitPrice
+        self.meanPrice: float = meanPrice
         self.type: OrderRequestType = requestType
 
         self.__statusLog: [] = []
@@ -95,8 +96,8 @@ class OrderRequest:
             'id': self.id,
             'exchange_name': self.exchange_name,
             'market': self.market,
-            'amount': self.amount,
-            'price': self.price,
+            'amount': self.volumeBase,
+            'price': self.limitPrice,
             'type': self.type,
             'status': self.__status.value,
         }
@@ -116,7 +117,8 @@ class OrderRequestList:
 
 class SegmentedOrderRequestList:
 
-    def __init__(self, orderRequestLists: [OrderRequestList]):
+    def __init__(self, uuid: str, orderRequestLists: [OrderRequestList]):
+        self.uuid: str = uuid
         self.__orderRequestsLists: [OrderRequestList] = orderRequestLists
 
     def getOrderRequestLists(self) -> [OrderRequestList]:
