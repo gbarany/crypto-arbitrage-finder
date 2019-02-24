@@ -65,8 +65,10 @@ class OrderbookAnalyser:
                  trader=None,
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled,
                  dealfinder_mode=FWLiveParams.dealfinder_mode_networkx,
-                 kafkaCredentials=None):
+                 kafkaCredentials=None,
+                 dealFinderRateLimitTimeSeconds=0.01):
 
+        self.dealFinderRateLimitTimeSeconds = dealFinderRateLimitTimeSeconds
         self.eventLoop = asyncio.get_event_loop()
         self.kafkaProducer = KafkaProducerWrapper(kafkaCredentials, eventLoop=self.eventLoop)
         self.dealUUIDGenerator = DealUUIDGenerator()
@@ -75,7 +77,7 @@ class OrderbookAnalyser:
             self.arbitrageGraphs = [ArbitrageGraph() for count in range(len(vol_BTC))]
             self.pipes = [Pipe() for count in range(len(vol_BTC))]
             self.dealQueue = Queue()
-            self.processes = [Process(target=self.updatePointProcess, args=(self.arbitrageGraphs[i], vol_BTC[i], self.pipes[i], self.dealQueue)) for i in range(len(vol_BTC))]
+            self.processes = [Process(target=self.updatePointProcess, args=(self.arbitrageGraphs[i], vol_BTC[i], self.pipes[i], self.dealQueue, self.dealFinderRateLimitTimeSeconds)) for i in range(len(vol_BTC))]
             #self.dealProcessor = Process(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader))
             #self.dealProcessor.daemon = True
             self.dealProcessorThread = Thread(target=self.dealProcess, args=(self.eventLoop, self.dealQueue, trader, self.kafkaProducer, self.dealUUIDGenerator))
@@ -133,7 +135,7 @@ class OrderbookAnalyser:
                 logger.info("Called Trader ensure_future")
 
     @staticmethod
-    def updatePointProcess(arbitrageGraph, volumeBTC, pipe, dealQueue):
+    def updatePointProcess(arbitrageGraph, volumeBTC, pipe, dealQueue, dealFinderRateLimitTimeSeconds):
         p_output, p_input = pipe
 
         timeOfNextDealfinderCall = time.time()
@@ -145,7 +147,7 @@ class OrderbookAnalyser:
                 path = arbitrageGraph.getArbitrageDeal(timestamp)
                 if path.isProfitable() is True:
                     dealQueue.put(path)
-                timeOfNextDealfinderCall = time.time() + 0.01
+                timeOfNextDealfinderCall = time.time() + dealFinderRateLimitTimeSeconds
 
     @staticmethod
     def __isOrderbookFormatValid(orderbook):
