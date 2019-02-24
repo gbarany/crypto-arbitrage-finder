@@ -25,7 +25,7 @@ class Trader:
     PHASE_CREATE_TIMEOUT = 5  # sec (Az összes create-nek létre kell jönnie ennyi idő után)
     PHASE_FETCH_TIMEOUT = 10  # sec (Az összes order-nek CLOSED-nak kell lennie ennyi idő után, ha ez nem igaz, akkor ABORT ALL)
     NOF_CCTX_RETRY = 4
-    TTL_TRADEORDER_S = 60
+    TTL_TRADEORDER_S = 60 * 5
 
     EFFICIENCY = 0.9  # Ezzel szorozzuk a beadott amout-okat, hogy elkerüljük a recegést a soros átváltások miatt
 
@@ -334,6 +334,8 @@ class Trader:
                     f' free_balance_base: {free_balance_base}' +
                     f' volumeBase: {volumeBase}' +
                     f' type: {orderRequest.type}')
+            else:
+                return True
 
         elif orderRequest.type == OrderRequestType.BUY:
             free_balance_quote = self.get_free_balance(exchange_name, market_str.split('/')[1])
@@ -343,6 +345,8 @@ class Trader:
                     f' free_balance_quote: {free_balance_quote}' +
                     f' volumeBase: {volumeBase}' +
                     f' type: {orderRequest.type}')
+            else:
+                return True
         else:
             raise ValueError('Invalid orderRequest.type')
 

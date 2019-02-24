@@ -47,6 +47,10 @@ class TestClass(TestCase):
             await asyncio.sleep(0.2)
             return {'error': 'MOCKED ERROR'}
 
+        def mockAmountToPrecision(symbol, amount):
+            return amount
+
+        to_be_mocked.amountToPrecision = mockAmountToPrecision
         to_be_mocked.fetch_balance = CoroutineMock(side_effect=mockBalance)
         to_be_mocked.fetchOrder = CoroutineMock(side_effect=mockFunc0)
         to_be_mocked.createLimitSellOrder = CoroutineMock(side_effect=mockFunc0)
@@ -84,28 +88,28 @@ class TestClass(TestCase):
         }
 
     def __SORL_3(self):
-        or_11 = OrderRequest(BINANCE, ETH_EUR, amount=11, price=1, requestType=OrderRequestType.BUY)
-        or_12 = OrderRequest(BINANCE, ETH_EUR, amount=12, price=1, requestType=OrderRequestType.SELL)
-        or_13 = OrderRequest(BINANCE, ETH_EUR, amount=13, price=1, requestType=OrderRequestType.BUY)
-        or_21 = OrderRequest(KRAKEN, ETH_EUR, amount=21, price=1, requestType=OrderRequestType.BUY)
-        or_22 = OrderRequest(KRAKEN, ETH_EUR, amount=22, price=1, requestType=OrderRequestType.SELL)
-        or_23 = OrderRequest(KRAKEN, ETH_EUR, amount=23, price=1, requestType=OrderRequestType.BUY)
-        or_31 = OrderRequest(POLONIEX, ETH_EUR, amount=31, price=1, requestType=OrderRequestType.BUY)
-        or_32 = OrderRequest(POLONIEX, ETH_EUR, amount=32, price=1, requestType=OrderRequestType.SELL)
-        or_33 = OrderRequest(POLONIEX, ETH_EUR, amount=33, price=1, requestType=OrderRequestType.BUY)
+        or_11 = OrderRequest(BINANCE, ETH_EUR, volumeBase=11, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
+        or_12 = OrderRequest(BINANCE, ETH_EUR, volumeBase=12, limitPrice=1, meanPrice=1, requestType=OrderRequestType.SELL)
+        or_13 = OrderRequest(BINANCE, ETH_EUR, volumeBase=13, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
+        or_21 = OrderRequest(KRAKEN, ETH_EUR, volumeBase=21, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
+        or_22 = OrderRequest(KRAKEN, ETH_EUR, volumeBase=22, limitPrice=1, meanPrice=1, requestType=OrderRequestType.SELL)
+        or_23 = OrderRequest(KRAKEN, ETH_EUR, volumeBase=23, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
+        or_31 = OrderRequest(POLONIEX, ETH_EUR, volumeBase=31, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
+        or_32 = OrderRequest(POLONIEX, ETH_EUR, volumeBase=32, limitPrice=1, meanPrice=1, requestType=OrderRequestType.SELL)
+        or_33 = OrderRequest(POLONIEX, ETH_EUR, volumeBase=33, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
 
         orl_1 = OrderRequestList([or_11, or_12, or_13])
         orl_2 = OrderRequestList([or_21, or_22, or_23])
         orl_3 = OrderRequestList([or_31, or_32, or_33])
-        sorl = SegmentedOrderRequestList([orl_1, orl_2, orl_3])
+        sorl = SegmentedOrderRequestList('uuid', [orl_1, orl_2, orl_3])
         return sorl
 
     def __SORL_1(self, EXCHANGE):
-        or_1 = OrderRequest(EXCHANGE, ETH_EUR, amount=1, price=1, requestType=OrderRequestType.BUY)
-        or_2 = OrderRequest(EXCHANGE, ETH_EUR, amount=2, price=1, requestType=OrderRequestType.SELL)
-        or_3 = OrderRequest(EXCHANGE, ETH_EUR, amount=3, price=1, requestType=OrderRequestType.BUY)
+        or_1 = OrderRequest(EXCHANGE, ETH_EUR, volumeBase=1, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
+        or_2 = OrderRequest(EXCHANGE, ETH_EUR, volumeBase=2, limitPrice=1, meanPrice=1, requestType=OrderRequestType.SELL)
+        or_3 = OrderRequest(EXCHANGE, ETH_EUR, volumeBase=3, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
         orl_1 = OrderRequestList([or_1, or_2, or_3])
-        sorl = SegmentedOrderRequestList([orl_1])
+        sorl = SegmentedOrderRequestList('uuid', [orl_1])
         return sorl
 
     async def setUp(self):
@@ -121,6 +125,7 @@ class TestClass(TestCase):
         self.trader = Trader(is_sandbox_mode=False)
         await self.trader.initExchangesFromCredFile(credfile='./cred/api_test.json')
         self.trader.input = lambda x: 'ok'
+        Trader.TTL_TRADEORDER_S = 1
 
     async def tearDown(self):
 
@@ -135,10 +140,10 @@ class TestClass(TestCase):
         exchangeMock.createLimitSellOrder = CoroutineMock(side_effect=[{'id': '0'}])
         exchangeMock.fetchOrder = CoroutineMock(side_effect=[{'status': CCXT_ORDER_STATUS_CLOSED}])
 
-        or_1 = OrderRequest(EXCHANGE, ETH_EUR, amount=1, price=1, requestType=OrderRequestType.SELL)
+        or_1 = OrderRequest(EXCHANGE, ETH_EUR, volumeBase=1, limitPrice=1, meanPrice=1, requestType=OrderRequestType.SELL)
 
         orl_1 = OrderRequestList([or_1])
-        sorl = SegmentedOrderRequestList([orl_1])
+        sorl = SegmentedOrderRequestList('uuid', [orl_1])
         await self.trader.execute(sorl)
 
         assert exchangeMock.createLimitSellOrder.await_count == 1
@@ -150,16 +155,16 @@ class TestClass(TestCase):
         sorl = self.__SORL_3()
         ors: [OrderRequest] = sorl.getOrderRequests()
         ors[0].type = OrderRequestType.SELL
-        ors[1].amount = 1000
+        ors[1].volumeBase = 1000
         assert self.trader.isSegmentedOrderRequestListValid(sorl)
-        ors[3].amount = 1000
+        ors[3].volumeBase = 1000
         with pytest.raises(ValueError):
             assert self.trader.isSegmentedOrderRequestListValid(sorl)
-        ors[3].amount = 10
-        ors[4].amount = 0
+        ors[3].volumeBase = 10
+        ors[4].volumeBase = 0
         with pytest.raises(ValueError):
             assert self.trader.isSegmentedOrderRequestListValid(sorl)
-        ors[4].amount = 10000000010
+        ors[4].volumeBase = 10000000010
         with pytest.raises(ValueError):
             assert self.trader.isSegmentedOrderRequestListValid(sorl)
 
@@ -179,9 +184,9 @@ class TestClass(TestCase):
         exchangeMock.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
 
         sorl = self.__SORL_1(EXCHANGE)
-        assert sorl.getOrderRequests()[0].amount == 1
-        assert sorl.getOrderRequests()[1].amount == 2
-        assert sorl.getOrderRequests()[2].amount == 3
+        assert sorl.getOrderRequests()[0].volumeBase == 1
+        assert sorl.getOrderRequests()[1].volumeBase == 2
+        assert sorl.getOrderRequests()[2].volumeBase == 3
 
         await self.trader.execute(sorl)
 
@@ -216,9 +221,9 @@ class TestClass(TestCase):
         exchangeMock.fetchOrder = CoroutineMock(side_effect=mockFetchOrder)
 
         sorl = self.__SORL_1(EXCHANGE)
-        assert sorl.getOrderRequests()[0].amount == 1
-        assert sorl.getOrderRequests()[1].amount == 2
-        assert sorl.getOrderRequests()[2].amount == 3
+        assert sorl.getOrderRequests()[0].volumeBase == 1
+        assert sorl.getOrderRequests()[1].volumeBase == 2
+        assert sorl.getOrderRequests()[2].volumeBase == 3
 
         await self.trader.execute(sorl)
 
@@ -256,9 +261,9 @@ class TestClass(TestCase):
         exchangeMock.fetchOrder = CoroutineMock(side_effect=mockFetchOrder)
 
         sorl = self.__SORL_1(EXCHANGE)
-        assert sorl.getOrderRequests()[0].amount == 1
-        assert sorl.getOrderRequests()[1].amount == 2
-        assert sorl.getOrderRequests()[2].amount == 3
+        assert sorl.getOrderRequests()[0].volumeBase == 1
+        assert sorl.getOrderRequests()[1].volumeBase == 2
+        assert sorl.getOrderRequests()[2].volumeBase == 3
 
         await self.trader.execute(sorl)
 
@@ -311,9 +316,9 @@ class TestClass(TestCase):
         exchangeMockPloniex.cancelOrder = CoroutineMock(side_effect=mockCancelOrder)
 
         sorl = self.__SORL_3()
-        assert sorl.getOrderRequests()[0].amount == 11
-        assert sorl.getOrderRequests()[3].amount == 21
-        assert sorl.getOrderRequests()[6].amount == 31
+        assert sorl.getOrderRequests()[0].volumeBase == 11
+        assert sorl.getOrderRequests()[3].volumeBase == 21
+        assert sorl.getOrderRequests()[6].volumeBase == 31
 
         await self.trader.execute(sorl)
 
@@ -345,10 +350,10 @@ class TestClass(TestCase):
         assert exchangeMockKraken.fetchOrder.await_count == 1
         assert exchangeMockKraken.cancelOrder.await_count == 0  # Trader.NOF_CCTX_RETRY * 2
 
-        assert exchangeMockPloniex.createLimitSellOrder.await_count == 1
-        assert exchangeMockPloniex.createLimitBuyOrder.await_count == 1
+        # assert exchangeMockPloniex.createLimitSellOrder.await_count == 1 Nem determinisztikus az értéke
+        # assert exchangeMockPloniex.createLimitBuyOrder.await_count == 1 Nem determinisztikus az értéke
         assert exchangeMockPloniex.fetchOrder.await_count == 1
-        assert exchangeMockPloniex.cancelOrder.await_count == 2  # Trader.NOF_CCTX_RETRY * 3
+        assert exchangeMockPloniex.cancelOrder.await_count == 0
 
     async def test_canceled_more_exchanges_middle_canceled(self):
         """
@@ -395,9 +400,9 @@ class TestClass(TestCase):
         #     exchangeMock.cancelOrder = CoroutineMock(return_value={'error': 'MOCKED ERROR'})
 
         sorl = self.__SORL_3()
-        assert sorl.getOrderRequests()[0].amount == 11
-        assert sorl.getOrderRequests()[3].amount == 21
-        assert sorl.getOrderRequests()[6].amount == 31
+        assert sorl.getOrderRequests()[0].volumeBase == 11
+        assert sorl.getOrderRequests()[3].volumeBase == 21
+        assert sorl.getOrderRequests()[6].volumeBase == 31
 
         await self.trader.execute(sorl)
 
@@ -472,20 +477,20 @@ class TestClass(TestCase):
         exchangeMockKraken.cancelOrder = CoroutineMock(side_effect=mockCancelOrder)
 
         # to be SUCCESS
-        or11 = OrderRequest(BINANCE, ETH_EUR, amount=11, price=1, requestType=OrderRequestType.SELL)
+        or11 = OrderRequest(BINANCE, ETH_EUR, volumeBase=11, limitPrice=1, meanPrice=1, requestType=OrderRequestType.SELL)
         # to be FAILED
-        or12 = OrderRequest(BINANCE, ETH_EUR, amount=12, price=1, requestType=OrderRequestType.SELL)
+        or12 = OrderRequest(BINANCE, ETH_EUR, volumeBase=12, limitPrice=1, meanPrice=1, requestType=OrderRequestType.SELL)
         # to be SUCCESS but very slow
-        or21 = OrderRequest(KRAKEN, ETH_EUR, amount=21, price=1, requestType=OrderRequestType.BUY)
-        or22 = OrderRequest(KRAKEN, ETH_EUR, amount=22, price=1, requestType=OrderRequestType.BUY)
+        or21 = OrderRequest(KRAKEN, ETH_EUR, volumeBase=21, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
+        or22 = OrderRequest(KRAKEN, ETH_EUR, volumeBase=22, limitPrice=1, meanPrice=1, requestType=OrderRequestType.BUY)
 
-        sorl = SegmentedOrderRequestList([
+        sorl = SegmentedOrderRequestList('uuid', [
             OrderRequestList([or11, or12]),
             OrderRequestList([or21, or22])
         ])
-        assert sorl.getOrderRequests()[0].amount == 11
-        assert sorl.getOrderRequests()[1].amount == 12
-        assert sorl.getOrderRequests()[2].amount == 21
+        assert sorl.getOrderRequests()[0].volumeBase == 11
+        assert sorl.getOrderRequests()[1].volumeBase == 12
+        assert sorl.getOrderRequests()[2].volumeBase == 21
 
         await self.trader.execute(sorl)
 
