@@ -170,7 +170,7 @@ class ArbitragePath:
             raise ValueError("Trade list is empty, there are no trades to execute")
 
         if ArbitragePath.isOrderListSingleExchange(orderList) == True:
-            return SegmentedOrderRequestList(self.uuid, [orderList])
+            return SegmentedOrderRequestList(self.uuid, [OrderRequestList(orderList)])
 
         segmentedOrderList = []
         orderListCurrentSegment = []
