@@ -21,13 +21,14 @@ vol_BTC = [1]
 def getOrderbookAnalyser():
     parameters = FWLiveParams()
     parameters.output = FWLiveParams.output_kafkaaws
+    trader = Trader(is_sandbox_mode=True)
     return OrderbookAnalyser(
         vol_BTC=vol_BTC,
         edgeTTL=30,
         priceTTL=60,
         resultsdir='./results/',
         priceSource=OrderbookAnalyser.PRICE_SOURCE_CMC,
-        trader=Trader(is_sandbox_mode=True),
+        trader=trader,
 #        neo4j_mode=FWLiveParams.neo4j_mode_localhost,
 #        dealfinder_mode=FWLiveParams.dealfinder_mode_neo4j,
         neo4j_mode=FWLiveParams.neo4j_mode_disabled,
@@ -135,22 +136,22 @@ class TestClass(object):
                 timestamp=102)
 
             # wait for the Deal finder Threads to run
-            asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
-            time.sleep(0.1)
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(2))
+            time.sleep(2)
 
             assert orderbookAnalyser.trader.execute.call_count == len(vol_BTC)
             assert orderbookAnalyser.kafkaProducer.sendAsync.call_count == len(vol_BTC)
-            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()
+            orderRequestLists = orderbookAnalyser.trader.execute.call_args_list[0][0][0].getOrderRequestLists()[0].getOrderRequests()
             
-            orderRequestList = orderRequestLists[0][0]
+            orderRequestList = orderRequestLists[0]
             assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('BTC/USD', vol_BTC[0], 9000, OrderRequestType.SELL,OrderRequestStatus.INITIAL)
 
-            orderRequestList = orderRequestLists[0][1]
+            orderRequestList = orderRequestLists[1]
             assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/USD', vol_BTC[0] / cmc['ETH/BTC']['last'], 200,OrderRequestType.BUY, OrderRequestStatus.INITIAL)
 
-            orderRequestList = orderRequestLists[0][2]
+            orderRequestList = orderRequestLists[2]
             assert (orderRequestList.market, orderRequestList.volumeBase, orderRequestList.limitPrice, orderRequestList.type,orderRequestList.getStatus()) == \
                     ('ETH/BTC', vol_BTC[0] / cmc['ETH/BTC']['last'], 0.03,OrderRequestType.SELL, OrderRequestStatus.INITIAL)
 
