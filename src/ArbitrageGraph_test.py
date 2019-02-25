@@ -77,15 +77,21 @@ class TestClass(object):
         assert path.getProfit() == 800
 
         segmentedOrderList = path.toSegmentedOrderList().getOrderRequestLists()
-        assert (segmentedOrderList[0][0].exchange_name,
-                segmentedOrderList[0][0].market,
-                segmentedOrderList[0][0].type) == ('kraken', 'BTC/USD',OrderRequestType.SELL)
-        assert (segmentedOrderList[0][1].exchange_name,
-                segmentedOrderList[0][1].market,
-                segmentedOrderList[0][1].type) == ('kraken', 'ETH/USD',OrderRequestType.BUY)
-        assert (segmentedOrderList[0][2].exchange_name,
-                segmentedOrderList[0][2].market,
-                segmentedOrderList[0][2].type) == ('kraken', 'ETH/BTC',OrderRequestType.SELL)
+
+        orderitem = segmentedOrderList[0].getOrderRequests()[0]
+        assert (orderitem.exchange_name,
+                orderitem.market,
+                orderitem.type) == ('kraken', 'BTC/USD',OrderRequestType.SELL)
+
+        orderitem = segmentedOrderList[0].getOrderRequests()[1]
+        assert (orderitem.exchange_name,
+                orderitem.market,
+                orderitem.type) == ('kraken', 'ETH/USD',OrderRequestType.BUY)
+
+        orderitem = segmentedOrderList[0].getOrderRequests()[2]
+        assert (orderitem.exchange_name,
+                orderitem.market,
+                orderitem.type) == ('kraken', 'ETH/BTC',OrderRequestType.SELL)
 
     def test_multipleExchanges(self):
         arbitrageGraph = ArbitrageGraph()
@@ -116,18 +122,18 @@ class TestClass(object):
 
         segmentedOrderRequestLists[0].getOrderRequests()[0].exchange_name == 'kraken'
         segmentedOrderRequestLists[0].getOrderRequests()[0].market == 'BTC/USD'
-        segmentedOrderRequestLists[0].getOrderRequests()[0].price == 9000
-        segmentedOrderRequestLists[0].getOrderRequests()[0].amount == 1
+        segmentedOrderRequestLists[0].getOrderRequests()[0].limitPrice == 9000
+        segmentedOrderRequestLists[0].getOrderRequests()[0].volumeBase == 1
 
         segmentedOrderRequestLists[0].getOrderRequests()[1].exchange_name == 'kraken'
         segmentedOrderRequestLists[0].getOrderRequests()[1].market == 'ETH/USD'
-        segmentedOrderRequestLists[0].getOrderRequests()[1].price == 200
-        segmentedOrderRequestLists[0].getOrderRequests()[1].amount == 4.5
+        segmentedOrderRequestLists[0].getOrderRequests()[1].limitPrice == 200
+        segmentedOrderRequestLists[0].getOrderRequests()[1].volumeBase == 4.5
 
         segmentedOrderRequestLists[1].getOrderRequests()[0].exchange_name == 'poloniex'
         segmentedOrderRequestLists[1].getOrderRequests()[0].market == 'ETH/BTC'
-        segmentedOrderRequestLists[1].getOrderRequests()[0].price == 0.2
-        segmentedOrderRequestLists[1].getOrderRequests()[0].amount == 4.5
+        segmentedOrderRequestLists[1].getOrderRequests()[0].limitPrice == 0.2
+        segmentedOrderRequestLists[1].getOrderRequests()[0].volumeBase == 4.5
 
 
     def test_multipleExchanges_merge_segments(self):
@@ -159,18 +165,18 @@ class TestClass(object):
 
         segmentedOrderRequestLists[0].getOrderRequests()[0].exchange_name == 'kraken'
         segmentedOrderRequestLists[0].getOrderRequests()[0].market == 'BTC/USD'
-        segmentedOrderRequestLists[0].getOrderRequests()[0].price == 9000
-        segmentedOrderRequestLists[0].getOrderRequests()[0].amount == 1
+        segmentedOrderRequestLists[0].getOrderRequests()[0].limitPrice == 9000
+        segmentedOrderRequestLists[0].getOrderRequests()[0].volumeBase == 1
 
         segmentedOrderRequestLists[0].getOrderRequests()[1].exchange_name == 'kraken'
         segmentedOrderRequestLists[0].getOrderRequests()[1].market == 'ETH/USD'
-        segmentedOrderRequestLists[0].getOrderRequests()[1].price == 200
-        segmentedOrderRequestLists[0].getOrderRequests()[1].amount == 4.5
+        segmentedOrderRequestLists[0].getOrderRequests()[1].limitPrice == 200
+        segmentedOrderRequestLists[0].getOrderRequests()[1].volumeBase == 4.5
 
         segmentedOrderRequestLists[1].getOrderRequests()[0].exchange_name == 'poloniex'
         segmentedOrderRequestLists[1].getOrderRequests()[0].market == 'ETH/BTC'
-        segmentedOrderRequestLists[1].getOrderRequests()[0].price == 0.2
-        segmentedOrderRequestLists[1].getOrderRequests()[0].amount == 4.5
+        segmentedOrderRequestLists[1].getOrderRequests()[0].limitPrice == 0.2
+        segmentedOrderRequestLists[1].getOrderRequests()[0].volumeBase == 4.5
         
     def test_TTLTest_one(self):
         arbitrageGraph = ArbitrageGraph()
@@ -301,19 +307,19 @@ class TestClass(object):
 
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
         assert len(segmentedOrderRequestLists)==1
-        assert len(segmentedOrderRequestLists[0])==3
-        
-        assert segmentedOrderRequestLists[0][0].exchange_name == 'kraken'
-        assert segmentedOrderRequestLists[0][0].market == 'BTC/USD'
-        assert segmentedOrderRequestLists[0][0].price == 5000
-        assert segmentedOrderRequestLists[0][0].amount == 1
+        assert len(segmentedOrderRequestLists[0].getOrderRequests())==3
 
-        assert segmentedOrderRequestLists[0][1].exchange_name == 'kraken'
-        assert segmentedOrderRequestLists[0][1].market == 'ETH/USD'
-        assert segmentedOrderRequestLists[0][1].price == 200
-        assert segmentedOrderRequestLists[0][1].amount == 4.5
+        assert segmentedOrderRequestLists[0].getOrderRequests()[0].exchange_name == 'kraken'
+        assert segmentedOrderRequestLists[0].getOrderRequests()[0].market == 'BTC/USD'
+        assert segmentedOrderRequestLists[0].getOrderRequests()[0].limitPrice == 5000
+        assert segmentedOrderRequestLists[0].getOrderRequests()[0].volumeBase == 1
 
-        assert segmentedOrderRequestLists[0][2].exchange_name == 'kraken'
-        assert segmentedOrderRequestLists[0][2].market == 'ETH/BTC'
-        assert segmentedOrderRequestLists[0][2].price == 1/5
-        assert segmentedOrderRequestLists[0][2].amount == 4.5
+        assert segmentedOrderRequestLists[0].getOrderRequests()[1].exchange_name == 'kraken'
+        assert segmentedOrderRequestLists[0].getOrderRequests()[1].market == 'ETH/USD'
+        assert segmentedOrderRequestLists[0].getOrderRequests()[1].limitPrice == 200
+        assert segmentedOrderRequestLists[0].getOrderRequests()[1].volumeBase == 4.5
+
+        assert segmentedOrderRequestLists[0].getOrderRequests()[2].exchange_name == 'kraken'
+        assert segmentedOrderRequestLists[0].getOrderRequests()[2].market == 'ETH/BTC'
+        assert segmentedOrderRequestLists[0].getOrderRequests()[2].limitPrice == 1/5
+        assert segmentedOrderRequestLists[0].getOrderRequests()[2].volumeBase == 4.5
