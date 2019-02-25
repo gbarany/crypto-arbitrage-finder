@@ -50,7 +50,7 @@ class KafkaProducerWrapper:
     def __del__(self):
         if self.kafkaProducer is not None:
             try:
-                asyncio.ensure_future(self.kafkaProducer.stop())
+                self.eventLoop.run_until_complete(self.kafkaProducer.stop())
             except Exception as e:
                 logger.error('Error during destroying Kafka producer: '+str(e))
 
@@ -69,7 +69,7 @@ class OrderbookAnalyser:
                  neo4j_mode=FWLiveParams.neo4j_mode_disabled,
                  dealfinder_mode=FWLiveParams.dealfinder_mode_networkx,
                  kafkaCredentials=None,
-                 dealFinderRateLimitTimeSeconds=0.01):
+                 dealFinderRateLimitTimeSeconds=0.05):
 
         self.dealFinderRateLimitTimeSeconds = dealFinderRateLimitTimeSeconds
         self.eventLoop = asyncio.get_event_loop()
@@ -257,8 +257,7 @@ class OrderbookAnalyser:
 
     def terminate(self):
         self.isRunning = False
-        # terminate running processes
-        # self.dealProcessor.terminate()
+
         self.dealQueue.put(None)
         for process in self.processes:
             process.terminate()
