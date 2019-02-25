@@ -90,22 +90,12 @@ class TestClass(object):
 
     def test_zero(self):
         orderBookPair = orderbookPairStrInit()
-        askprice = orderBookPair.asks.getPrice(3)
-        bidprice = orderBookPair.bids.getPrice(3)
 
-        assert askprice.meanPrice == None
-        assert askprice.limitPrice == None
-        assert askprice.volumeBTC == None
-        assert askprice.volumeBase == None
-        assert askprice.feeAmountBTC == None
-        assert askprice.feeAmountBase == None
+        with pytest.raises(Exception):
+            askprice = orderBookPair.asks.getPrice(3)
 
-        assert bidprice.meanPrice == None
-        assert bidprice.limitPrice == None
-        assert bidprice.volumeBTC == None
-        assert bidprice.volumeBase == None
-        assert bidprice.feeAmountBTC == None
-        assert bidprice.feeAmountBase == None
+        with pytest.raises(Exception):
+            bidprice = orderBookPair.bids.getPrice(3)
 
     def test_equivalence(self):
         orderBookPair1 = orderbookPairStrInit()
