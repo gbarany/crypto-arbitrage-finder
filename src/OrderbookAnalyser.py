@@ -172,7 +172,7 @@ class OrderbookAnalyser:
             raise Exception("Invalid asks format on " + str(exchangename)+" "+str(symbol)+", bids:"+str(asks))
         if not isinstance(timestamp, numbers.Number):
             raise Exception("Invalid timestamp on " + str(exchangename) + " " + str(symbol)+":"+str(timestamp))
-        if bids[0][0] >= asks[0][0]:
+        if bids[0][0] >= asks[0][0] and str(exchangename).lower() is not "sfox":
             raise Exception("Bid is higher than ask on " + str(exchangename) + " " + str(symbol) + ":" + str(timestamp))
 
         if self.priceSource == OrderbookAnalyser.PRICE_SOURCE_ORDERBOOK:
