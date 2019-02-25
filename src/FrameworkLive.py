@@ -263,6 +263,10 @@ class FrameworkLive:
                     logger.warning('Error parsing Kafka JSON:'+str(e))
                 # TODO : last resort solution: drop frames that cannot be processed
                 #await consumer.seek_to_end()
+
+        except Exception as e:
+            logger.error('Kafka consumer failed '+str(e))
+
         finally:
             # Will leave consumer group; perform autocommit if enabled.
             await consumer.stop()
