@@ -9,7 +9,7 @@ class DealHistoryDictItem:
         self.uuid = uuid.uuid4()
 
     def getUUIDString(self):
-        return str(self.uuid) + "-" + str(round(self.profitPerc*1000))
+        return str(self.uuid)
 
 
 class DealUUIDGenerator:
