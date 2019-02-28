@@ -17,6 +17,7 @@ from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType, Ord
 import time
 import logging
 from Notifications import sendNotification
+from TraderHistory import TraderHistory
 
 logger = logging.getLogger('Trader')
 
@@ -255,43 +256,6 @@ class Trader:
         market = self.get_market(exchange_name, market_str)
         return market['limits']['amount']['min']
 
-    # def hasSufficientBalance(self, exchange_name: str, market_str: str, amount: float, type: OrderRequestType):
-    #     try:
-    #         exchange = self.get_exchange(exchange_name)
-    #         market = self.get_market(exchange_name, market_str)
-    #         if market['limits']['amount']['min']:
-    #             if amount < exchange.markets[market_str]['limits']['amount']['min']:
-    #                 raise ValueError(
-    #                     'Amount too small, won'
-    #                     't execute on ' + exchange.name + " " + market_str +
-    #                     " Amount: " + str(amount) + " Min.amount:" +
-    #                     str(exchange.markets[market_str]['limits']['amount']['min'])
-    #                 )
-    #
-    #         if market['limits']['amount']['max']:
-    #             if amount > exchange.markets[market_str]['limits']['amount']['max']:
-    #                 raise ValueError(
-    #                     'Amount too big, won'
-    #                     't execute on ' + exchange.name + " " + market_str +
-    #                     " Amount: " + str(amount) + " Max.amount:" +
-    #                     str(exchange.markets[market_str]['limits']['amount']['max'])
-    #                 )
-    #
-    #         if type == OrderRequestType.SELL:
-    #             free_balance = self.get_free_balance(exchange_name, market_str.split('/')[0])
-    #         else:
-    #             free_balance = self.get_free_balance(exchange_name, market_str.split('/')[1])
-    #         if free_balance < amount:
-    #             raise ValueError(
-    #                 'Insufficient stock on ' + exchange.name + " " + market_str +
-    #                 " Amount available: " +
-    #                 str(free_balance) +
-    #                 " Amount required:" + str(amount))
-    #
-    #         return True
-    #     except Exception as e:
-    #         raise ValueError(f"Error during transaction validation: {e}")
-
     def isOrderRequestValid(self, orderRequest: OrderRequest):
         exchange_name = orderRequest.exchange_name_std
         market_str = orderRequest.market
@@ -323,29 +287,37 @@ class Trader:
             raise ValueError(f"Error during validating OrderRequest: {e}")
 
     def hasSufficientBalanceForOrderRequest(self, orderRequest: OrderRequest):
+        logger.info(f'hasSufficientBalanceForOrderRequest({orderRequest})')
         exchange_name = orderRequest.exchange_name_std
         market_str = orderRequest.market
         volumeBase = orderRequest.volumeBase
         if orderRequest.type == OrderRequestType.SELL:
-            free_balance_base = self.get_free_balance(exchange_name, market_str.split('/')[0])
+            base_symbol = market_str.split('/')[0]
+            free_balance_base = self.get_free_balance(base_symbol, exchange_name)
+            logger.info(f'base_symbol={base_symbol}, free_balance_base={free_balance_base}, volumeBase={volumeBase}')
             if free_balance_base < volumeBase:
                 raise ValueError(
-                    f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
+                    f'Insufficient fund on {exchange_name} {orderRequest.market}.' +
                     f' free_balance_base: {free_balance_base}' +
                     f' volumeBase: {volumeBase}' +
                     f' type: {orderRequest.type}')
             else:
+                logger.info(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_base} needed={volumeBase}')
                 return True
 
         elif orderRequest.type == OrderRequestType.BUY:
-            free_balance_quote = self.get_free_balance(exchange_name, market_str.split('/')[1])
-            if free_balance_quote < volumeBase * orderRequest.meanPrice:
+            quote_symbol = market_str.split('/')[1]
+            free_balance_quote = self.get_free_balance(exchange_name, quote_symbol)
+            logger.info(f'quote_symbol={quote_symbol}, free_balance_quote={free_balance_quote}, volumeBase={volumeBase}, orderRequest.meanPrice={orderRequest.meanPrice}')
+            needed_quote = volumeBase * orderRequest.meanPrice
+            if free_balance_quote < needed_quote:
                 raise ValueError(
-                    f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
+                    f'Insufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}.' +
                     f' free_balance_quote: {free_balance_quote}' +
-                    f' volumeBase: {volumeBase}' +
+                    f' volumeBase * orderRequest.meanPrice: {volumeBase * orderRequest.meanPrice}' +
                     f' type: {orderRequest.type}')
             else:
+                logger.info(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_quote} needed={needed_quote}')
                 return True
         else:
             raise ValueError('Invalid orderRequest.type')
@@ -459,6 +431,21 @@ class Trader:
             traceback.print_exc()
             raise TradesShowstopper("Trade showstopper")
 
+    def isSandboxMode(self):
+        return self.__is_sandbox_mode
+
+    def input(self, str):
+        return input(str)
+
+    def sendNotification(self, str_text):
+        sendNotification(str_text)
+
+    async def pollTrades(self):
+        ''' TraderHistory-n keresztül menti a trade-ket '''
+        traderHistory = await TraderHistory.getInstance()
+        await traderHistory.pollTrades()
+        await traderHistory.close()
+
     async def execute(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         if self.__isBusy:
             # logger.info(f"Trader is busy, the execute() call is droped")
@@ -470,6 +457,7 @@ class Trader:
             logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
             isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
             logger.info(f'Validating result: {isValid}')
+            logger.info(f'Balances: {self.getBalances()}')
 
             if isValid is False:
                 self.__isBusy = False
@@ -493,7 +481,8 @@ class Trader:
         #     logger.info('Trader is authorized.')
 
         try:
-            sendNotification("CryptoArb Trader is placing orders. Check the logs for details.")
+            # TODO: save SORL into db
+            self.sendNotification("CryptoArb Trader is placing orders. Check the logs for details.")
             t1 = time.time()
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
@@ -510,18 +499,20 @@ class Trader:
             for orderRequest in segmentedOrderRequestList.getOrderRequests():
                 orderRequest.shouldAbort = True
             await self.abortSegmentedOrderRequestList(segmentedOrderRequestList)
+            self.sendNotification(f"CryptoArb Trader failed. Reason: {e} ")
         finally:
             logger.info('SORL after execution:')
             logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
             logger.info('History log after execution:')
             logger.info(f'\n{segmentedOrderRequestList.statusLogToString()}\n')
             await self.fetch_balances()
+            logger.info(f'Balances: {self.getBalances()}')
+            # Fetch trades into db
+            await self.pollTrades()
+
+            # TODO: fetch FIAT into db
+            # TODO: fetchBalance into db
             self.__isBusy = False
-            logger.info('Exit after execute()')
-            sys.exit("Exit after execute()")
+            logger.info('execute(): end.')
+            # sys.exit("Exit after execute()")
 
-    def isSandboxMode(self):
-        return self.__is_sandbox_mode
-
-    def input(self, str):
-        return input(str)

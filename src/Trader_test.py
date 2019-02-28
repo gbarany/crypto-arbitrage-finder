@@ -13,7 +13,7 @@ BINANCE = 'binance'
 KRAKEN = 'kraken'
 ETH_EUR = 'ETH/EUR'
 ETH_BTC = 'ETH/BTC'
-BTC_USD = 'ETH/BTC'
+BTC_USD = 'BTC/USD'
 
 logging.getLogger('Trader').setLevel(logging.DEBUG)
 rootLogger = logging.getLogger()
@@ -47,6 +47,10 @@ class TestClass(TestCase):
             await asyncio.sleep(0.2)
             return {'error': 'MOCKED ERROR'}
 
+        async def mockReturnEmptyArray():
+            await asyncio.sleep(0.2)
+            return []
+
         def mockAmountToPrecision(symbol, amount):
             return amount
 
@@ -58,6 +62,10 @@ class TestClass(TestCase):
         to_be_mocked.cancelOrder = CoroutineMock(side_effect=mockFunc2)
         to_be_mocked.load_markets = CoroutineMock(side_effect=mockFunc0)
         to_be_mocked.close = CoroutineMock(side_effect=mockFunc0)
+        # TraderHistory hívja meg:
+        to_be_mocked.fetchOrders = CoroutineMock(side_effect=mockReturnEmptyArray)
+        to_be_mocked.fetchClosedOrders = CoroutineMock(side_effect=mockReturnEmptyArray)
+        to_be_mocked.fetchMyTrades = CoroutineMock(side_effect=mockReturnEmptyArray)
         to_be_mocked.name = exchangeName
         to_be_mocked.rateLimit = 7
         to_be_mocked.markets = {
@@ -125,10 +133,11 @@ class TestClass(TestCase):
         self.trader = Trader(is_sandbox_mode=False)
         await self.trader.initExchangesFromCredFile(credfile='./cred/api_test.json')
         self.trader.input = lambda x: 'ok'
+        self.trader.sendNotification = lambda x: ''
+        self.trader.pollTrades = CoroutineMock()
         Trader.TTL_TRADEORDER_S = 1
 
     async def tearDown(self):
-
         await self.trader.close_exchanges()
         self.kraken = None
         self.binance = None
@@ -167,6 +176,8 @@ class TestClass(TestCase):
         ors[4].volumeBase = 10000000010
         with pytest.raises(ValueError):
             assert self.trader.isSegmentedOrderRequestListValid(sorl)
+        with pytest.raises(ValueError):
+            assert self.trader.isSegmentedOrderRequestListValid(SegmentedOrderRequestList('uuid', [OrderRequestList([OrderRequest(BINANCE, ETH_EUR, volumeBase=10, limitPrice=1000, meanPrice=1000, requestType=OrderRequestType.BUY)])]))
 
 
 

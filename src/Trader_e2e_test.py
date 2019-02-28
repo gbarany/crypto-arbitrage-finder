@@ -55,10 +55,10 @@ class TestClass(TestCase):
     async def test_execute_trades(self):
         self.trader.input = lambda x: 'ok'
 
-        or11 = OrderRequest(COINBASEPRO, ETH_BTC, amount=0.1, price=0.02, requestType=OrderRequestType.BUY)
+        or11 = OrderRequest(COINBASEPRO, ETH_BTC, volumeBase=0.1, limitPrice=0.02, meanPrice=0.02, requestType=OrderRequestType.BUY)
 
         orl1 = OrderRequestList([or11])
         # orl2 = OrderRequestList([or21, or22])
-        stl = SegmentedOrderRequestList([orl1])
+        stl = SegmentedOrderRequestList('uuid', [orl1])
         await self.trader.execute(stl)
 
