@@ -21,6 +21,7 @@ class TraderHistory:
         self.__initDBFromAWSParameterStore()
         logger.info(f'TraderHistory.__init__()')
 
+
     @staticmethod
     async def getInstance():
         ''' :return:TraderHistory '''
@@ -220,16 +221,8 @@ class TraderHistory:
         )
 
         try:
-
             cursor = self.__db.cursor()
             cursor.execute(query, args)
-
-            if cursor.lastrowid:
-                if cursor.lastrowid % 100 == 0:
-                    print('last insert id', cursor.lastrowid)
-            else:
-                print('last insert id not found')
-
             self.__db.commit()
         except Exception as e:
             print(e)
@@ -239,13 +232,13 @@ class TraderHistory:
             try:
                 if exchange.has['fetchOrders']:
                     logger.info(f"CALL: {exchange.id}.fetchOrders")
-                    items = await exchange.fetchOrders()
-                    logger.info(items)
+                    fetchOrdersItems = await exchange.fetchOrders()
+                    logger.info(fetchOrdersItems)
                     # print(f"CALL: {exchange.id}.fetchOrders\n")
                     # print(json.dumps(items, indent=2))
                     # for i in items:
                     #     print(i.keys())
-                    self.__insertOrders(exchange.id, items)
+                    self.__insertOrders(exchange.id, fetchOrdersItems)
             except Exception as e:
                 logger.error(e)
 
@@ -253,13 +246,13 @@ class TraderHistory:
             try:
                 if exchange.has['fetchClosedOrders']:
                     logger.info(f"CALL: {exchange.id}.fetchClosedOrders")
-                    items = await exchange.fetchClosedOrders()
-                    logger.info(items)
+                    fetchClosedOrdersItems = await exchange.fetchClosedOrders()
+                    logger.info(fetchClosedOrdersItems)
                     # print(f"CALL: {exchange.id}.fetchClosedOrders\n")
                     # print(json.dumps(items, indent=2))
                     # for i in items:
                     #     print(i.keys())
-                    self.__insertOrders(exchange.id, items)
+                    self.__insertOrders(exchange.id, fetchClosedOrdersItems)
             except Exception as e:
                 logger.error(e)
 
@@ -267,12 +260,13 @@ class TraderHistory:
             try:
                 if exchange.has['fetchMyTrades']:
                     logger.info(f"CALL: {exchange.id}.fetchMyTrades")
-                    items = await exchange.fetch_my_trades(symbol=None, since=None, limit=None, params={})
-                    logger.info(items)
+                    test = map(lambda x: x['symbol'], fetchClosedOrdersItems)
+                    fetchMyTradesItems = await exchange.fetchMyTrades(symbol=None, since=None, limit=None, params={})
+                    logger.info(fetchMyTradesItems)
                     # print(f"CALL: {exchange.id}.fetchMyTrades\n")
                     # print(json.dumps(items, indent=2))
                     # for i in items:
                     #     print(i.keys())
-                    self.__insertTrades(exchange.id, items)
+                    self.__insertTrades(exchange.id, fetchMyTradesItems)
             except Exception as e:
                 logger.error(e)

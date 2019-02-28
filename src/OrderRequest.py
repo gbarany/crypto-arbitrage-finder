@@ -99,7 +99,7 @@ class OrderRequest:
             'volumeBase': self.volumeBase,
             'limitPrice': self.limitPrice,
             'meanPrice': self.meanPrice,
-            'type': self.type,
+            'type': self.type.value,
             'status': self.__status.value,
         }
         if self.shouldAbort:
