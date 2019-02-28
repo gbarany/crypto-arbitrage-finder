@@ -287,29 +287,37 @@ class Trader:
             raise ValueError(f"Error during validating OrderRequest: {e}")
 
     def hasSufficientBalanceForOrderRequest(self, orderRequest: OrderRequest):
+        logger.info(f'hasSufficientBalanceForOrderRequest({orderRequest})')
         exchange_name = orderRequest.exchange_name_std
         market_str = orderRequest.market
         volumeBase = orderRequest.volumeBase
         if orderRequest.type == OrderRequestType.SELL:
-            free_balance_base = self.get_free_balance(exchange_name, market_str.split('/')[0])
+            base_symbol = market_str.split('/')[0]
+            free_balance_base = self.get_free_balance(base_symbol, exchange_name)
+            logger.info(f'base_symbol={base_symbol}, free_balance_base={free_balance_base}, volumeBase={volumeBase}')
             if free_balance_base < volumeBase:
                 raise ValueError(
-                    f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
+                    f'Insufficient fund on {exchange_name} {orderRequest.market}.' +
                     f' free_balance_base: {free_balance_base}' +
                     f' volumeBase: {volumeBase}' +
                     f' type: {orderRequest.type}')
             else:
+                logger.info(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_base} needed={volumeBase}')
                 return True
 
         elif orderRequest.type == OrderRequestType.BUY:
-            free_balance_quote = self.get_free_balance(exchange_name, market_str.split('/')[1])
-            if free_balance_quote < volumeBase * orderRequest.meanPrice:
+            quote_symbol = market_str.split('/')[1]
+            free_balance_quote = self.get_free_balance(exchange_name, quote_symbol)
+            logger.info(f'quote_symbol={quote_symbol}, free_balance_quote={free_balance_quote}, volumeBase={volumeBase}, orderRequest.meanPrice={orderRequest.meanPrice}')
+            needed_quote = volumeBase * orderRequest.meanPrice
+            if free_balance_quote < needed_quote:
                 raise ValueError(
-                    f'Insufficient stock on {orderRequest.exchange_name_std} {orderRequest.market}.' +
+                    f'Insufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}.' +
                     f' free_balance_quote: {free_balance_quote}' +
-                    f' volumeBase: {volumeBase}' +
+                    f' volumeBase * orderRequest.meanPrice: {volumeBase * orderRequest.meanPrice}' +
                     f' type: {orderRequest.type}')
             else:
+                logger.info(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_quote} needed={needed_quote}')
                 return True
         else:
             raise ValueError('Invalid orderRequest.type')
