@@ -506,7 +506,7 @@ class Trader:
             logger.info('History log after execution:')
             logger.info(f'\n{segmentedOrderRequestList.statusLogToString()}\n')
             await self.fetch_balances()
-
+            logger.info(f'Balances: {self.getBalances()}')
             # Fetch trades into db
             await self.pollTrades()
 
