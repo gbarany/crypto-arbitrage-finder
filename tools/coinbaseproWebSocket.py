@@ -29,34 +29,34 @@ class CryptoArbOrderBook(cbpro.OrderBook):
         return super().__init__(product_id=product_id, log_to=log_to)
 
     def on_message(self, message):
-        if (time.time() - self.timeLastRun) < self.timeLimiterSeconds:
-            return super().on_message(message)
-        try:
-            book = self.get_current_book()
-            if len(book["asks"])>0 and len(book["bids"])>0:
-                asksConsolidated = self.getConsolidatedOrderbook(book["asks"], reverse=False)
-                bidsConsolidated = self.getConsolidatedOrderbook(book["bids"], reverse=True)
-                print("asks:"+str(asksConsolidated)+", bids:"+str(bidsConsolidated))
+        super().on_message(message)
 
-                if self.asksConsolidatedOld != asksConsolidated or self.bidsConsolidatedOld != bidsConsolidated:
-                    payload = {}
-                    payload['exchange'] = "coinbasepro"
-                    payload['symbol'] = message['product_id'].replace('-','/')
-                    payload['data'] = {}
-                    payload['data']['asks'] = asksConsolidated
-                    payload['data']['bids'] = bidsConsolidated
-                    payload['timestamp'] = time.mktime(dateutil.parser.parse(message['time']).timetuple())
-                    logger.info("Received " + payload['symbol'] + " prices from coinbasepro")
-                    self.asksConsolidatedOld = asksConsolidated
-                    self.bidsConsolidatedOld = bidsConsolidated
+        if (time.time() - self.timeLastRun) > self.timeLimiterSeconds:
+            try:
+                book = self.get_current_book()
+                if len(book["asks"])>0 and len(book["bids"])>0:
+                    asksConsolidated = self.getConsolidatedOrderbook(book["asks"], reverse=False)
+                    bidsConsolidated = self.getConsolidatedOrderbook(book["bids"], reverse=True)
+                    print("asks:"+str(asksConsolidated)+", bids:"+str(bidsConsolidated))
 
-                if book["asks"][0][0]<=book["bids"][-1][0]:
-                    logger.error("Bid higher than ask")
-        except Exception as err:
-            logger.error("Error during message processing:" + str(err))
-        finally:
-            self.timeLastRun = time.time()
-            return super().on_message(message)
+                    if self.asksConsolidatedOld != asksConsolidated or self.bidsConsolidatedOld != bidsConsolidated:
+                        payload = {}
+                        payload['exchange'] = "coinbasepro"
+                        payload['symbol'] = message['product_id'].replace('-','/')
+                        payload['data'] = {}
+                        payload['data']['asks'] = asksConsolidated
+                        payload['data']['bids'] = bidsConsolidated
+                        payload['timestamp'] = time.mktime(dateutil.parser.parse(message['time']).timetuple())
+                        logger.info("Received " + payload['symbol'] + " prices from coinbasepro")
+                        self.asksConsolidatedOld = asksConsolidated
+                        self.bidsConsolidatedOld = bidsConsolidated
+
+                    if book["asks"][0][0] <= book["bids"][-1][0]:
+                        logger.error("Bid higher than ask")
+            except Exception as err:
+                logger.error("Error during message processing:" + str(err))
+            finally:
+                self.timeLastRun = time.time()
 
     def getConsolidatedOrderbook(self, entries, reverse=False):
         orderbook = []
