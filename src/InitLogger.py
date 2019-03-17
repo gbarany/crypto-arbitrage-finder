@@ -10,7 +10,7 @@ fh = logging.FileHandler('./results/CryptoArbitrageApp.log')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 # create formatter and add it to the handlers
 formatter = logging.Formatter(
     '%(asctime)s - %(levelname)s - %(message)s - [%(filename)s:%(funcName)s:%(lineno)s]',
@@ -31,7 +31,7 @@ fh = logging.FileHandler('./results/CryptoArbitrageDeals.csv',mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 # create formatter and add it to the handlers
 formatter = logging.Formatter('%(asctime)s,%(message)s',datefmt="%Y-%m-%d %H:%M:%S")
 fh.setFormatter(formatter)
@@ -50,7 +50,7 @@ fh = logging.FileHandler('./results/Trader.log')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.WARNING)
 # create formatter and add it to the handlers
 formatter = logging.Formatter(
     '%(asctime)s - %(levelname)s - %(message)s - [%(filename)s:%(funcName)s:%(lineno)s]',
