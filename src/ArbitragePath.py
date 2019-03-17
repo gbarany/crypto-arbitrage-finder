@@ -57,7 +57,7 @@ class ArbitragePath:
         volumeBTCs = list(map(lambda orderBookPrice:orderBookPrice.getVolumeBTC(),self.orderBookPriceList))
         volumeBTCs = [x for x in volumeBTCs if x is not None]
         if volumeBTCs.count(volumeBTCs[0]) is not len(volumeBTCs): # check that all prices in path were calculated based on the same volume
-            logger.warning('Different volumeBTCs in deal: ' + str(volumeBTCs))
+            logger.info('Different volumeBTCs in deal: ' + str(volumeBTCs))
 
         return max(volumeBTCs)
     
