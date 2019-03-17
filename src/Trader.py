@@ -236,8 +236,11 @@ class Trader:
             raise ValueError(
                 f"No balance available from {exchangeName} {symbol} {self.__balances[exchangeName][symbol]['free']}")
 
+    def is_exchange_available(self, exchange_name: str) -> bool:
+        return exchange_name in self.__exchanges
+
     def get_exchange(self, exchange_name: str) -> Exchange:
-        if exchange_name not in self.__exchanges:
+        if not self.is_exchange_available(exchange_name):
             raise ValueError(
                 f'Exchange ({exchange_name}) does not exists in initialized exchanges'
             )
@@ -256,12 +259,14 @@ class Trader:
         market = self.get_market(exchange_name, market_str)
         return market['limits']['amount']['min']
 
-    def isOrderRequestValid(self, orderRequest: OrderRequest):
+    def isOrderRequestValid(self, orderRequest: OrderRequest) -> bool:
         exchange_name = orderRequest.exchange_name_std
         market_str = orderRequest.market
         amount = orderRequest.volumeBase
         type = orderRequest.type
         try:
+            if not self.is_exchange_available(exchange_name):
+                return False
             exchange = self.get_exchange(exchange_name)
             market = self.get_market(exchange_name, market_str)
             if market['limits']['amount']['min']:
@@ -293,7 +298,7 @@ class Trader:
         volumeBase = orderRequest.volumeBase
         if orderRequest.type == OrderRequestType.SELL:
             base_symbol = market_str.split('/')[0]
-            free_balance_base = self.get_free_balance(base_symbol, exchange_name)
+            free_balance_base = self.get_free_balance(exchange_name, base_symbol)
             logger.info(f'base_symbol={base_symbol}, free_balance_base={free_balance_base}, volumeBase={volumeBase}')
             if free_balance_base < volumeBase:
                 raise ValueError(
@@ -515,4 +520,3 @@ class Trader:
             self.__isBusy = False
             logger.info('execute(): end.')
             # sys.exit("Exit after execute()")
-
