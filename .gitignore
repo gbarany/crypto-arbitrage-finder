@@ -9,8 +9,8 @@ src/__pycache__
 *.csv
 env
 cov.xml
-.idea
 .vscode/.ropeproject
 .scannerwork
-.idea
+**/.idea/workspace.xml
+**/.idea/tasks.xml
 env
