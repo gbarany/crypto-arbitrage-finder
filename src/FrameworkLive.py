@@ -252,7 +252,14 @@ class FrameworkLive:
                         logger.info("Received Coinmarketcap sample " + payload['symbol'] + ' producer timestamp [ms]:' + str(payload['timestamp']) + ' (delay [ms]:'+str(time.time()*1000-float(payload['timestamp']))+')')
                         self.orderbookAnalyser.updateCoinmarketcapPrice(payload['data'])
                     else:
-                        logger.info("Received " + payload['symbol'] + " from " + payload['exchange'] + ' producer timestamp [ms]:' + str(payload['timestamp']) + ' (delay [ms]:'+str(time.time()*1000-float(payload['timestamp']))+')')
+                        delay = time.time()*1000-float(payload['timestamp'])
+                        if delay > 1000:
+                            logger.warning("Received " + payload['symbol'] + " from " + payload[
+                                'exchange'] + ' with high delay! producer timestamp [ms]:' + str(
+                                payload['timestamp']) + ' (delay [ms]:' + str(delay) + ')')
+                        else:
+                            logger.info("Received " + payload['symbol'] + " from " + payload['exchange'] + ' producer timestamp [ms]:' + str(payload['timestamp']) + ' (delay [ms]:'+str(delay)+')')
+
                         self.orderbookAnalyser.update(
                             exchangename=payload['exchange'],
                             symbol=payload['symbol'],
