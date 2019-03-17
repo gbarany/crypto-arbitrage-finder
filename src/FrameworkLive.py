@@ -78,7 +78,7 @@ class FrameworkLive:
 
         kafkaCredentials=self.parameters.getKafkaProducerCredentials()
         self.orderbookAnalyser = OrderbookAnalyser(
-            vol_BTC=[0.05, 0.025, 0.5], # TODO : this should be configurable
+            vol_BTC=[0.05, 0.025, 0.5, 1], # TODO : this should be configurable
             edgeTTL=1,
             priceTTL=600,
             resultsdir=self.parameters.results_dir,
