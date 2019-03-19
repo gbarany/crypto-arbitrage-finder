@@ -20,7 +20,7 @@ fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
-logger.addHandler(ch)
+#logger.addHandler(ch)
 
 #########################
 ## Init arbitrage deals
@@ -38,7 +38,7 @@ fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
 dealLogger.addHandler(fh)
-dealLogger.addHandler(ch)
+#dealLogger.addHandler(ch)
 dealLogger.info('timestamp,vol_BTC,profit_perc,nodes,price,age,nofTotalTransactions,nofIntraexchangeTransactions,exchangesInvolved,nofExchangesInvolved,tradingStrategyApproved,limitPrice,uuid')
 
 ###################
@@ -60,4 +60,4 @@ fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 # add the handlers to the logger
 logger.addHandler(fh)
-logger.addHandler(ch)
+#logger.addHandler(ch)
