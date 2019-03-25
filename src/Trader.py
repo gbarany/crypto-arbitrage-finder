@@ -27,6 +27,7 @@ class Trader:
     PHASE_FETCH_TIMEOUT = 10  # sec (Az összes order-nek CLOSED-nak kell lennie ennyi idő után, ha ez nem igaz, akkor ABORT ALL)
     NOF_CCTX_RETRY = 4
     TTL_TRADEORDER_S = 60 * 5
+    FETCH_ORDER_STATUS_TIMEOUT = 60 * 5
 
     EFFICIENCY = 0.9  # Ezzel szorozzuk a beadott amout-okat, hogy elkerüljük a recegést a soros átváltások miatt
 
@@ -153,38 +154,37 @@ class Trader:
 
     async def __fetch_order_status(self, orderRequest: OrderRequest):
         logger.info(f'__fetch_order_status #{orderRequest.id} ({orderRequest.toString()})')
-        for retrycntr in range(Trader.NOF_CCTX_RETRY):
-            try:
-                t1 = time.time()
-                response = await self.__exchanges[orderRequest.exchange_name_std].fetchOrder(orderRequest.id)
-                logger.debug(f'__fetch_order_status #{orderRequest.id} response: {response}')
-                t2 = time.time()
-                d = (t2 - t1) * 1000.0
-                logger.info(f'Order status fetched #{orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
-                orderRequest.setOrder(response)
-                if response['status'] == CCXT_ORDER_STATUS_CANCELED:
-                    logger.info(f'Order status CANCELED #{orderRequest.id}')
-                    raise OrderErrorByExchange(orderRequest)
-
-                exchange = self.__exchanges[orderRequest.exchange_name_std]
-                await asyncio.sleep(exchange.rateLimit / 1000)
-
-                return
-
-            except OrderErrorByExchange as e:
-                raise e
-            except InvalidOrder as e:
-                logger.error(
-                    f'Order status fetching failed for {orderRequest.id}  {orderRequest.market} {orderRequest.exchange_name} {e.args} retrycntr: {retrycntr}')
+        try:
+            t1 = time.time()
+            response = await self.__exchanges[orderRequest.exchange_name_std].fetchOrder(orderRequest.id)
+            logger.debug(f'__fetch_order_status #{orderRequest.id} response: {response}')
+            t2 = time.time()
+            d = (t2 - t1) * 1000.0
+            logger.info(f'Order status fetched #{orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
+            orderRequest.updateOrderStatusFromCCXT(response)
+            if response['status'] == CCXT_ORDER_STATUS_CANCELED:
+                logger.info(f'Order status CANCELED #{orderRequest.id}')
                 raise OrderErrorByExchange(orderRequest)
-            except Exception as e:
-                logger.error(f'Order status fetching failed for {orderRequest} with reason {e} retrycntr={retrycntr}')
-                await asyncio.sleep(
-                    self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
+
+            exchange = self.__exchanges[orderRequest.exchange_name_std]
+            await asyncio.sleep(exchange.rateLimit / 1000)
+
+            return
+
+        except OrderErrorByExchange as e:
+            raise e
+        except InvalidOrder as e:
+            logger.error(
+                f'Order status fetching failed for {orderRequest.id}  {orderRequest.market} {orderRequest.exchange_name} {e.args} retrycntr: {retrycntr}')
+            raise OrderErrorByExchange(orderRequest)
+        except Exception as e:
+            logger.error(f'Order status fetching failed for {orderRequest} with reason {e} retrycntr={retrycntr}')
+            await asyncio.sleep(
+                self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
 
     async def __fetch_order_status_until_closed_or_timeout(self, orderRequest: OrderRequest):
-        retrycntr = 0
-        while orderRequest.isPending() and retrycntr <= Trader.NOF_CCTX_RETRY:
+        t_start = time.time()
+        while (orderRequest.getStatus() != OrderRequestStatus.CLOSED) and (time.time() < t_start + Trader.FETCH_ORDER_STATUS_TIMEOUT):
             await self.__fetch_order_status(orderRequest)
             await asyncio.sleep(self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
 
@@ -409,7 +409,10 @@ class Trader:
                     if orderRequest.shouldAbort is True:
                         await self.__cancelOrderRequest(orderRequest)
                     else:
-                        await self.__fetch_order_status(orderRequest)
+                        await self.__fetch_order_status_until_closed_or_timeout(orderRequest)
+                        if orderRequest.getStatus() != OrderRequestStatus.CLOSED:
+                            raise ValueError(f'OrderRequestStatus is not CLOSED after timeout: {orderRequest.toString()}')
+
 
         except Exception as e:
             logger.error(f"OrderRequestList cannot be created: {e}")

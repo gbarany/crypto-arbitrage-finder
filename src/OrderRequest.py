@@ -70,7 +70,7 @@ class OrderRequest:
     def getStatusLog(self):
         return self.__statusLog
 
-    def setOrder(self, order_from_ccxt):
+    def updateOrderStatusFromCCXT(self, order_from_ccxt):
         status = order_from_ccxt['status']
         if status == 'open':
             self.setStatus(OrderRequestStatus.OPEN)
@@ -106,6 +106,8 @@ class OrderRequest:
             obj['shouldAbort'] = self.shouldAbort
         return jsonpickle.encode(obj)
 
+    def __str__(self):
+        return self.toString()
 
 class OrderRequestList:
 

@@ -136,6 +136,7 @@ class TestClass(TestCase):
         self.trader.sendNotification = lambda x: ''
         self.trader.pollTrades = CoroutineMock()
         Trader.TTL_TRADEORDER_S = 1
+        Trader.FETCH_ORDER_STATUS_TIMEOUT = 5
 
     async def tearDown(self):
         await self.trader.close_exchanges()
@@ -219,13 +220,16 @@ class TestClass(TestCase):
         EXCHANGE = BINANCE
 
         async def mockCreateLimitSellOrder(symbol, amount, price):
+            await asyncio.sleep(1)
             raise InsufficientFunds("NO FUNDS ON MOCKED EXCHANGE")
 
         async def mockCreateLimitBuyOrder(symbol, amount, price):
+            await asyncio.sleep(1)
             return {'id': amount}
 
         async def mockFetchOrder(id):
-            return {'status': CCXT_ORDER_STATUS_OPEN}
+            await asyncio.sleep(1)
+            return {'status': CCXT_ORDER_STATUS_CLOSED}
 
         exchangeMock.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
         exchangeMock.createLimitBuyOrder = CoroutineMock(side_effect=mockCreateLimitBuyOrder)
@@ -238,14 +242,14 @@ class TestClass(TestCase):
 
         await self.trader.execute(sorl)
 
-        assert sorl.getOrderRequests()[0].getStatus() == OrderRequestStatus.OPEN
+        assert sorl.getOrderRequests()[0].getStatus() == OrderRequestStatus.CLOSED
         assert sorl.getOrderRequests()[1].getStatus() == OrderRequestStatus.FAILED
         assert sorl.getOrderRequests()[2].getStatus() == OrderRequestStatus.INITIAL
 
         assert exchangeMock.createLimitSellOrder.await_count == 1
         assert exchangeMock.createLimitBuyOrder.await_count == 1
         assert exchangeMock.fetchOrder.await_count == 1
-        assert exchangeMock.cancelOrder.await_count == Trader.NOF_CCTX_RETRY
+        assert exchangeMock.cancelOrder.await_count == 0
 
     async def test_canceled_same_exchange_second_canceled(self):
         """
@@ -262,10 +266,11 @@ class TestClass(TestCase):
             return {'id': amount}
 
         async def mockFetchOrder(id):
+            await asyncio.sleep(0.2)
             if id == 2:
                 return {'status': CCXT_ORDER_STATUS_CANCELED}
             else:
-                return {'status': CCXT_ORDER_STATUS_OPEN}
+                return {'status': CCXT_ORDER_STATUS_CLOSED}
 
         exchangeMock.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
         exchangeMock.createLimitBuyOrder = CoroutineMock(side_effect=mockCreateLimitBuyOrder)
@@ -278,13 +283,54 @@ class TestClass(TestCase):
 
         await self.trader.execute(sorl)
 
-        assert sorl.getOrderRequests()[0].getStatus() == OrderRequestStatus.OPEN
+        assert sorl.getOrderRequests()[0].getStatus() == OrderRequestStatus.CLOSED
         assert sorl.getOrderRequests()[1].getStatus() == OrderRequestStatus.CANCELED
         assert sorl.getOrderRequests()[2].getStatus() == OrderRequestStatus.INITIAL
 
         assert exchangeMock.createLimitSellOrder.await_count == 1
         assert exchangeMock.createLimitBuyOrder.await_count == 1
         assert exchangeMock.fetchOrder.await_count == 2
+        assert exchangeMock.cancelOrder.await_count == 0
+
+    async def test_canceled_same_exchange_second_timeouted(self):
+        """
+           1 exchange, the second order canceled by the exchange, should cancel all orders
+        """
+        goid = 0  # Global Order ID: mocked unique order id
+        exchangeMock = self.binance.return_value
+        EXCHANGE = BINANCE
+
+        async def mockCreateLimitSellOrder(symbol, amount, price):
+            return {'id': amount}
+
+        async def mockCreateLimitBuyOrder(symbol, amount, price):
+            return {'id': amount}
+
+        async def mockFetchOrder(id):
+            await asyncio.sleep(1)
+            if id == 2:
+                return {'status': CCXT_ORDER_STATUS_OPEN}
+            else:
+                return {'status': CCXT_ORDER_STATUS_CLOSED}
+
+        exchangeMock.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
+        exchangeMock.createLimitBuyOrder = CoroutineMock(side_effect=mockCreateLimitBuyOrder)
+        exchangeMock.fetchOrder = CoroutineMock(side_effect=mockFetchOrder)
+
+        sorl = self.__SORL_1(EXCHANGE)
+        assert sorl.getOrderRequests()[0].volumeBase == 1
+        assert sorl.getOrderRequests()[1].volumeBase == 2
+        assert sorl.getOrderRequests()[2].volumeBase == 3
+
+        await self.trader.execute(sorl)
+
+        assert sorl.getOrderRequests()[0].getStatus() == OrderRequestStatus.CLOSED
+        assert sorl.getOrderRequests()[1].getStatus() == OrderRequestStatus.OPEN
+        assert sorl.getOrderRequests()[2].getStatus() == OrderRequestStatus.INITIAL
+
+        assert exchangeMock.createLimitSellOrder.await_count == 1
+        assert exchangeMock.createLimitBuyOrder.await_count == 1
+        assert exchangeMock.fetchOrder.await_count > Trader.FETCH_ORDER_STATUS_TIMEOUT / 2
         assert exchangeMock.cancelOrder.await_count == Trader.NOF_CCTX_RETRY
 
     async def test_canceled_more_exchanges_middle_failed(self):
@@ -297,34 +343,45 @@ class TestClass(TestCase):
         exchangeMockPloniex = self.poloniex.return_value
 
         async def mockCreateLimitSellOrder(symbol, amount, price):
+            await asyncio.sleep(0.1)
             if amount == 22:
                 raise InsufficientFunds("NO FUNDS ON MOCKED EXCHANGE")
             return {'id': amount}
 
         async def mockCreateLimitBuyOrder(symbol, amount, price):
+            await asyncio.sleep(0.1)
             if amount == 22:
                 raise InsufficientFunds("NO FUNDS ON MOCKED EXCHANGE")
             return {'id': amount}
 
         async def mockFetchOrder(id):
+            await asyncio.sleep(1)
             return {'status': CCXT_ORDER_STATUS_CLOSED}
 
-        async def mockCancelOrder(id, exc):
-            # await asyncio.sleep(0.1)
+        async def mockCancelOrderKraken(id, exc):
+            await asyncio.sleep(0.1)
+            return {'id': id, 'status': CCXT_ORDER_STATUS_CANCELED}
+
+        async def mockCancelOrderPoloniex(id, exc):
+            await asyncio.sleep(0.1)
+            return {'id': id, 'status': CCXT_ORDER_STATUS_CANCELED}
+
+        async def mockCancelOrderBinance(id, exc):
+            await asyncio.sleep(0.1)
             return {'id': id, 'status': CCXT_ORDER_STATUS_CANCELED}
 
         exchangeMockBinance.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
         exchangeMockBinance.createLimitBuyOrder = CoroutineMock(side_effect=mockCreateLimitBuyOrder)
         exchangeMockBinance.fetchOrder = CoroutineMock(side_effect=mockFetchOrder)
-        exchangeMockBinance.cancelOrder = CoroutineMock(side_effect=mockCancelOrder)
+        exchangeMockBinance.cancelOrder = CoroutineMock(side_effect=mockCancelOrderBinance)
         exchangeMockKraken.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
         exchangeMockKraken.createLimitBuyOrder = CoroutineMock(side_effect=mockCreateLimitBuyOrder)
         exchangeMockKraken.fetchOrder = CoroutineMock(side_effect=mockFetchOrder)
-        exchangeMockKraken.cancelOrder = CoroutineMock(side_effect=mockCancelOrder)
+        exchangeMockKraken.cancelOrder = CoroutineMock(side_effect=mockCancelOrderKraken)
         exchangeMockPloniex.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
         exchangeMockPloniex.createLimitBuyOrder = CoroutineMock(side_effect=mockCreateLimitBuyOrder)
         exchangeMockPloniex.fetchOrder = CoroutineMock(side_effect=mockFetchOrder)
-        exchangeMockPloniex.cancelOrder = CoroutineMock(side_effect=mockCancelOrder)
+        exchangeMockPloniex.cancelOrder = CoroutineMock(side_effect=mockCancelOrderPoloniex)
 
         sorl = self.__SORL_3()
         assert sorl.getOrderRequests()[0].volumeBase == 11
@@ -346,7 +403,7 @@ class TestClass(TestCase):
         assert sorl.getOrderRequests()[5].getStatus() == OrderRequestStatus.INITIAL
 
         assert sorl.getOrderRequests()[6].getStatus() == OrderRequestStatus.CLOSED
-        # assert sorl.getOrderRequests()[7].getStatus() == OrderRequestStatus.CANCELED Nem determinisztikus az értéke
+        assert sorl.getOrderRequests()[7].getStatus() == OrderRequestStatus.CANCELED
         assert sorl.getOrderRequests()[8].getStatus() == OrderRequestStatus.INITIAL
 
         # A fenti lefixált állapotokhoz tartozó hívások count-ja
@@ -364,7 +421,7 @@ class TestClass(TestCase):
         # assert exchangeMockPloniex.createLimitSellOrder.await_count == 1 Nem determinisztikus az értéke
         # assert exchangeMockPloniex.createLimitBuyOrder.await_count == 1 Nem determinisztikus az értéke
         assert exchangeMockPloniex.fetchOrder.await_count == 1
-        assert exchangeMockPloniex.cancelOrder.await_count == 0
+        assert exchangeMockPloniex.cancelOrder.await_count == 2
 
     async def test_canceled_more_exchanges_middle_canceled(self):
         """
@@ -384,11 +441,15 @@ class TestClass(TestCase):
             return {'id': amount}
 
         async def mockFetchOrder(id):
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(1)
             if id == 22:
                 return {'status': CCXT_ORDER_STATUS_CANCELED}
             else:
-                return {'status': CCXT_ORDER_STATUS_OPEN}
+                return {'status': CCXT_ORDER_STATUS_CLOSED}
+
+        async def mockSlowFetchOrder(id):
+            await asyncio.sleep(3)
+            return {'status': CCXT_ORDER_STATUS_CLOSED}
 
         async def mockCancelOrder(id, exc):
             await asyncio.sleep(0.1)
@@ -404,7 +465,7 @@ class TestClass(TestCase):
         exchangeMockKraken.cancelOrder = CoroutineMock(side_effect=mockCancelOrder)
         exchangeMockPloniex.createLimitSellOrder = CoroutineMock(side_effect=mockCreateLimitSellOrder)
         exchangeMockPloniex.createLimitBuyOrder = CoroutineMock(side_effect=mockCreateLimitBuyOrder)
-        exchangeMockPloniex.fetchOrder = CoroutineMock(side_effect=mockFetchOrder)
+        exchangeMockPloniex.fetchOrder = CoroutineMock(side_effect=mockSlowFetchOrder)
         exchangeMockPloniex.cancelOrder = CoroutineMock(side_effect=mockCancelOrder)
 
         # for exchangeMock in [exchangeMockPloniex, exchangeMockKraken, exchangeMockBinance]:
@@ -420,16 +481,16 @@ class TestClass(TestCase):
         # A tesztet úgy kell vizsgálni, hogy fixáljuk le az execute() eredményét, mert az függ a futási
         # logikától és a mock-ban használt sleep timeoktól
 
-        assert sorl.getOrderRequests()[0].getStatus() == OrderRequestStatus.CANCELED
-        assert sorl.getOrderRequests()[1].getStatus() == OrderRequestStatus.CANCELED
+        assert sorl.getOrderRequests()[0].getStatus() == OrderRequestStatus.CLOSED
+        assert sorl.getOrderRequests()[1].getStatus() == OrderRequestStatus.CLOSED
         assert sorl.getOrderRequests()[2].getStatus() == OrderRequestStatus.INITIAL
 
-        assert sorl.getOrderRequests()[3].getStatus() == OrderRequestStatus.CANCELED
+        assert sorl.getOrderRequests()[3].getStatus() == OrderRequestStatus.CLOSED
         assert sorl.getOrderRequests()[4].getStatus() == OrderRequestStatus.CANCELED  # Ez döglik meg MAJD
         assert sorl.getOrderRequests()[5].getStatus() == OrderRequestStatus.INITIAL
 
         assert sorl.getOrderRequests()[6].getStatus() == OrderRequestStatus.CANCELED
-        assert sorl.getOrderRequests()[7].getStatus() == OrderRequestStatus.CANCELED
+        assert sorl.getOrderRequests()[7].getStatus() == OrderRequestStatus.INITIAL
         assert sorl.getOrderRequests()[8].getStatus() == OrderRequestStatus.INITIAL
 
         # A fenti lefixált állapotokhoz tartozó hívások count-ja
@@ -437,15 +498,15 @@ class TestClass(TestCase):
         assert exchangeMockBinance.createLimitSellOrder.await_count == 1
         assert exchangeMockBinance.createLimitBuyOrder.await_count == 1
         assert exchangeMockBinance.fetchOrder.await_count == 2
-        assert exchangeMockBinance.cancelOrder.await_count == 2
+        assert exchangeMockBinance.cancelOrder.await_count == 0
         assert exchangeMockKraken.createLimitSellOrder.await_count == 1
         assert exchangeMockKraken.createLimitBuyOrder.await_count == 1
         assert exchangeMockKraken.fetchOrder.await_count == 2
-        assert exchangeMockKraken.cancelOrder.await_count == 1
-        assert exchangeMockPloniex.createLimitSellOrder.await_count == 1
+        assert exchangeMockKraken.cancelOrder.await_count == 0
+        assert exchangeMockPloniex.createLimitSellOrder.await_count == 0
         assert exchangeMockPloniex.createLimitBuyOrder.await_count == 1
-        assert exchangeMockPloniex.fetchOrder.await_count == 2
-        assert exchangeMockPloniex.cancelOrder.await_count == 2
+        assert exchangeMockPloniex.fetchOrder.call_count == 1
+        assert exchangeMockPloniex.cancelOrder.await_count == 1
 
         print(sorl.logStatusLogs())
 
