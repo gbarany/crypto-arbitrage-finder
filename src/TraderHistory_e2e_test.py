@@ -21,6 +21,7 @@ class TestClass(TestCase):
     async def TearDown(self):
         await self.traderHistory.close()
 
+    @pytest.mark.skip(reason="ezt csak manuálisan futtassuk")
     @pytest.mark.asyncio
     async def test_poll_trades(self):
         await self.traderHistory.pollTrades()

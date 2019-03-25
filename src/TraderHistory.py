@@ -260,13 +260,14 @@ class TraderHistory:
             try:
                 if exchange.has['fetchMyTrades']:
                     logger.info(f"CALL: {exchange.id}.fetchMyTrades")
-                    test = map(lambda x: x['symbol'], fetchClosedOrdersItems)
-                    fetchMyTradesItems = await exchange.fetchMyTrades(symbol=None, since=None, limit=None, params={})
-                    logger.info(fetchMyTradesItems)
-                    # print(f"CALL: {exchange.id}.fetchMyTrades\n")
-                    # print(json.dumps(items, indent=2))
-                    # for i in items:
-                    #     print(i.keys())
-                    self.__insertTrades(exchange.id, fetchMyTradesItems)
+                    if exchange.id == 'coinbasepro':
+                        for item in fetchClosedOrdersItems:
+                            fetchMyTradesItems = await exchange.fetchMyTrades(symbol=item['symbol'], since=None, limit=None, params={})
+                            logger.info(fetchMyTradesItems)
+                            self.__insertTrades(exchange.id, fetchMyTradesItems)
+                    else:
+                        fetchMyTradesItems = await exchange.fetchMyTrades(symbol=None, since=None, limit=None, params={})
+                        logger.info(fetchMyTradesItems)
+                        self.__insertTrades(exchange.id, fetchMyTradesItems)
             except Exception as e:
                 logger.error(e)
