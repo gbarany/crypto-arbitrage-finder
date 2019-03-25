@@ -29,14 +29,14 @@ class Trader:
     TTL_TRADEORDER_S = 60 * 5
     FETCH_ORDER_STATUS_TIMEOUT = 60 * 5
 
-    EFFICIENCY = 0.9  # Ezzel szorozzuk a beadott amout-okat, hogy elkerüljük a recegést a soros átváltások miatt
-
-    @staticmethod
-    def applyEfficiencyOnAmounts(segmentedOrderRequestList: SegmentedOrderRequestList) -> SegmentedOrderRequestList:
-        for orl in segmentedOrderRequestList.getOrderRequestLists():
-            for idx, orderRequest in enumerate(orl.getOrderRequests()):
-                orderRequest.amount = orderRequest.amount * pow(Trader.EFFICIENCY, idx * 1)
-        return segmentedOrderRequestList
+    # EFFICIENCY = 0.9  # Ezzel szorozzuk a beadott amout-okat, hogy elkerüljük a recegést a soros átváltások miatt
+    #
+    # @staticmethod
+    # def applyEfficiencyOnAmounts(segmentedOrderRequestList: SegmentedOrderRequestList) -> SegmentedOrderRequestList:
+    #     for orl in segmentedOrderRequestList.getOrderRequestLists():
+    #         for idx, orderRequest in enumerate(orl.getOrderRequests()):
+    #             orderRequest.amount = orderRequest.amount * pow(Trader.EFFICIENCY, idx * 1)
+    #     return segmentedOrderRequestList
 
     def __init__(self, is_sandbox_mode=True):
         self.__balances: Dict[str, Any] = {}
