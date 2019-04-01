@@ -11,7 +11,7 @@ import ccxt.async_support as ccxt
 from ccxt import InvalidOrder, OrderNotFound
 from ccxt.async_support.base.exchange import Exchange
 
-from Exceptions import OrderCreationError, TradesShowstopper, OrderErrorByExchange
+from Exceptions import OrderCreationError, OrderErrorByExchange
 from OrderRequest import OrderRequest, OrderRequestStatus, OrderRequestType, OrderRequestList, \
     SegmentedOrderRequestList, CCXT_ORDER_STATUS_OPEN, CCXT_ORDER_STATUS_CANCELED
 import time
@@ -48,6 +48,20 @@ class Trader:
     def getBalances(self):
         return self.__balances
 
+    def getFreeBalances(self):
+        free = {}
+        for name in self.__balances:
+            exchange = self.__balances[name]
+            try:
+                for symbol in exchange['free']:
+                    if exchange['free'][symbol] > 0.00001:
+                        if name not in free:
+                            free[name] = {}
+                        free[name][symbol] = exchange['free'][symbol]
+            except Exception as e:
+                logger.error(e)
+        return free
+
     async def initExchangesFromAWSParameterStore(self):
         logger.info(f'initExchangesFromAWSParameterStore')
         with open('./cred/aws-keys.json') as file:
@@ -76,6 +90,7 @@ class Trader:
                     exchangeCreds[key] = value
                 await self.__init_exchange(exch, exchangeCreds)
         await self.fetch_balances()
+        logger.info(f'Free balances: \n{self.getFreeBalances()}')
 
     async def initExchangesFromCredFile(self, credfile):
         logger.info(f'initExchangesFromCredFile({credfile})')
@@ -175,10 +190,10 @@ class Trader:
             raise e
         except InvalidOrder as e:
             logger.error(
-                f'Order status fetching failed for {orderRequest.id}  {orderRequest.market} {orderRequest.exchange_name} {e.args} retrycntr: {retrycntr}')
+                f'Order status fetching failed for {orderRequest.id}  {orderRequest.market} {orderRequest.exchange_name} {e.args}')
             raise OrderErrorByExchange(orderRequest)
         except Exception as e:
-            logger.error(f'Order status fetching failed for {orderRequest} with reason {e} retrycntr={retrycntr}')
+            logger.error(f'Order status fetching failed for {orderRequest} with reason {e}')
             await asyncio.sleep(
                 self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
 
@@ -266,7 +281,7 @@ class Trader:
         type = orderRequest.type
         try:
             if not self.is_exchange_available(exchange_name):
-                return False
+                raise ValueError(f'Exchange is not available: {exchange_name}')
             exchange = self.get_exchange(exchange_name)
             market = self.get_market(exchange_name, market_str)
             if market['limits']['amount']['min']:
@@ -413,11 +428,10 @@ class Trader:
                         if orderRequest.getStatus() != OrderRequestStatus.CLOSED:
                             raise ValueError(f'OrderRequestStatus is not CLOSED after timeout: {orderRequest.toString()}')
 
-
         except Exception as e:
             logger.error(f"OrderRequestList cannot be created: {e}")
             # traceback.print_exc()
-            raise TradesShowstopper("TradeList showstopper")
+            raise e
 
     async def createLimitOrdersOnSegmentedOrderRequestList(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         orders = []
@@ -436,8 +450,7 @@ class Trader:
 
         except ValueError as ve:
             logger.error("Arbitrage deal cannot be executed, " + str(ve.args))
-            traceback.print_exc()
-            raise TradesShowstopper("Trade showstopper")
+            raise ve
 
     def isSandboxMode(self):
         return self.__is_sandbox_mode
@@ -463,9 +476,9 @@ class Trader:
         try:
             logger.info(f'Start execute the orders:')
             logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
+            logger.info(f'Free balances: \n{self.getFreeBalances()}')
             isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
             logger.info(f'Validating result: {isValid}')
-            logger.info(f'Balances: {self.getBalances()}')
 
             if isValid is False:
                 self.__isBusy = False
@@ -476,6 +489,10 @@ class Trader:
                 self.__isBusy = False
                 return
 
+        except ValueError as e:
+            logger.error(f"execute failed during pre validation. Reason: {e}")
+            self.__isBusy = False
+            return
         except Exception as e:
             logger.error(f"execute failed during pre validation. Reason: {e}", exc_info=True)
             self.__isBusy = False
@@ -490,7 +507,7 @@ class Trader:
 
         try:
             # TODO: save SORL into db
-            self.sendNotification("CryptoArb Trader is placing orders. Check the logs for details.")
+            self.sendNotification(f"CryptoArb Trader is placing orders, uuid: {segmentedOrderRequestList.uuid}")
             t1 = time.time()
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
@@ -502,19 +519,19 @@ class Trader:
             logger.info(f"Canceling all requests")
             await self.cancelAllOrderRequests(segmentedOrderRequestList)
         except Exception as e:
-            d_ms = time.time() - t1
-            logger.error(f"execute failed in {d_ms} ms. Reason: {e}")
+            d_s = time.time() - t1
+            logger.error(f"execute failed in {d_s} ms. Reason: {e}")
             for orderRequest in segmentedOrderRequestList.getOrderRequests():
                 orderRequest.shouldAbort = True
             await self.abortSegmentedOrderRequestList(segmentedOrderRequestList)
-            self.sendNotification(f"CryptoArb Trader failed. Reason: {e} ")
+            self.sendNotification(f"CryptoArb Trader failed. Reason: " + f"{e}"[:100])
         finally:
             logger.info('SORL after execution:')
             logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
             logger.info('History log after execution:')
             logger.info(f'\n{segmentedOrderRequestList.statusLogToString()}\n')
             await self.fetch_balances()
-            logger.info(f'Balances: {self.getBalances()}')
+            logger.info(f'Free Balances: {self.getFreeBalances()}')
             # Fetch trades into db
             await self.pollTrades()
 

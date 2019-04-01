@@ -173,9 +173,9 @@ class TraderHistory:
             order['amount'],
             order['filled'],
             order['remaining'],
-            order['fee']['cost'],
-            order['fee']['currency'],
-            order['fee']['rate'],
+            order['fee']['cost'] if order['fee'] is not None else 0,
+            order['fee']['currency'] if order['fee'] is not None else 0,
+            order['fee']['rate'] if order['fee'] is not None else 0,
             json.dumps(order, indent=2)
         )
 

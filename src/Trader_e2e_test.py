@@ -30,6 +30,8 @@ class TestClass(TestCase):
     isSandboxMode = False
 
     async def setUp(self):
+        Trader.TTL_TRADEORDER_S = 1
+        Trader.FETCH_ORDER_STATUS_TIMEOUT = 5
         self.trader = Trader(is_sandbox_mode=TestClass.isSandboxMode)
         await self.trader.initExchangesFromAWSParameterStore()
 
@@ -55,7 +57,7 @@ class TestClass(TestCase):
     async def test_execute_trades(self):
         self.trader.input = lambda x: 'ok'
 
-        or11 = OrderRequest(COINBASEPRO, ETH_BTC, volumeBase=0.1, limitPrice=0.02, meanPrice=0.02, requestType=OrderRequestType.BUY)
+        or11 = OrderRequest('NINCSILYEN', ETH_BTC, volumeBase=0.1, limitPrice=0.02, meanPrice=0.02, requestType=OrderRequestType.BUY)
 
         orl1 = OrderRequestList([or11])
         # orl2 = OrderRequestList([or21, or22])
