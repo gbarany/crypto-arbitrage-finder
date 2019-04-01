@@ -16,11 +16,12 @@ class TraderHistory:
     NOF_CCTX_RETRY = 4
     SSM_DB_PREFIX = '/prod/db/arbitragedb'
 
+    SYMBOLS = ["BCH/BTC", "XRP/BTC", "LTC/BTC", "ETH/BTC", "BCH/ETH", "ETC/BTC", "ETC/ETH", "LSK/ETH", "LSK/BTC", "LTC/USDT", "BTC/EUR", "LTC/EUR", "BTC/USD", "ETH/USD", "ETH/EUR", "BCH/EUR", "BCH/USD"]
+
     def __init__(self):
         self.__exchanges: Dict[str, Exchange] = {}
         self.__initDBFromAWSParameterStore()
         logger.info(f'TraderHistory.__init__()')
-
 
     @staticmethod
     async def getInstance():
@@ -186,8 +187,6 @@ class TraderHistory:
             if cursor.lastrowid:
                 if cursor.lastrowid % 100 == 0:
                     print('last insert id', cursor.lastrowid)
-            else:
-                print('last insert id not found')
 
             self.__db.commit()
         except Exception as e:
@@ -229,45 +228,64 @@ class TraderHistory:
 
     async def pollTrades(self):
         for _, exchange in self.__exchanges.items():
-            try:
-                if exchange.has['fetchOrders']:
-                    logger.info(f"CALL: {exchange.id}.fetchOrders")
-                    fetchOrdersItems = await exchange.fetchOrders()
-                    logger.info(fetchOrdersItems)
-                    # print(f"CALL: {exchange.id}.fetchOrders\n")
-                    # print(json.dumps(items, indent=2))
-                    # for i in items:
-                    #     print(i.keys())
-                    self.__insertOrders(exchange.id, fetchOrdersItems)
-            except Exception as e:
-                logger.error(e)
+            if exchange.has['fetchOrders']:
+                if exchange.id == 'binance':
+                    for symbol in TraderHistory.SYMBOLS:
+                        try:
+                            if symbol in exchange.symbols:
+                                logger.debug(f"CALL: {exchange.id}.fetchOrders({symbol})")
+                                fetchOrdersItems = await exchange.fetchOrders(symbol)
+                                logger.debug(fetchOrdersItems)
+                                self.__insertOrders(exchange.id, fetchOrdersItems)
+                        except Exception as e:
+                            logger.error(e)
+                else:
+                    try:
+                        logger.debug(f"CALL: {exchange.id}.fetchOrders()")
+                        fetchOrdersItems = await exchange.fetchOrders()
+                        logger.debug(fetchOrdersItems)
+                        self.__insertOrders(exchange.id, fetchOrdersItems)
+                    except Exception as e:
+                        logger.error(e)
 
         for _, exchange in self.__exchanges.items():
-            try:
-                if exchange.has['fetchClosedOrders']:
-                    logger.info(f"CALL: {exchange.id}.fetchClosedOrders")
-                    fetchClosedOrdersItems = await exchange.fetchClosedOrders()
-                    logger.info(fetchClosedOrdersItems)
-                    # print(f"CALL: {exchange.id}.fetchClosedOrders\n")
-                    # print(json.dumps(items, indent=2))
-                    # for i in items:
-                    #     print(i.keys())
-                    self.__insertOrders(exchange.id, fetchClosedOrdersItems)
-            except Exception as e:
-                logger.error(e)
+            if exchange.has['fetchClosedOrders']:
+                if exchange.id == 'binance':
+                    for symbol in TraderHistory.SYMBOLS:
+                        try:
+                            if symbol in exchange.symbols:
+                                logger.debug(f"CALL: {exchange.id}.fetchClosedOrders({symbol})")
+                                fetchClosedOrdersItems = await exchange.fetchClosedOrders(symbol)
+                                logger.debug(fetchOrdersItems)
+                                self.__insertOrders(exchange.id, fetchClosedOrdersItems)
+                        except Exception as e:
+                            logger.error(e)
+                else:
+                    try:
+                        logger.debug(f"CALL: {exchange.id}.fetchClosedOrders()")
+                        fetchClosedOrdersItems = await exchange.fetchClosedOrders()
+                        logger.debug(fetchClosedOrdersItems)
+                        self.__insertOrders(exchange.id, fetchClosedOrdersItems)
+                    except Exception as e:
+                        logger.error(e)
 
         for _, exchange in self.__exchanges.items():
-            try:
-                if exchange.has['fetchMyTrades']:
-                    logger.info(f"CALL: {exchange.id}.fetchMyTrades")
-                    if exchange.id == 'coinbasepro':
-                        for item in fetchClosedOrdersItems:
-                            fetchMyTradesItems = await exchange.fetchMyTrades(symbol=item['symbol'], since=None, limit=None, params={})
-                            logger.info(fetchMyTradesItems)
-                            self.__insertTrades(exchange.id, fetchMyTradesItems)
-                    else:
+            if exchange.has['fetchMyTrades']:
+                if exchange.id == 'coinbasepro' or exchange.id == 'binance':
+                    for symbol in TraderHistory.SYMBOLS:
+                        try:
+                            if symbol in exchange.symbols:
+                                logger.debug(f"CALL: {exchange.id}.fetchMyTrades({symbol})")
+                                fetchMyTradesItems = await exchange.fetchMyTrades(symbol=symbol, since=None, limit=None, params={})
+                                logger.debug(fetchMyTradesItems)
+                                self.__insertTrades(exchange.id, fetchMyTradesItems)
+                        except Exception as e:
+                            logger.error(e)
+                else:
+                    try:
+                        logger.debug(f"CALL: {exchange.id}.fetchMyTrades()")
                         fetchMyTradesItems = await exchange.fetchMyTrades(symbol=None, since=None, limit=None, params={})
-                        logger.info(fetchMyTradesItems)
+                        logger.debug(fetchMyTradesItems)
                         self.__insertTrades(exchange.id, fetchMyTradesItems)
-            except Exception as e:
-                logger.error(e)
+                    except Exception as e:
+                        logger.error(e)
