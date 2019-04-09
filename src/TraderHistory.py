@@ -6,21 +6,22 @@ import ccxt.async_support as ccxt
 from ccxt.async_support.base.exchange import Exchange
 import time
 import logging
-import MySQLdb
+# import MySQLdb
 import os
+from Database import Database
 
 logger = logging.getLogger('TraderHistory')
 
 
 class TraderHistory:
     NOF_CCTX_RETRY = 4
-    SSM_DB_PREFIX = '/prod/db/arbitragedb'
+
 
     SYMBOLS = ["BCH/BTC", "XRP/BTC", "LTC/BTC", "ETH/BTC", "BCH/ETH", "ETC/BTC", "ETC/ETH", "LSK/ETH", "LSK/BTC", "LTC/USDT", "BTC/EUR", "LTC/EUR", "BTC/USD", "ETH/USD", "ETH/EUR", "BCH/EUR", "BCH/USD"]
 
     def __init__(self):
         self.__exchanges: Dict[str, Exchange] = {}
-        self.__initDBFromAWSParameterStore()
+        self.__db = Database.initDBFromAWSParameterStore()
         logger.info(f'TraderHistory.__init__()')
 
     @staticmethod
@@ -64,23 +65,23 @@ class TraderHistory:
                 await self.__init_exchange(exch, exchangeCreds)
         # await self.fetch_balances()
 
-    def __initDBFromAWSParameterStore(self):
-        logger.info(f'__initDBFromAWSParameterStore')
-        with open(os.path.dirname(os.path.realpath(__file__)) + '/../cred/aws-keys.json') as file:
-            cred = json.load(file)
-            ssm = boto3.client('ssm',
-                               aws_access_key_id=cred['aws_access_key_id'],
-                               aws_secret_access_key=cred['aws_secret_access_key'],
-                               region_name=cred['region_name'])
-
-            def getSSMParam(paramName):
-                return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']
-
-            self.__db = MySQLdb.connect(host=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/host'),
-                                        user=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/user'),
-                                        passwd=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/password'),
-                                        db=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/database'),
-                                        port=int(getSSMParam(TraderHistory.SSM_DB_PREFIX + '/port')))
+    # def __initDBFromAWSParameterStore(self):
+    #     logger.info(f'__initDBFromAWSParameterStore')
+    #     with open(os.path.dirname(os.path.realpath(__file__)) + '/../cred/aws-keys.json') as file:
+    #         cred = json.load(file)
+    #         ssm = boto3.client('ssm',
+    #                            aws_access_key_id=cred['aws_access_key_id'],
+    #                            aws_secret_access_key=cred['aws_secret_access_key'],
+    #                            region_name=cred['region_name'])
+    #
+    #         def getSSMParam(paramName):
+    #             return ssm.get_parameter(Name=paramName, WithDecryption=True)['Parameter']['Value']
+    #
+    #         self.__db = MySQLdb.connect(host=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/host'),
+    #                                     user=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/user'),
+    #                                     passwd=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/password'),
+    #                                     db=getSSMParam(TraderHistory.SSM_DB_PREFIX + '/database'),
+    #                                     port=int(getSSMParam(TraderHistory.SSM_DB_PREFIX + '/port')))
 
     async def __init_exchange(self, exchangeName: str, exchangeCreds):
         exchange = getattr(ccxt, exchangeName)(exchangeCreds)

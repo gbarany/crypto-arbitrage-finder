@@ -1,4 +1,4 @@
-ccxt==1.17.393
+ccxt==1.18.444
 mysqlclient==1.3.13
 matplotlib==3.0.0
 bellmanford==0.2.1

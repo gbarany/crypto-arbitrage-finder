@@ -179,8 +179,8 @@ class TestClass(TestCase):
             assert self.trader.isSegmentedOrderRequestListValid(sorl)
         with pytest.raises(ValueError):
             assert self.trader.isSegmentedOrderRequestListValid(SegmentedOrderRequestList('uuid', [OrderRequestList([OrderRequest(BINANCE, ETH_EUR, volumeBase=10, limitPrice=1000, meanPrice=1000, requestType=OrderRequestType.BUY)])]))
-
-        assert self.trader.isSegmentedOrderRequestListValid(SegmentedOrderRequestList('uuid', [OrderRequestList([OrderRequest('NINCSILYEN', ETH_EUR, volumeBase=10, limitPrice=1000, meanPrice=1000, requestType=OrderRequestType.BUY)])])) == False
+        with pytest.raises(ValueError):
+            assert self.trader.isSegmentedOrderRequestListValid(SegmentedOrderRequestList('uuid', [OrderRequestList([OrderRequest('NINCSILYEN', ETH_EUR, volumeBase=10, limitPrice=1000, meanPrice=1000, requestType=OrderRequestType.BUY)])]))
 
     async def test_creating_same_exchange_first_failed(self):
         """

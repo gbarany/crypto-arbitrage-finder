@@ -64,3 +64,11 @@ class TestClass(TestCase):
         stl = SegmentedOrderRequestList('uuid', [orl1])
         await self.trader.execute(stl)
 
+    @pytest.mark.skip(reason="e2e test")
+    @pytest.mark.asyncio
+    async def test_store_balances(self):
+        Trader.storeFreeBalances(None, None, {
+            "testexchage": {
+                "TEST": 0.1650193171279469,
+            }
+        })

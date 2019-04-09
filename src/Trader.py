@@ -18,6 +18,7 @@ import time
 import logging
 from Notifications import sendNotification
 from TraderHistory import TraderHistory
+from Database import Database
 
 logger = logging.getLogger('Trader')
 
@@ -43,7 +44,7 @@ class Trader:
         self.__is_sandbox_mode: bool = is_sandbox_mode
         self.__exchanges: Dict[str, Exchange] = {}
         self.__isBusy = False
-        logger.info(f'Trader.__init__(is_sandbox_mode={is_sandbox_mode})')
+        logger.debug(f'Trader.__init__(is_sandbox_mode={is_sandbox_mode})')
 
     def getBalances(self):
         return self.__balances
@@ -62,8 +63,42 @@ class Trader:
                 logger.error(e)
         return free
 
+    @staticmethod
+    def storeFreeBalances(uuid, timing, balances):
+        db = Database.initDBFromAWSParameterStore()
+
+        for exchange in balances:
+
+            for symbol in balances[exchange]:
+
+                query = "INSERT INTO `balance`" \
+                        "(uuid, timing, exchange, symbol, balance)" \
+                        "VALUES(%s,%s,%s,%s,%s)"
+                args = (
+                    uuid,
+                    timing,
+                    exchange,
+                    symbol,
+                    balances[exchange][symbol]
+                )
+
+                try:
+
+                    cursor = db.cursor()
+                    cursor.execute(query, args)
+
+                    if cursor.lastrowid:
+                        if cursor.lastrowid % 100 == 0:
+                            print('last insert id', cursor.lastrowid)
+
+                    db.commit()
+                except Exception as e:
+                    print(e)
+
+        db.close()
+
     async def initExchangesFromAWSParameterStore(self):
-        logger.info(f'initExchangesFromAWSParameterStore')
+        logger.debug(f'initExchangesFromAWSParameterStore')
         with open('./cred/aws-keys.json') as file:
             cred = json.load(file)
             ssm = boto3.client('ssm',
@@ -90,10 +125,11 @@ class Trader:
                     exchangeCreds[key] = value
                 await self.__init_exchange(exch, exchangeCreds)
         await self.fetch_balances()
-        logger.info(f'Free balances: \n{self.getFreeBalances()}')
+        logger.debug(f'Free balances: \n{self.getFreeBalances()}')
+        Trader.storeFreeBalances(None, None, self.getFreeBalances())
 
     async def initExchangesFromCredFile(self, credfile):
-        logger.info(f'initExchangesFromCredFile({credfile})')
+        logger.debug(f'initExchangesFromCredFile({credfile})')
         with open(credfile) as file:
             exchangeCreds = json.load(file)
             for exchangeName in exchangeCreds:
@@ -114,10 +150,10 @@ class Trader:
             tasks.append(asyncio.ensure_future(
                 self.__close_exchange(exchange)))
         await asyncio.gather(*tasks)
-        logger.info("Exchanges closed")
+        logger.debug("Exchanges closed")
 
     async def __cancelOrderRequest(self, orderRequest: OrderRequest):
-        logger.info(f'__cancelOrderRequest #{orderRequest.id} ({orderRequest.toString()})')
+        logger.debug(f'__cancelOrderRequest #{orderRequest.id} ({orderRequest.toString()})')
         waitingForCreatingStatusRetries = 0
         while orderRequest.getStatus() == OrderRequestStatus.CREATING and waitingForCreatingStatusRetries < 100:
             logger.debug(
@@ -137,7 +173,7 @@ class Trader:
                     if 'error' in response:
                         raise ValueError('Error in exchange response:' +
                                          str(response['error']))
-                    logger.info(f'Cancelled oder #{orderRequest.id} ({orderRequest})')
+                    logger.debug(f'Cancelled oder #{orderRequest.id} ({orderRequest})')
                     orderRequest.setCanceled()
                     exchange = self.__exchanges[orderRequest.exchange_name_std]
                     await asyncio.sleep(exchange.rateLimit / 1000)
@@ -149,7 +185,7 @@ class Trader:
                     logger.debug(f'Cancel order request (#{orderRequest.id}) failed  with {e}, retrycntr={retrycntr}')
                     await asyncio.sleep(self.__exchanges[orderRequest.exchange_name_std].rateLimit / 1000)
         dt = (time.time() - t1) * 1000
-        logger.info(f'Cancel order request (#{orderRequest.id}) ended in {dt} ms ({orderRequest.toString()})')
+        logger.debug(f'Cancel order request (#{orderRequest.id}) ended in {dt} ms ({orderRequest.toString()})')
 
     async def cancelAllOrderRequests(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         tasks = []
@@ -158,7 +194,7 @@ class Trader:
                 tasks.append(
                     asyncio.ensure_future(self.__cancelOrderRequest(orderRequest)))
         await asyncio.gather(*tasks)
-        logger.info("Cancellation of all order requests completed")
+        logger.debug("Cancellation of all order requests completed")
 
     async def abortSegmentedOrderRequestList(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         logger.debug(f'abortSegmentedOrderRequestList')
@@ -168,17 +204,17 @@ class Trader:
             logger.error(f'abortSegmentedOrderRequestList failed: {e}')
 
     async def __fetch_order_status(self, orderRequest: OrderRequest):
-        logger.info(f'__fetch_order_status #{orderRequest.id} ({orderRequest.toString()})')
+        logger.debug(f'__fetch_order_status #{orderRequest.id} ({orderRequest.toString()})')
         try:
             t1 = time.time()
             response = await self.__exchanges[orderRequest.exchange_name_std].fetchOrder(orderRequest.id)
             logger.debug(f'__fetch_order_status #{orderRequest.id} response: {response}')
             t2 = time.time()
             d = (t2 - t1) * 1000.0
-            logger.info(f'Order status fetched #{orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
+            logger.debug(f'Order status fetched #{orderRequest.id} from {orderRequest.exchange_name} in {d} ms')
             orderRequest.updateOrderStatusFromCCXT(response)
             if response['status'] == CCXT_ORDER_STATUS_CANCELED:
-                logger.info(f'Order status CANCELED #{orderRequest.id}')
+                logger.debug(f'Order status CANCELED #{orderRequest.id}')
                 raise OrderErrorByExchange(orderRequest)
 
             exchange = self.__exchanges[orderRequest.exchange_name_std]
@@ -210,7 +246,7 @@ class Trader:
                 tasks.append(asyncio.ensure_future(
                     self.__fetch_order_status(orderRequest)))
             await asyncio.gather(*tasks)
-            logger.info("Order statuses fetching completed")
+            logger.debug("Order statuses fetching completed")
         except OrderErrorByExchange as e:
             logger.error(f"Order canceled by exchange: {e}")
             raise e
@@ -223,7 +259,7 @@ class Trader:
                 self.__balances[exchange.name.lower().replace(
                     " ", "")] = balance
                 d_ms = (time.time() - t1) * 1000.0
-                logger.info('Balance fetching completed from ' +
+                logger.debug('Balance fetching completed from ' +
                             exchange.name + f" in {d_ms} ms")
                 await asyncio.sleep(exchange.rateLimit / 1000)  # wait for rateLimit
                 return
@@ -307,14 +343,14 @@ class Trader:
             raise ValueError(f"Error during validating OrderRequest: {e}")
 
     def hasSufficientBalanceForOrderRequest(self, orderRequest: OrderRequest):
-        logger.info(f'hasSufficientBalanceForOrderRequest({orderRequest})')
+        logger.debug(f'hasSufficientBalanceForOrderRequest({orderRequest})')
         exchange_name = orderRequest.exchange_name_std
         market_str = orderRequest.market
         volumeBase = orderRequest.volumeBase
         if orderRequest.type == OrderRequestType.SELL:
             base_symbol = market_str.split('/')[0]
             free_balance_base = self.get_free_balance(exchange_name, base_symbol)
-            logger.info(f'base_symbol={base_symbol}, free_balance_base={free_balance_base}, volumeBase={volumeBase}')
+            logger.debug(f'base_symbol={base_symbol}, free_balance_base={free_balance_base}, volumeBase={volumeBase}')
             if free_balance_base < volumeBase:
                 raise ValueError(
                     f'Insufficient fund on {exchange_name} {orderRequest.market}.' +
@@ -322,13 +358,13 @@ class Trader:
                     f' volumeBase: {volumeBase}' +
                     f' type: {orderRequest.type}')
             else:
-                logger.info(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_base} needed={volumeBase}')
+                logger.debug(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_base} needed={volumeBase}')
                 return True
 
         elif orderRequest.type == OrderRequestType.BUY:
             quote_symbol = market_str.split('/')[1]
             free_balance_quote = self.get_free_balance(exchange_name, quote_symbol)
-            logger.info(f'quote_symbol={quote_symbol}, free_balance_quote={free_balance_quote}, volumeBase={volumeBase}, orderRequest.meanPrice={orderRequest.meanPrice}')
+            logger.debug(f'quote_symbol={quote_symbol}, free_balance_quote={free_balance_quote}, volumeBase={volumeBase}, orderRequest.meanPrice={orderRequest.meanPrice}')
             needed_quote = volumeBase * orderRequest.meanPrice
             if free_balance_quote < needed_quote:
                 raise ValueError(
@@ -337,7 +373,7 @@ class Trader:
                     f' volumeBase * orderRequest.meanPrice: {volumeBase * orderRequest.meanPrice}' +
                     f' type: {orderRequest.type}')
             else:
-                logger.info(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_quote} needed={needed_quote}')
+                logger.debug(f'Has sufficient fund on {orderRequest.exchange_name_std} {orderRequest.market}: balance={free_balance_quote} needed={needed_quote}')
                 return True
         else:
             raise ValueError('Invalid orderRequest.type')
@@ -356,9 +392,9 @@ class Trader:
         return ret
 
     async def __create_limit_order(self, orderRequest: OrderRequest):
-        logger.info(f"__create_limit_order ({orderRequest.toString()})")
+        logger.debug(f"__create_limit_order ({orderRequest.toString()})")
         if orderRequest.shouldAbort:
-            logger.info(f"Create limit order is canceled, reason: shouldAbort is True ({orderRequest.toString()})")
+            logger.debug(f"Create limit order is canceled, reason: shouldAbort is True ({orderRequest.toString()})")
             return
         exchange = self.__exchanges[orderRequest.exchange_name_std]
         symbol = orderRequest.market
@@ -395,7 +431,7 @@ class Trader:
                         raise ValueError('Error in exchange response:' +
                                          str(response['error']))
             d_ms = (time.time() - t1) * 1000.0
-            logger.info(f"Create limit order SUCCESS ({orderRequest.toString()}) in {d_ms} ms")
+            logger.debug(f"Create limit order SUCCESS ({orderRequest.toString()}) in {d_ms} ms")
 
             await asyncio.sleep(exchange.rateLimit / 1000)
 
@@ -469,23 +505,23 @@ class Trader:
 
     async def execute(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         if self.__isBusy:
-            # logger.info(f"Trader is busy, the execute() call is droped")
+            # logger.debug(f"Trader is busy, the execute() call is droped")
             return
         self.__isBusy = True
 
         try:
-            logger.info(f'Start execute the orders:')
-            logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
-            logger.info(f'Free balances: \n{self.getFreeBalances()}')
+            logger.debug(f'Start execute the orders:')
+            logger.debug(f'\n{segmentedOrderRequestList.sorlToString()}\n')
+            logger.debug(f'Free balances: \n{self.getFreeBalances()}')
             isValid = self.isSegmentedOrderRequestListValid(segmentedOrderRequestList)
-            logger.info(f'Validating result: {isValid}')
+            logger.debug(f'Validating result: {isValid}')
 
             if isValid is False:
                 self.__isBusy = False
                 return
 
             if self.__is_sandbox_mode:
-                logger.info('Trader is in sandbox mode. Skiping the order requests.')
+                logger.debug('Trader is in sandbox mode. Skiping the order requests.')
                 self.__isBusy = False
                 return
 
@@ -500,23 +536,24 @@ class Trader:
 
         # ret = self.input('Write <ok> to authorize the trade:')
         # if ret != "ok":
-        #     logger.info(f'Trader is not authorized to execute the trade.')
+        #     logger.debug(f'Trader is not authorized to execute the trade.')
         #     return
         # else:
-        #     logger.info('Trader is authorized.')
+        #     logger.debug('Trader is authorized.')
 
         try:
             # TODO: save SORL into db
             self.sendNotification(f"CryptoArb Trader is placing orders, uuid: {segmentedOrderRequestList.uuid}")
             t1 = time.time()
+            Trader.storeFreeBalances(segmentedOrderRequestList.uuid, -1, self.getFreeBalances())
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
             d_ms = time.time() - t1
             logger.debug(f"createLimitOrdersOnSegmentedOrderRequestList ended in {d_ms} ms")
-            logger.info(f"Waiting for the order requests to complete for {Trader.TTL_TRADEORDER_S} s ")
+            logger.debug(f"Waiting for the order requests to complete for {Trader.TTL_TRADEORDER_S} s ")
             await asyncio.sleep(Trader.TTL_TRADEORDER_S)
-            logger.info(f"Waiting for TTL_TRADEORDER_S is over. ({Trader.TTL_TRADEORDER_S} s) ")
+            logger.debug(f"Waiting for TTL_TRADEORDER_S is over. ({Trader.TTL_TRADEORDER_S} s) ")
             await self.fetch_order_statuses(segmentedOrderRequestList)
-            logger.info(f"Canceling all requests")
+            logger.debug(f"Canceling all requests")
             await self.cancelAllOrderRequests(segmentedOrderRequestList)
         except Exception as e:
             d_s = time.time() - t1
@@ -526,17 +563,18 @@ class Trader:
             await self.abortSegmentedOrderRequestList(segmentedOrderRequestList)
             self.sendNotification(f"CryptoArb Trader failed. Reason: " + f"{e}"[:100])
         finally:
-            logger.info('SORL after execution:')
-            logger.info(f'\n{segmentedOrderRequestList.sorlToString()}\n')
-            logger.info('History log after execution:')
-            logger.info(f'\n{segmentedOrderRequestList.statusLogToString()}\n')
+            logger.debug('SORL after execution:')
+            logger.debug(f'\n{segmentedOrderRequestList.sorlToString()}\n')
+            logger.debug('History log after execution:')
+            logger.debug(f'\n{segmentedOrderRequestList.statusLogToString()}\n')
             await self.fetch_balances()
-            logger.info(f'Free Balances: {self.getFreeBalances()}')
+            logger.debug(f'Free Balances: {self.getFreeBalances()}')
+            Trader.storeFreeBalances(segmentedOrderRequestList.uuid, 1, self.getFreeBalances())
             # Fetch trades into db
             await self.pollTrades()
 
             # TODO: fetch FIAT into db
             # TODO: fetchBalance into db
             self.__isBusy = False
-            logger.info('execute(): end.')
+            logger.debug('execute(): end.')
             # sys.exit("Exit after execute()")
