@@ -503,6 +503,12 @@ class Trader:
         await traderHistory.pollTrades()
         await traderHistory.close()
 
+    def saveSORLtoDB(self, segmentedOrderRequestList: SegmentedOrderRequestList):
+        try:
+            segmentedOrderRequestList.saveToDB()
+        except Exception as e:
+            logger.error(e)
+
     async def execute(self, segmentedOrderRequestList: SegmentedOrderRequestList):
         if self.__isBusy:
             # logger.debug(f"Trader is busy, the execute() call is droped")
@@ -573,8 +579,9 @@ class Trader:
             # Fetch trades into db
             await self.pollTrades()
 
+            self.saveSORLtoDB(segmentedOrderRequestList)
+
             # TODO: fetch FIAT into db
-            # TODO: fetchBalance into db
             self.__isBusy = False
             logger.debug('execute(): end.')
             # sys.exit("Exit after execute()")

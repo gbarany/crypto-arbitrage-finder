@@ -1,7 +1,9 @@
 import time
 from enum import Enum
-# from json import JSONEncoder
+import json
 import jsonpickle
+from Database import Database
+from datetime import datetime
 
 CCXT_ORDER_STATUS_OPEN = "open"
 CCXT_ORDER_STATUS_CLOSED = "closed"
@@ -109,6 +111,33 @@ class OrderRequest:
     def __str__(self):
         return self.toString()
 
+    def saveToDb(self, db, uuid):
+        query = "INSERT INTO `arbitrage`" \
+                "(uuid, exchange_id, exchange_name, volumeBase, limitPrice, symbol, meanPrice, shouldAbort, status, `type`, json)" \
+                "VALUES(%s,%s,%s,%s,%s,%s,%s,%s, %s,%s,%s)"
+        args = (
+            uuid,
+            self.id,
+            self.exchange_name,
+            self.volumeBase,
+            self.limitPrice,
+            self.market,
+            self.meanPrice,
+            1 if self.shouldAbort else 0,
+            self.__status.value,
+            self.type.value,
+            self.toString()
+        )
+
+        cursor = db.cursor()
+        cursor.execute(query, args)
+        if cursor.lastrowid:
+            if cursor.lastrowid % 100 == 0:
+                print('last insert id', cursor.lastrowid)
+
+        db.commit()
+
+
 class OrderRequestList:
 
     def __init__(self, orderRequests: [OrderRequest]):
@@ -138,7 +167,8 @@ class SegmentedOrderRequestList:
         for orderRequest in self.getOrderRequests():
             for logEntry in orderRequest.getStatusLog():
                 log.append({
-                    'id': orderRequest.id,
+                    'exchange_name': orderRequest.exchange_name,
+                    'exchange_id': orderRequest.id,
                     'status': logEntry['status'].value,
                     'time': logEntry['time'],
                     'dtime': logEntry['dtime']
@@ -157,3 +187,44 @@ class SegmentedOrderRequestList:
         for orderRequest in self.getOrderRequests():
             r = r + orderRequest.toString() + "\n"
         return r
+
+    def saveToDB(self):
+        db = Database.initDBFromAWSParameterStore()
+
+        query = "INSERT INTO `uuid`" \
+                "(uuid, txt)" \
+                "VALUES(%s,%s)"
+        args = (
+            self.uuid,
+            f"{self.sorlToString()}\n\n{self.statusLogToString()}"
+        )
+        cursor = db.cursor()
+        cursor.execute(query, args)
+
+        db.commit()
+
+        for orderRequest in self.getOrderRequests():
+            orderRequest.saveToDb(db, self.uuid)
+
+        self.__saveHistoryToDB(db)
+        db.close()
+
+    def __saveHistoryToDB(self, db):
+        log = self.logStatusLogs()
+
+        for l in log:
+            query = "INSERT INTO `arbitrage_history`" \
+                    "(uuid, exchange_name, exchange_id, status, `time`, dtime)" \
+                    "VALUES(%s,%s,%s,%s,%s,%s)"
+            args = (
+                self.uuid,
+                l['exchange_name'],
+                l['exchange_id'],
+                l['status'],
+                datetime.fromtimestamp(l['time']).strftime('%Y-%m-%d %H:%M:%S'),
+                l['dtime']
+            )
+            cursor = db.cursor()
+            cursor.execute(query, args)
+
+        db.commit()

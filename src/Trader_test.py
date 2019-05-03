@@ -134,6 +134,7 @@ class TestClass(TestCase):
         await self.trader.initExchangesFromCredFile(credfile='./cred/api_test.json')
         self.trader.input = lambda x: 'ok'
         self.trader.sendNotification = lambda x: ''
+        self.trader.saveSORLtoDB = lambda x: ''
         self.trader.pollTrades = CoroutineMock()
         Trader.TTL_TRADEORDER_S = 1
         Trader.FETCH_ORDER_STATUS_TIMEOUT = 5
