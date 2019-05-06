@@ -42,7 +42,22 @@ class ArbitragePath:
                 cntr += 1
 
         return cntr
-    
+
+    def getMaxIntraexchangeTransactionsPerExchange(self):
+        exchangesList = list(map(lambda node: node.getExchange(), self.nodesList))
+        max_cntr = 0
+        cntr_per_exchange = 0
+
+        for idx, exchange in enumerate(exchangesList[:-1]):
+            if exchange == exchangesList[idx + 1]:
+                cntr_per_exchange += 1
+            else:
+                max_cntr = max(max_cntr, cntr_per_exchange)
+                cntr_per_exchange = 0
+
+        max_cntr = max(max_cntr, cntr_per_exchange)
+        return max_cntr
+
     def getProfit(self):
         return self.profit
 

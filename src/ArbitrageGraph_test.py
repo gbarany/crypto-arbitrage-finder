@@ -74,6 +74,7 @@ class TestClass(object):
         assert path.getNofIntraexchangeTransactions() == 3
         assert path.getExchangesInvolved() == ['kraken']
         assert path.getNofExchangesInvolved() == 1
+        assert path.getMaxIntraexchangeTransactionsPerExchange() == 3
         assert path.getProfit() == 800
 
         segmentedOrderList = path.toSegmentedOrderList().getOrderRequestLists()
@@ -303,6 +304,7 @@ class TestClass(object):
         assert path.getNofIntraexchangeTransactions() == 3
         assert path.getExchangesInvolved() == ['kraken']
         assert path.getNofExchangesInvolved() == 1
+        assert path.getMaxIntraexchangeTransactionsPerExchange() == 3
         assert path.getProfit() == 400
 
         segmentedOrderRequestLists = path.toSegmentedOrderList().getOrderRequestLists()
