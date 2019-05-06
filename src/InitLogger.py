@@ -1,12 +1,13 @@
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 
 ###################
 ## Init app logger
 logger = logging.getLogger('CryptoArbitrageApp')
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('./results/CryptoArbitrageApp.log')
+fh = RotatingFileHandler('./results/CryptoArbitrageApp.log', mode='a', maxBytes=10*1024*1024*1024, backupCount=2, encoding=None, delay=0)
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler(sys.stdout)
@@ -27,7 +28,7 @@ logger.addHandler(fh)
 dealLogger = logging.getLogger('CryptoArbitrageDeals')
 dealLogger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('./results/CryptoArbitrageDeals.csv',mode='w')
+fh = RotatingFileHandler('./results/CryptoArbitrageDeals.csv', mode='a', maxBytes=2*1024*1024*1024, backupCount=2, encoding=None, delay=0)
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler(sys.stdout)
@@ -46,7 +47,7 @@ dealLogger.info('timestamp,vol_BTC,profit_perc,nodes,price,age,nofTotalTransacti
 logger = logging.getLogger('Trader')
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('./results/Trader.log')
+fh = RotatingFileHandler('./results/Trader.log', mode='a', maxBytes=2*1024*1024*1024, backupCount=2, encoding=None, delay=0)
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler(sys.stdout)
