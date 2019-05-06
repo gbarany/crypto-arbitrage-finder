@@ -124,7 +124,7 @@ class ArbitragePath:
         logStr = logStr[:-1]
         dealLogger.info(logStr)
 
-    def toOrderList(self):
+    def toOrderList(self, volumeMultiplier=1):
         orl = []
         
         #orl.profit = self.profit
@@ -165,7 +165,7 @@ class ArbitragePath:
                 orl.append(OrderRequest(
                         exchange_name=base_exchange,
                         market=tradesymbols,
-                        volumeBase=volume,
+                        volumeBase=volume*volumeMultiplier,
                         limitPrice=limitPrice,
                         meanPrice=meanPrice,
                         requestType=tradetype))
@@ -179,8 +179,8 @@ class ArbitragePath:
                 return False
         return True
 
-    def toSegmentedOrderList(self):
-        orderList = self.toOrderList().getOrderRequests()
+    def toSegmentedOrderList(self, volumeMultiplier=1):
+        orderList = self.toOrderList(volumeMultiplier=volumeMultiplier).getOrderRequests()
         if len(orderList) == 0:
             raise ValueError("Trade list is empty, there are no trades to execute")
 

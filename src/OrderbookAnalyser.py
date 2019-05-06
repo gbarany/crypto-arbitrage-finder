@@ -58,7 +58,7 @@ class KafkaProducerWrapper:
 class OrderbookAnalyser:
     PRICE_SOURCE_ORDERBOOK = "PRICE_SOURCE_ORDERBOOK"
     PRICE_SOURCE_CMC = "PRICE_SOURCE_CMC"
-
+    TRADER_VOLUME_MULTIPLIER = 0.8
     def __init__(self,
                  vol_BTC=[1],
                  edgeTTL=5,
@@ -133,7 +133,7 @@ class OrderbookAnalyser:
             asyncio.ensure_future(kafkaProducer.sendAsync(path), loop=eventLoop)
 
             if TradingStrategy.isDealApproved(path) is True:
-                sorl = path.toSegmentedOrderList()
+                sorl = path.toSegmentedOrderList(volumeMultiplier=OrderbookAnalyser.TRADER_VOLUME_MULTIPLIER )
                 asyncio.ensure_future(trader.execute(sorl), loop=eventLoop)
                 logger.info("Called Trader ensure_future")
 

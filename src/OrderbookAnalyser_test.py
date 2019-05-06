@@ -59,7 +59,9 @@ class TestClass(object):
             def getTakerFeeMock(self,exchangename, symbol):
                     return feeRate
             monkeypatch.setattr(FeeStore, 'getTakerFee', getTakerFeeMock)
-            
+            monkeypatch.setattr(TradingStrategy, 'MAX_NOF_INTRAEXCHANGE_TRANSACTIONS_PER_EXCHANGE', 3)
+            monkeypatch.setattr(OrderbookAnalyser, 'TRADER_VOLUME_MULTIPLIER', 1)
+
             orderbookAnalyser = getOrderbookAnalyser()
             cmc = getCMCSampleFetch()
             if orderbookAnalyser.neo4j_mode != FWLiveParams.neo4j_mode_disabled:
