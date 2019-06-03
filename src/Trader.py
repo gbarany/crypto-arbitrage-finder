@@ -28,7 +28,7 @@ class Trader:
     PHASE_FETCH_TIMEOUT = 10  # sec (Az összes order-nek CLOSED-nak kell lennie ennyi idő után, ha ez nem igaz, akkor ABORT ALL)
     NOF_CCTX_RETRY = 4
     TTL_TRADEORDER_S = 60 * 5
-    FETCH_ORDER_STATUS_TIMEOUT = 60 * 5
+    FETCH_ORDER_STATUS_TIMEOUT = 60 * 60 # sec
 
     # EFFICIENCY = 0.9  # Ezzel szorozzuk a beadott amout-okat, hogy elkerüljük a recegést a soros átváltások miatt
     #
