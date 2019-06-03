@@ -553,8 +553,8 @@ class Trader:
             t1 = time.time()
             Trader.storeFreeBalances(segmentedOrderRequestList.uuid, -1, self.getFreeBalances())
             await self.createLimitOrdersOnSegmentedOrderRequestList(segmentedOrderRequestList)
-            d_ms = time.time() - t1
-            logger.debug(f"createLimitOrdersOnSegmentedOrderRequestList ended in {d_ms} ms")
+            d_s = time.time() - t1
+            logger.debug(f"createLimitOrdersOnSegmentedOrderRequestList ended in {d_s} s")
             logger.debug(f"Waiting for the order requests to complete for {Trader.TTL_TRADEORDER_S} s ")
             await asyncio.sleep(Trader.TTL_TRADEORDER_S)
             logger.debug(f"Waiting for TTL_TRADEORDER_S is over. ({Trader.TTL_TRADEORDER_S} s) ")
@@ -563,7 +563,7 @@ class Trader:
             await self.cancelAllOrderRequests(segmentedOrderRequestList)
         except Exception as e:
             d_s = time.time() - t1
-            logger.error(f"execute failed in {d_s} ms. Reason: {e}")
+            logger.error(f"execute failed in {d_s} s. Reason: {e}")
             for orderRequest in segmentedOrderRequestList.getOrderRequests():
                 orderRequest.shouldAbort = True
             await self.abortSegmentedOrderRequestList(segmentedOrderRequestList)
