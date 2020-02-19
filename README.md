@@ -1,4 +1,7 @@
-# CryptoArbitrage - Stabilizing price swings accross multiple exchanges
+# Crypto Arbitrage Finder
+
+Stabilizing extreme price gaps accross cryptocurrency exchanges is benefital for the ecosystem. 
+Crypto Arbitrage Finder is able to identify arbitrage opportunities and execute arbitrage transactions. 
 
 High level architecture: 
 https://bit.ly/2CLrzK7
